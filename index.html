@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>卓タイマー管理 + 控室（スプシ連携）</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#fff; --text:#111;
+    --red:#e74c3c; --blue:#2e86de; --vip:#9b59b6;
+    --ok:#e7ffe7; --warn:#fff3cd; --danger:#ffe0e0; --gold:#ffdd57;
+    --staff-on-bg:#e6f4ea;      /* 出勤(空き) 背景 */
+    --staff-on-border:#34a853;  /* 出勤(空き) 枠線 */
+    --staff-on-text:#0b6630;    /* 出勤(空き) 文字 */
+
+    --staff-busy-bg:#fff3cd;    /* 接客中 背景 */
+    --staff-busy-border:#f59e0b;/* 接客中 枠線 */
+    --staff-busy-text:#7a4e00;  /* 接客中 文字 */
+
+    --staff-off-bg:#f1f5f9;     /* 非出勤 背景 */
+    --staff-off-border:#cbd5e1; /* 非出勤 枠線 */
+    --staff-off-text:#94a3b8;   /* 非出勤 文字 */
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;background:#1f1f23;color:#fff;position:sticky;top:0;z-index:5}
+  header h1{margin:0;font-size:18px}
+  .toolbar{display:flex;gap:8px;align-items:center}
+  .toolbar input{padding:8px;border-radius:8px;border:1px solid #ccc;min-width:220px}
+  .now{opacity:.85}
+  main{padding:12px;display:grid;gap:12px}
+  /* Floor */
+  .floor{
+    position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
+    overflow:hidden; padding:4px; min-height:750px;
+  }
+  .legend{position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;opacity:.9;background:#fff9;border-radius:8px;padding:6px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
+  .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.danger{background:var(--danger)} .dot.empty{background:#eee}
+  .seat{
+    position:absolute;background:#fff;border:2px solid #bbb;border-radius:10px;
+    padding:6px;min-height:64px;min-width:80px;cursor:pointer;
+    display:flex;flex-direction:column;gap:4px;transition:transform .05s ease, box-shadow .1s, background .2s;
+    box-shadow:0 1px 0 #0001;
+  }
+  .seat:hover{transform:translateY(-1px)}
+  .seat.red{border-color:var(--red)}
+  .seat.blue{border-color:var(--blue)}
+  .seat.active{background:var(--ok)} .seat.warn{background:var(--warn)} .seat.danger{background:var(--danger)}
+  .seat.highlight{box-shadow:0 0 0 3px var(--gold) inset}
+  .line1{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+  .timer{font-size:18px;font-weight:800}
+  .meta{font-size:18px;line-height:1.25;opacity:.95;overflow-wrap:anywhere}
+
+  /* VIP row */
+  .vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
+  .vipSeat{
+    background:#fff; border:2px dashed var(--vip); border-radius:12px;
+    padding:10px; min-height:100px; flex:1; cursor:pointer;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
+  .vipSeat .timer{font-size:22px}
+
+  /* Backstage (控室) */
+  .backstage{background:var(--panel); border:1px solid #ddd; border-radius:12px; padding:10px;}
+  .backstage h2{margin:0 0 8px; font-size:16px}
+  .legend-staff{font-size:12px; opacity:.8; display:flex; gap:12px; align-items:center}
+  .dotS{width:10px; height:10px; border-radius:50%; display:inline-block}
+  .dotS.on{background:#145768}      /* 出勤・空き */
+  .dotS.busy{background:#6b480a}    /* 接客中 */
+  .dotS.off{background:#9ca3af}     /* 休み */
+  .roster{display:flex; flex-wrap:wrap; gap:8px}
+  .staffChip{
+    padding:6px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#f8fafc;
+    cursor:pointer; font-size:14px;
+  }
+  .staffChip.cast{border-color:#6b480a}
+  .staffChip.boy{border-color:#60a5fa}
+  .staffChip.on,
+  .suggList .staffChip.on{
+    background:var(--staff-on-bg);
+    border:1px solid var(--staff-on-border);
+    color:var(--staff-on-text);
+    box-shadow:0 0 0 1px #0e3d49 inset;
+  }
+  .staffChip.on:hover{ filter:brightness(0.95); }
+  .staffChip.busy,
+  .suggList .staffChip.busy{
+    background:var(--staff-busy-bg);
+    border:1px solid var(--staff-busy-border);
+    color:var(--staff-busy-text);
+    box-shadow:0 0 0 1px #3a2706 inset;
+  }
+  .staffChip.off,
+  .suggList .staffChip.off{
+    background:var(--staff-off-bg);
+    border:1px solid var(--staff-off-border);
+    color:var(--staff-off-text);
+  }
+  .staffSectionTitle{flex-basis:100%; margin-top:6px; font-size:12px; color:#475569}
+
+  /* Modal */
+  .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
+  .modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
+  .modal h3{margin:0 0 10px 0}
+  .row{display:flex;gap:8px;margin:8px 0}
+  .row input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+  .btns{display:flex;flex-wrap:wrap;gap:8px}
+  button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;background:#111;color:#fff}
+  button.secondary{background:#e5e7eb;color:#111}
+  button.danger{background:#dc2626}
+  .chips button{background:#fff;border:1px solid #111;color:#111}
+  .label{font-weight:700;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1;align-self:center;white-space:nowrap;}
+  .label-extend{color: var(--vip);border: 1px solid var(--vip);background: #f7ecff;}
+  .twoCols{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  .suggBlock{display:flex; flex-direction:column; gap:4px; flex:1;}
+  .suggTitle{font-size:12px; color:#6b7280}
+  .suggList{display:flex; flex-wrap:wrap; gap:6px}
+  .suggList .staffChip{padding:4px 8px; font-size:12px}
+
+  @media(max-width:900px){
+    .toolbar input{min-width:160px}
+    .seat{min-width:72px;min-height:60px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>卓タイマー管理</h1>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="キャスト名で検索（例: あや）">
+    <div class="now" id="now"></div>
+  </div>
+</header>
+
+<main>
+  <section class="floor" id="floor">
+    <div class="legend">
+      <span><i class="dot empty"></i>空席</span>
+      <span><i class="dot ok"></i>計時中</span>
+      <span><i class="dot warn"></i>残り10分未満</span>
+      <span><i class="dot danger"></i>残り3分未満</span>
+    </div>
+    <div class="vipRow" id="vip"></div>
+  </section>
+
+  <!-- 控室 -->
+  <section class="backstage">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+      <h2>控室（スプレッドシート連携）</h2>
+      <div style="display:flex; align-items:center; gap:12px">
+        <div class="legend-staff">
+          <span><i class="dotS on"></i> 出勤（空き）</span>
+          <span><i class="dotS busy"></i> 接客中</span>
+          <span><i class="dotS off"></i> 休み/退勤</span>
+        </div>
+        <label style="font-size:12px"><input type="checkbox" id="editDuty"> 出勤を編集</label>
+        <button id="reloadStaff" class="secondary" type="button">更新</button>
+      </div>
+    </div>
+    <div id="roster" class="roster"></div>
+  </section>
+
+</main>
+
+<!-- モーダル -->
+<div class="modalWrap" id="modalWrap" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modalTitle">卓を編集</h3>
+    <div class="row">
+      <input id="cast" placeholder="キャスト（カンマ区切り）" list="castList">
+      <input id="boy" placeholder="担当ボーイ" list="boyList">
+      <datalist id="castList"></datalist>
+      <datalist id="boyList"></datalist>
+    </div>
+    <div class="row chips">
+      <span class="label" style="color:#374151;border:1px solid #d1d5db;background:#f9fafb;">時間</span>
+      <div class="btns">
+        <button class="quick" data-min="15" type="button">15分</button>
+        <button class="quick" data-min="30" type="button">30分</button>
+        <button class="quick" data-min="45" type="button">45分</button>
+        <button class="quick" data-min="60" type="button">60分</button>
+      </div>
+    </div>
+    <div class="row chips">
+      <span class="label label-extend">延長</span>
+      <div class="btns">
+        <button class="extend" data-min="5" type="button">+5</button>
+        <button class="extend" data-min="10" type="button">+10</button>
+        <button class="extend" data-min="15" type="button">+15</button>
+      </div>
+    </div>
+
+    <!-- 出勤メンバーのクイック選択 -->
+    <div class="row" style="gap:12px">
+      <div class="suggBlock">
+        <div class="suggTitle">出勤キャスト（タップで追加）</div>
+        <div id="suggCast" class="suggList"></div>
+      </div>
+      <div class="suggBlock">
+        <div class="suggTitle">出勤ボーイ（タップで設定）</div>
+        <div id="suggBoy" class="suggList"></div>
+      </div>
+    </div>
+
+    <div class="row twoCols">
+      <input id="manual" inputmode="numeric" placeholder="分を入力 → 開始">
+      <button id="start" type="button">開始</button>
+    </div>
+    <div class="row btns" style="justify-content:space-between">
+      <button id="saveMeta" class="secondary" type="button">キャスト/ボーイを保存</button>
+      <div>
+        <button id="clear" class="danger" type="button">クリア（空席）</button>
+        <button id="close" class="secondary" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= スタッフ（スプレッドシート）設定 ================= */
+/* 手順:
+   1) スプシで「ファイル → ウェブに公開」を選び、スタッフ表のシートを CSV で公開
+   2) 生成された URL を下の STAFF_CSV_URL に貼り付ける
+   3) 列は「名前 / 役割(キャスト|ボーイ) / 出勤(1|0 or TRUE|FALSE)」を推奨
+*/
+const STAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRyaTH8TVNV12iTbB9I2pL65t3ImLMB4-nA2--vaHU5Gc1ok1sCSEw1FUSDfZlVO0Cs8WWMVzF_7MaR/pub?gid=1348648909&single=true&output=csv'; // ここに直接文字列を入れてもOK
+// M列（従業員）を読む。ヘッダー名が見つからない時の保険で列番号(0始まり)も指定
+const STAFF_NAME_HEADER = '従業員';
+const STAFF_NAME_COL_FALLBACK = 12; // M列
+
+// 読み込んだ人リスト（{name, duty}）と、出勤フラグの保存場所（localStorage）
+let staff = []; 
+let dutyMap = JSON.parse(localStorage.getItem('staff.duty.map') || '{}');
+
+/* ================= 席データ（localStorage保持） ================= */
+const seats = (() => {
+  const saved = localStorage.getItem('seats.v2');
+  if (saved) {
+    const arr = JSON.parse(saved);
+    arr.forEach(s => { if (s.finished === undefined) s.finished = false; });
+    return arr;
+  }
+  const a=[];
+  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
+  return a;
+})();
+const save = () => localStorage.setItem('seats.v2', JSON.stringify(seats));
+
+/* --------- 座席座標（%） --------- */
+const POS = {
+  R8:{top:15,left:25,width:13}, R7:{top:15,left:39,width:13},
+  R6:{top:15,left:53,width:13}, R5:{top:15,left:67,width:13},
+  R1:{top:30,left:67,width:13}, R2:{top:45,left:67,width:13},
+  R3:{top:30,left:18,width:13}, R4:{top:45,left:18,width:13},
+  B1:{top:22,left:87,width:10}, B2:{top:36,left:87,width:10}, B3:{top:50,left:87,width:10},
+  B4:{top:7,left:2,width:10},  B5:{top:7,left:12,width:10},
+  B6:{top:65,left:7,width:11}, B7:{top:65,left:84,width:11}
+};
+
+/* ================= 要素参照 ================= */
+const $ = s=>document.querySelector(s);
+const floor = $('#floor'), vipWrap = $('#vip'), nowEl = $('#now');
+const rosterBox = $('#roster');
+const wrap = $('#modalWrap'), title = $('#modalTitle');
+const castI = $('#cast'), boyI = $('#boy'), manI = $('#manual');
+const suggCast = $('#suggCast'), suggBoy = $('#suggBoy');
+let currentId = null;
+
+/* ================= UI生成 ================= */
+function cardHTML(s){
+  return `
+    <div class="line1"><span>${s.label}</span></div>
+    <div class="timer">${s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')}</div>
+    <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>
+  `;
+}
+function addVipSeat(s){
+  const d=document.createElement('div');
+  d.className='vipSeat';
+  d.dataset.id=s.id;
+  d.innerHTML=cardHTML(s);
+  d.addEventListener('click', ()=>openModal(s.id));
+  vipWrap.appendChild(d);
+}
+function addSeatToFloor(s){
+  const pos = POS[s.id];
+  if(!pos) return;
+  const d=document.createElement('div');
+  d.className=`seat ${s.group}`;
+  d.dataset.id=s.id;
+  d.style.top=pos.top+'%';
+  d.style.left=pos.left+'%';
+  d.style.width=pos.width+'%';
+  d.innerHTML=cardHTML(s);
+  d.addEventListener('click', ()=>openModal(s.id));
+  floor.appendChild(d);
+}
+
+/* ================= レイアウト補正 ================= */
+function resizeFloor(){
+  const pad = 12; // VIPの下の余白（px）
+  const needed = vipWrap.offsetTop + vipWrap.offsetHeight + pad;
+  floor.style.height = needed + 'px';
+}
+
+/* ================= 描画 ================= */
+function render(){
+  // いったん全部作り直し
+  floor.querySelectorAll('.seat').forEach(n=>n.remove());
+  vipWrap.innerHTML = '';
+
+  const q = $('#q').value.trim();
+
+  // 要素を配置（VIPは下段、他はfloor上）
+  seats.forEach(s=>{
+    if (s.group === 'vip') addVipSeat(s);
+    else addSeatToFloor(s);
+  });
+
+  // 状態色・タイマー表示・検索ハイライト
+  document.querySelectorAll('[data-id]').forEach(el=>{
+    const s = seats.find(x => x.id === el.dataset.id);
+    const t = el.querySelector('.timer');
+
+    el.classList.remove('active','warn','danger','highlight');
+
+    if (s.end){
+      const r = s.end - Date.now();
+      if (r > 0){
+        // 計時中
+        t.textContent = formatRemain(r);
+        el.classList.add('active');
+        if (r <= 3*60*1000) el.classList.add('danger');
+        else if (r <= 10*60*1000) el.classList.add('warn');
+      } else {
+        // 時間切れ → 終了
+        s.end = null;
+        s.finished = true;
+        save();
+        t.textContent = '終了';
+      }
+    } else {
+      // タイマーが無いときは「終了」or「空」
+      t.textContent = s.finished ? '終了' : '空';
+    }
+
+    // 検索ハイライト
+    if (q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
+  });
+
+  resizeFloor();
+  renderRoster(); // 控室も更新
+}
+
+function tick(){
+  nowEl.textContent = new Date().toLocaleString('ja-JP',{hour12:false});
+  document.querySelectorAll('[data-id]').forEach(el=>{
+    const s = seats.find(x=>x.id===el.dataset.id);
+    const t = el.querySelector('.timer');
+    el.classList.remove('active','warn','danger');
+
+    if (!s.end){
+      t.textContent = s.finished ? '終了' : '空';
+      return;
+    }
+
+    const r = s.end-Date.now();
+    if(r<=0){ 
+      s.end=null; 
+      s.finished = true;
+      save(); t.textContent='終了'; 
+      return; 
+    }
+
+    t.textContent = formatRemain(r);
+    el.classList.add('active');
+    if(r<=3*60*1000) el.classList.add('danger');
+    else if(r<=10*60*1000) el.classList.add('warn');
+  });
+
+  // 接客中の判定が変わる可能性があるので控室も軽く再描画
+  if (staff.length) renderRoster();
+}
+function formatRemain(ms){
+  const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60;
+  return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+
+/* ================= モーダル操作 ================= */
+function openModal(id){
+  const s = seats.find(x=>x.id===id);
+  currentId=id;
+  title.textContent=`席を編集：${s.label}`;
+  castI.value=s.cast||''; boyI.value=s.boy||''; manI.value='';
+  // 出勤者の候補を表示
+  fillSuggestionBlocks();
+  wrap.style.display='grid'; wrap.setAttribute('aria-hidden','false');
+}
+function closeModal(){ wrap.style.display='none'; wrap.setAttribute('aria-hidden','true'); }
+document.getElementById('close').addEventListener('click', closeModal);
+wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
+
+document.getElementById('saveMeta').addEventListener('click', ()=>{
+  const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); render(); closeModal();
+});
+document.getElementById('clear').addEventListener('click', ()=>{
+  const s=seats.find(x=>x.id===currentId);
+  s.end  = null;
+  s.cast = '';
+  s.boy  = '';
+  s.finished = false;
+  save(); 
+  render(); 
+  castI.value = ''; boyI.value  = ''; manI.value  = '';
+  closeModal();
+});
+document.getElementById('start').addEventListener('click', ()=>{
+  const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
+  const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+v*60*1000;
+  s.finished = false;
+  save(); render(); closeModal();
+});
+document.querySelectorAll('button.quick').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const mins=Number(b.dataset.min);
+    const s=seats.find(x=>x.id===currentId);
+    s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+mins*60*1000;
+    s.finished = false;
+    save(); render(); closeModal();
+  });
+});
+document.querySelectorAll('button.extend').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const mins=Number(b.dataset.min);
+    const s=seats.find(x=>x.id===currentId);
+    const base = s.end && s.end>Date.now()? s.end: Date.now();
+    s.end = base + mins*60*1000;
+    s.finished = false;
+    if(!s.cast) s.cast=castI.value.trim();
+    if(!s.boy)  s.boy=boyI.value.trim();
+    save(); render(); closeModal();
+  });
+});
+document.getElementById('q').addEventListener('input', render);
+const reloadBtn = document.getElementById('reloadStaff');
+if (reloadBtn) reloadBtn.addEventListener('click', loadStaff);
+
+/* ================== 控室（スタッフ） ================== */
+function parseCSV(str){
+  const rows=[]; let cur=[], val='', inQ=false;
+  for(let i=0;i<str.length;i++){
+    const c=str[i];
+    if(inQ){
+      if(c=='"'){ if(str[i+1]=='"'){ val+='"'; i++; } else inQ=false; }
+      else val+=c;
+    }else{
+      if(c=='"'){ inQ=true; }
+      else if(c==','){ cur.push(val); val=''; }
+      else if(c=='\n'){ cur.push(val); rows.push(cur); cur=[]; val=''; }
+      else if(c=='\r'){ /* skip */ }
+      else val+=c;
+    }
+  }
+  if(val.length>0 || cur.length>0){ cur.push(val); rows.push(cur); }
+  return rows;
+}
+
+// M列（従業員）だけ取り出す
+function parseStaffNamesFromCSV(csv){
+  const rowsRaw = parseCSV(csv);
+  const rows = rowsRaw.filter(r => r && r.some(c => (c||'').trim() !== ''));
+  if(!rows.length) return [];
+
+  // 先頭～10行で「従業員」を見出し検出。見つからなければ M列(0始まりで12)を使う
+  let headerRowIdx = -1, nameIdx = -1;
+  const MAX_SCAN = Math.min(rows.length, 10);
+  for (let i=0; i<MAX_SCAN; i++){
+    const idx = rows[i].findIndex(c => String(c||'').trim() === '従業員');
+    if (idx >= 0){ headerRowIdx = i; nameIdx = idx; break; }
+  }
+  if (headerRowIdx < 0) headerRowIdx = 0;
+  if (nameIdx < 0) nameIdx = 12;     // ← M列フォールバック
+
+  const names = rows.slice(headerRowIdx+1)
+    .map(r => (r[nameIdx] || '').trim())
+    .filter(v => v && v !== '従業員');
+
+  return [...new Set(names)];        // 重複除去
+}
+
+async function loadStaff(){
+  if(!STAFF_CSV_URL) return;
+  try{
+    const res = await fetch(STAFF_CSV_URL, {cache:'no-store'});
+    const csv = await res.text();
+    const names = parseStaffNamesFromCSV(csv);
+
+    // duty はサイト内だけで保持
+    staff = names.map(n => ({ name:n, duty: !!dutyMap[n] }));
+
+    localStorage.setItem('staff.cache.names', JSON.stringify(names));
+    fillDatalists();
+    renderRoster();
+    console.log(`[Roster] CSV読込: ${names.length}件`);
+  }catch(e){
+    console.error('スタッフ読み込み失敗', e);
+    const cache = JSON.parse(localStorage.getItem('staff.cache.names') || '[]');
+    staff = cache.map(n => ({ name:n, duty: !!dutyMap[n] }));
+    fillDatalists();
+    renderRoster();
+  }
+}
+
+
+function toggleDuty(name){
+  dutyMap[name] = !dutyMap[name];
+  localStorage.setItem('staff.duty.map', JSON.stringify(dutyMap));
+  // staff配列も即時反映
+  staff = staff.map(s => s.name === name ? {...s, duty: !!dutyMap[name]} : s);
+  fillDatalists();
+  renderRoster();
+}
+
+function isNameBusy(name){
+  name = name.trim();
+  return seats.some(s=>{
+    const castNames = (s.cast||'').split(',').map(x=>x.trim()).filter(Boolean);
+    if(castNames.includes(name) || (s.boy||'').trim()===name){
+      return !!(s.end || s.finished);
+    }
+    return false;
+  });
+}
+function addCastName(name){
+  const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
+  if(!list.includes(name)){ list.push(name); castI.value = list.join(', '); }
+}
+function renderRoster(){
+  const rosterBox = document.getElementById('roster');
+  if(!rosterBox) return;
+  rosterBox.innerHTML = '';
+
+  if(!staff.length){
+    const small=document.createElement('div');
+    small.style.color='#64748b'; small.style.fontSize='12px';
+    small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
+    rosterBox.appendChild(small);
+    return;
+  }
+
+  const editSwitch = document.getElementById('editDuty');
+
+  const addChip = (name, duty, busy)=>{
+    const d = document.createElement('button');
+    d.type='button';
+    d.className = `staffChip ${duty ? (busy?'busy':'on') : 'off'}`;
+    d.textContent = name;
+
+    if(editSwitch && editSwitch.checked){
+      // 編集モードON → 出勤トグル（サイト内のみ）
+      d.disabled = false;
+      d.addEventListener('click', ()=> toggleDuty(name));
+    }else{
+      // 通常 → モーダルの入力欄に反映
+      if(!duty){ d.disabled = true; }
+      else{
+        d.addEventListener('click', ()=>{
+          if(wrap.getAttribute('aria-hidden')==='false'){
+            const name = d.textContent.trim();
+            // boy欄にフォーカス中ならボーイ、そうでなければキャストへ
+            if (document.activeElement === boyI) {
+              boyI.value = name;
+              boyI.focus();
+            } else {
+              addCastName(name);
+              castI.focus();
+          }
+      }
+  });
+}
+    }
+    rosterBox.appendChild(d);
+  };
+
+  // 出勤ON→先、OFF→後で表示
+  staff.filter(s=>s.duty).forEach(s=>addChip(s.name, true, isNameBusy(s.name)));
+  const off = staff.filter(s=>!s.duty);
+  if(off.length){
+    const title=document.createElement('div');
+    title.className='staffSectionTitle';
+    title.textContent='— 非出勤 —';
+    rosterBox.appendChild(title);
+    off.forEach(s=>addChip(s.name, false, false));
+  }
+}
+function fillDatalists(){
+  const castDL = document.getElementById('castList');
+  const boyDL  = document.getElementById('boyList');
+  const onList = staff.filter(s=>s.duty).map(s=>s.name);
+  castDL.innerHTML = onList.map(n=>`<option value="${n}">`).join('');
+  boyDL.innerHTML  = onList.map(n=>`<option value="${n}">`).join('');
+}
+
+function fillSuggestionBlocks(){
+  const onList = staff.filter(s=>s.duty).map(s=>s.name);
+
+  // 出勤キャスト → castI のみ「追加入力」
+  suggCast.innerHTML = onList
+    .map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`)
+    .join('');
+  suggCast.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name = b.dataset.name;
+      const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
+      if(!list.includes(name)) list.push(name);
+      castI.value = list.join(', ');
+      castI.focus();
+    });
+  });
+
+  // 出勤ボーイ → boyI のみ「上書き」
+  suggBoy.innerHTML = onList
+    .map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`)
+    .join('');
+  suggBoy.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      boyI.value = b.dataset.name;
+      boyI.focus();
+    });
+  });
+}
+
+
+
+
+/* ================= 初期化 ================= */
+render();
+setInterval(tick,1000);
+window.addEventListener('resize', resizeFloor);
+
+// スタッフ読み込み（60秒ごと再読込）
+if (STAFF_CSV_URL) loadStaff();
+setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
+</script>
+</body>
+</html>
