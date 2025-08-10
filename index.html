@@ -648,5 +648,97 @@ window.addEventListener('resize', resizeFloor);
 if (STAFF_CSV_URL) loadStaff();
 setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
 </script>
+  ※「匿名ログイン済みの人だけ読書き可」。
+
+5) **HTMLにFirebaseを読み込み & 初期化**  
+あなたの `index_with_backstage_staff.html` の最後の `<script>` の中に、下の「▶ 追加コード」をコピペしてください（`// === Firebase ここから ===` の塊）。  
+`firebaseConfig` には Firebase コンソールの **ウェブアプリの設定** で表示される値を貼り付けます。
+
+---
+
+# ▶ 追加コード（席データをリアルタイム同期）
+
+```html
+<script type="module">
+// === Firebase ここから ===
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
+  authDomain: "alexandria-8d142.firebaseapp.com",
+  projectId: "alexandria-8d142",
+  storageBucket: "alexandria-8d142.firebasestorage.app",
+  messagingSenderId: "78904719003",
+  appId: "1:78904719003:web:234e7d8b0703bad614f83e",
+  measurementId: "G-6TJNLEHJXQ"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+// 部屋（店舗）ID。必要なら ?room=xxx などで切替も可
+const ROOM_ID = "default";
+
+// 1) 匿名ログインしてから購読を開始
+signInAnonymously(auth);
+onAuthStateChanged(auth, async (u) => {
+if (!u) return;
+await ensureInitialSeats(); // 初回だけ空ドキュメントを作る
+listenSeats();              // 変更を購読（onSnapshot）
+});
+
+// 2) Firestoreに初期座席を作る（空なら）
+async function ensureInitialSeats(){
+const col = collection(db, "rooms", ROOM_ID, "seats");
+const snap = await getDocs(col);
+if (snap.empty) {
+ const initial = getInitialSeatsArray(); // 既存の生成ロジックをそのまま利用
+ await Promise.all(initial.map(s => setDoc(
+   doc(db, "rooms", ROOM_ID, "seats", s.id),
+   {...s, updatedAt: serverTimestamp()}
+ )));
+}
+}
+
+// 既存の seats 初期化ロジックを使って初期配列を作る関数
+function getInitialSeatsArray(){
+const a=[];
+for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
+return a;
+}
+
+// 3) Firestore の変更を購読して seats を更新 → render()
+function listenSeats(){
+const col = collection(db, "rooms", ROOM_ID, "seats");
+onSnapshot(col, (qs) => {
+ // Firestoreの座席を seats 配列に反映（id順に並べ直し）
+ const byId = {};
+ qs.forEach(d => byId[d.id] = d.data());
+ seats.length = 0;
+ // 既存の POS / レイアウトを壊さないよう既知ID順で詰め直す
+ [...Object.keys(byId)].sort().forEach(id => seats.push(byId[id]));
+ render();
+});
+}
+
+// 4) 1席ぶんだけ保存（ローカル保存は任意で）
+async function saveSeatRemote(s){
+await setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
+ {...s, updatedAt: serverTimestamp()},
+ { merge:true }
+);
+}
+// === Firebase ここまで ===
+</script>
+
 </body>
 </html>
