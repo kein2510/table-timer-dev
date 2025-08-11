@@ -558,8 +558,11 @@ async function loadStaff(){
     const names = parseStaffNamesFromCSV(csv);
 
     // duty はサイト内だけで保持
-    staff = names.map(n => ({ name:n, duty: !!dutyMap[n] }));
-
+    // 参照を保ったまま中身だけ置換
+    const newStaff = names.map(n => ({ name:n, duty: !!(window.dutyMap?.[n]) }));
+    staff.splice(0, staff.length, ...newStaff);
+    window.staff = staff; // 念のため同期
+    
     localStorage.setItem('staff.cache.names', JSON.stringify(names));
     fillDatalists();
     renderRoster();
@@ -578,7 +581,7 @@ function toggleDuty(name){
   // まずローカルを即時更新（体感をキビキビに）
   dutyMap[name] = !dutyMap[name];
   localStorage.setItem('staff.duty.map', JSON.stringify(dutyMap));
-  staff = staff.map(s => s.name === name ? {...s, duty: !!dutyMap[name]} : s);
+  staff.forEach(s => { if (s.name === name) s.duty = !!dutyMap[name]; });
   fillDatalists();
   renderRoster();
 
