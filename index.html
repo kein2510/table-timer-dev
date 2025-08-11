@@ -280,11 +280,21 @@ let currentId = null;
 let lastFocus = null;
 const pageRoots = document.querySelectorAll('header, main'); // 背景側
 
+// 表示用の席ラベル（グループ名→新名称 + 番号）を作る
+function displayLabel(s){
+  const nameByGroup = { red: 'ノーマル', blue: 'VIP', vip: '超VIP' };
+  const num = (s.id.match(/\d+/) || [''])[0];   // R7/B3/V2 → "7/3/2"
+  return `${nameByGroup[s.group] || s.label} ${num}`;
+}
+
+
+
+
 
 /* ================= UI生成 ================= */
 function cardHTML(s){
   return `
-    <div class="line1"><span>${s.label}</span></div>
+    <div class="line1"><span>${displayLabel(s)}</span></div>
     <div class="timer">${s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')}</div>
     <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>
   `;
@@ -307,7 +317,7 @@ function addSeatToFloor(s){
   d.style.left=pos.left+'%';
   d.style.width=pos.width+'%';
   d.innerHTML=cardHTML(s);
-  d.addEventListener('click', ()=>openModal(s.id));
+  d.addEventListener('click', ()=>(s.id));
   floor.appendChild(d);
 }
 
@@ -417,7 +427,7 @@ function openModal(id){
   lastFocus = document.activeElement; // 戻す先
   const s = seats.find(x=>x.id===id);
   currentId = id;
-  title.textContent = `席を編集：${s.label}`;
+  title.textContent = `席を編集：${displayLabel(s)}`;
   castI.value = s.cast || '';
   boyI.value  = s.boy  || '';
   manI.value  = '';
