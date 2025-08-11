@@ -533,12 +533,17 @@ async function loadStaff(){
 
 
 function toggleDuty(name){
+  // まずローカルを即時更新（体感をキビキビに）
   dutyMap[name] = !dutyMap[name];
   localStorage.setItem('staff.duty.map', JSON.stringify(dutyMap));
-  // staff配列も即時反映
   staff = staff.map(s => s.name === name ? {...s, duty: !!dutyMap[name]} : s);
   fillDatalists();
   renderRoster();
+
+  // そしてクラウドに送信（全員に配信される）
+  if (window.syncDuty) window.syncDuty(name, dutyMap[name]);
+}
+
 }
 
 function isNameBusy(name){
@@ -748,8 +753,50 @@ async function saveSeatRemote(s){
     { ...s, updatedAt: serverTimestamp() }, { merge:true });
 }
 
-// 既存コードから呼べるように公開
-window.syncSeat = saveSeatRemote;
+// ====== 控室（出勤オン/オフ）同期 ======
+import {
+  collection, doc, setDoc, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"; // 既にimport済みならOK
+
+const dutyCol = collection(db, "rooms", ROOM_ID, "duty");
+
+// Firestore -> 画面（購読）
+function listenDuty(){
+  onSnapshot(dutyCol, (qs) => {
+    // Firestoreにある出勤フラグを取り込む
+    const remote = {};
+    qs.forEach(d => remote[d.id] = !!(d.data()?.duty));
+
+    // ローカル dutyMap を更新して保存（オフライン用）
+    window.dutyMap = { ...(window.dutyMap||{}), ...remote };
+    localStorage.setItem('staff.duty.map', JSON.stringify(window.dutyMap));
+
+    // staff が読めているなら Duty を反映して再描画
+    if ((window.staff||[]).length){
+      window.staff = window.staff.map(s => ({
+        ...s, duty: !!window.dutyMap[s.name]
+      }));
+      window.fillDatalists && window.fillDatalists();
+      window.renderRoster && window.renderRoster();
+    }
+  });
+}
+
+// 画面 -> Firestore（1名ぶん保存）
+async function saveDutyRemote(name, duty){
+  const id = name.replace(/\//g, '／'); // Firestore docIDに「/」は使えないので置換
+  await setDoc(doc(dutyCol, id),
+    { duty: !!duty, updatedAt: serverTimestamp() }, { merge:true });
+}
+
+// 既存の onAuthStateChanged の中で seats購読のあとに呼ぶ
+//   await ensureInitialSeats();
+//   listenSeats();
+listenDuty();
+
+// 既存コードから呼べるように公開（toggle 時に使う）
+window.syncDuty = saveDutyRemote;
+
 </script>
 
 
