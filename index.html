@@ -745,7 +745,7 @@ if (STAFF_CSV_URL) loadStaff();
 setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
 
 async function migrateSeatLabels(){
-  const map = { red:'ノーマル', blue:'VIP', vip:'超VIP' };
+  const map = { red:'VIP', blue:'ノーマル', vip:'超VIP' };
   for (const s of seats){
     const num = (s.id.match(/\d+/)||[''])[0];
     const newLabel = `${map[s.group]||s.label} ${num}`;
@@ -816,8 +816,8 @@ async function ensureInitialSeats(){
 // 既存の初期化ロジックと同じ配列を作成
 function getInitialSeatsArray(){
   const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`ノーマル ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`VIP ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`VIP ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`ノーマル ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
   for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`超VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
   return a;
 }
