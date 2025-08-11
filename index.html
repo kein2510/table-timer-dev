@@ -544,7 +544,7 @@ function toggleDuty(name){
   if (window.syncDuty) window.syncDuty(name, dutyMap[name]);
 }
 
-}
+
 
 function isNameBusy(name){
   name = name.trim();
@@ -740,15 +740,20 @@ function listenSeats(){
     const byId = {};
     qs.forEach(d => byId[d.id] = d.data());
 
-    // 既存レイアウトの順序を優先して詰め直し
-    const ordered = (window.seats || []).map(s => byId[s.id] ?? s);
-    // 初回はFirestore側の順序で
-    if (!ordered.length) for (const id in byId) ordered.push(byId[id]);
+    // window.seats が未定義でも安全に動くようにガード
+    const base = Array.isArray(window.seats) ? window.seats : [];
+    const ordered = base.map(s => byId[s.id] ?? s);
 
+    // 初回は Firestore の内容で埋める
+    if (!ordered.length) Object.keys(byId).sort().forEach(id => ordered.push(byId[id]));
+
+    if (!Array.isArray(window.seats)) window.seats = []; // ガード
     window.seats.splice(0, window.seats.length, ...ordered);
-    window.render && window.render();
+
+    if (typeof window.render === 'function') window.render();
   });
 }
+
 
 // 1席ぶんをクラウド保存
 async function saveSeatRemote(s){
