@@ -582,11 +582,9 @@ function renderRoster(){
     d.textContent = name;
 
     if(editSwitch && editSwitch.checked){
-      // 編集モードON → 出勤トグル
       d.disabled = false;
       d.addEventListener('click', ()=> toggleDuty(name));
     }else{
-      // 通常 → モーダル入力補助
       if(!duty){
         d.disabled = true;
       }else{
@@ -606,7 +604,6 @@ function renderRoster(){
     rosterBox.appendChild(d);
   };
 
-  // 出勤ON → 先、OFF → 後に表示
   staff.filter(s=>s.duty).forEach(s=>addChip(s.name, true, isNameBusy(s.name)));
   const off = staff.filter(s=>!s.duty);
   if(off.length){
@@ -617,6 +614,7 @@ function renderRoster(){
     off.forEach(s=>addChip(s.name, false, false));
   }
 }
+
 
 function fillDatalists(){
   const castDL = document.getElementById('castList');
@@ -666,11 +664,16 @@ window.addEventListener('resize', resizeFloor);
 // スタッフ読み込み（60秒ごと再読込）
 if (STAFF_CSV_URL) loadStaff();
 setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
+
+  <script>
+  // ← いつもの非moduleスクリプト（あなたの本体コード）
+  // ここで window.seats / window.render を公開しておく
+  window.seats  = seats;
+  window.render = render;
 </script>
 
-
-
-
+  
+</script>
 
 <!-- 追加コードはこの1つの <script> に置き換えてください -->
 <script type="module">
@@ -787,10 +790,7 @@ async function saveDutyRemote(name, duty){
     { duty: !!duty, updatedAt: serverTimestamp() }, { merge:true });
 }
 
-// 既存の onAuthStateChanged の中で seats購読のあとに呼ぶ
-//   await ensureInitialSeats();
-//   listenSeats();
-listenDuty();
+
 
 // 既存コードから呼べるように公開（toggle 時に使う）
 window.syncDuty = saveDutyRemote;
