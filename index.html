@@ -422,14 +422,22 @@ function openModal(id){
   requestAnimationFrame(()=> castI.focus());
 }
   
-function closeModal()
-    if (wrap.contains(document.activeElement)) {
-    (lastFocus && document.contains(lastFocus) ? lastFocus : document.getElementById('q') || document.body).focus();
+function closeModal(){
+  // 先にフォーカスをモーダル外へ逃がす
+  if (wrap.contains(document.activeElement)) {
+    (lastFocus && document.contains(lastFocus)
+      ? lastFocus
+      : document.getElementById('q') || document.body
+    ).focus();
   }
 
   // 背景を解放
   pageRoots.forEach(el => el.removeAttribute('inert'));
-{ wrap.style.display='none'; wrap.setAttribute('aria-hidden','true'); }
+
+  // 非表示＋aria-hidden
+  wrap.style.display = 'none';
+  wrap.setAttribute('aria-hidden', 'true');
+}
 document.getElementById('close').addEventListener('click', closeModal);
 wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
 
