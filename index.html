@@ -758,6 +758,8 @@ function listenSeats(){
 async function saveSeatRemote(s){
   await setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
     { ...s, updatedAt: serverTimestamp() }, { merge:true });
+  window.syncSeat = saveSeatRemote;
+
 }
 
 // ====== 控室（出勤オン/オフ）同期 ======
