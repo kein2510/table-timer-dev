@@ -356,6 +356,11 @@ function render(){
   renderRoster(); // 控室も更新
 }
 
+// 既存スクリプトの一番最後に追加
+window.seats  = seats;   // module から参照するため公開
+window.render = render;  // module から再描画呼び出しに使う
+
+  
 function tick(){
   nowEl.textContent = new Date().toLocaleString('ja-JP',{hour12:false});
   document.querySelectorAll('[data-id]').forEach(el=>{
@@ -406,7 +411,9 @@ wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
 
 document.getElementById('saveMeta').addEventListener('click', ()=>{
   const s=seats.find(x=>x.id===currentId);
-  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); render(); closeModal();
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); 
+  if (window.syncSeat) window.syncSeat(s);
+  render(); closeModal();
 });
 document.getElementById('clear').addEventListener('click', ()=>{
   const s=seats.find(x=>x.id===currentId);
@@ -415,6 +422,7 @@ document.getElementById('clear').addEventListener('click', ()=>{
   s.boy  = '';
   s.finished = false;
   save(); 
+  if (window.syncSeat) window.syncSeat(s);
   render(); 
   castI.value = ''; boyI.value  = ''; manI.value  = '';
   closeModal();
@@ -424,7 +432,9 @@ document.getElementById('start').addEventListener('click', ()=>{
   const s=seats.find(x=>x.id===currentId);
   s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+v*60*1000;
   s.finished = false;
-  save(); render(); closeModal();
+  save(); 
+  if (window.syncSeat) window.syncSeat(s);
+  render(); closeModal();
 });
 document.querySelectorAll('button.quick').forEach(b=>{
   b.addEventListener('click', ()=>{
@@ -432,7 +442,9 @@ document.querySelectorAll('button.quick').forEach(b=>{
     const s=seats.find(x=>x.id===currentId);
     s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+mins*60*1000;
     s.finished = false;
-    save(); render(); closeModal();
+    save(); 
+    if (window.syncSeat) window.syncSeat(s);
+    render(); closeModal();
   });
 });
 document.querySelectorAll('button.extend').forEach(b=>{
@@ -444,7 +456,9 @@ document.querySelectorAll('button.extend').forEach(b=>{
     s.finished = false;
     if(!s.cast) s.cast=castI.value.trim();
     if(!s.boy)  s.boy=boyI.value.trim();
-    save(); render(); closeModal();
+    save(); 
+    if (window.syncSeat) window.syncSeat(s);
+    render(); closeModal();
   });
 });
 document.getElementById('q').addEventListener('input', render);
@@ -648,27 +662,24 @@ window.addEventListener('resize', resizeFloor);
 if (STAFF_CSV_URL) loadStaff();
 setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
 </script>
-  ※「匿名ログイン済みの人だけ読書き可」。
 
-5) **HTMLにFirebaseを読み込み & 初期化**  
-あなたの `index_with_backstage_staff.html` の最後の `<script>` の中に、下の「▶ 追加コード」をコピペしてください（`// === Firebase ここから ===` の塊）。  
-`firebaseConfig` には Firebase コンソールの **ウェブアプリの設定** で表示される値を貼り付けます。
 
----
 
-# ▶ 追加コード（席データをリアルタイム同期）
 
-```html
+
+<!-- 追加コードはこの1つの <script> に置き換えてください -->
 <script type="module">
-// === Firebase ここから ===
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// --- Firebase SDK (CDN) ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDocs,
+  serverTimestamp, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import {
+  getAuth, signInAnonymously, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// ★あなたの firebaseConfig を貼り付け（コンソールのWebアプリ設定の値）
 const firebaseConfig = {
   apiKey: "AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
   authDomain: "alexandria-8d142.firebaseapp.com",
@@ -679,66 +690,68 @@ const firebaseConfig = {
   measurementId: "G-6TJNLEHJXQ"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
-// 部屋（店舗）ID。必要なら ?room=xxx などで切替も可
-const ROOM_ID = "default";
+const ROOM_ID = "default"; // 共有部屋ID。必要なら ?room=xxx で切替もOK
 
-// 1) 匿名ログインしてから購読を開始
-signInAnonymously(auth);
+// 匿名ログイン → 初期化 → 購読開始
+signInAnonymously(auth).catch(console.error);
 onAuthStateChanged(auth, async (u) => {
-if (!u) return;
-await ensureInitialSeats(); // 初回だけ空ドキュメントを作る
-listenSeats();              // 変更を購読（onSnapshot）
+  if (!u) return;
+  await ensureInitialSeats();
+  listenSeats();
 });
 
-// 2) Firestoreに初期座席を作る（空なら）
+// 初期座席が無ければ作る
 async function ensureInitialSeats(){
-const col = collection(db, "rooms", ROOM_ID, "seats");
-const snap = await getDocs(col);
-if (snap.empty) {
- const initial = getInitialSeatsArray(); // 既存の生成ロジックをそのまま利用
- await Promise.all(initial.map(s => setDoc(
-   doc(db, "rooms", ROOM_ID, "seats", s.id),
-   {...s, updatedAt: serverTimestamp()}
- )));
-}
+  const colRef = collection(db, "rooms", ROOM_ID, "seats");
+  const snap = await getDocs(colRef);
+  if (!snap.empty) return;
+  const init = getInitialSeatsArray();
+  await Promise.all(init.map(s =>
+    setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
+      { ...s, updatedAt: serverTimestamp() })
+  ));
 }
 
-// 既存の seats 初期化ロジックを使って初期配列を作る関数
+// 既存の初期化ロジックと同じ配列を作成
 function getInitialSeatsArray(){
-const a=[];
-for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
-for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
-return a;
+  const a=[];
+  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
+  return a;
 }
 
-// 3) Firestore の変更を購読して seats を更新 → render()
+// Firestoreの変更を購読 → window.seats を更新して再描画
 function listenSeats(){
-const col = collection(db, "rooms", ROOM_ID, "seats");
-onSnapshot(col, (qs) => {
- // Firestoreの座席を seats 配列に反映（id順に並べ直し）
- const byId = {};
- qs.forEach(d => byId[d.id] = d.data());
- seats.length = 0;
- // 既存の POS / レイアウトを壊さないよう既知ID順で詰め直す
- [...Object.keys(byId)].sort().forEach(id => seats.push(byId[id]));
- render();
-});
+  const colRef = collection(db, "rooms", ROOM_ID, "seats");
+  onSnapshot(colRef, (qs) => {
+    const byId = {};
+    qs.forEach(d => byId[d.id] = d.data());
+
+    // 既存レイアウトの順序を優先して詰め直し
+    const ordered = (window.seats || []).map(s => byId[s.id] ?? s);
+    // 初回はFirestore側の順序で
+    if (!ordered.length) for (const id in byId) ordered.push(byId[id]);
+
+    window.seats.splice(0, window.seats.length, ...ordered);
+    window.render && window.render();
+  });
 }
 
-// 4) 1席ぶんだけ保存（ローカル保存は任意で）
+// 1席ぶんをクラウド保存
 async function saveSeatRemote(s){
-await setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
- {...s, updatedAt: serverTimestamp()},
- { merge:true }
-);
+  await setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
+    { ...s, updatedAt: serverTimestamp() }, { merge:true });
 }
-// === Firebase ここまで ===
+
+// 既存コードから呼べるように公開
+window.syncSeat = saveSeatRemote;
 </script>
+
 
 </body>
 </html>
