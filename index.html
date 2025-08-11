@@ -234,6 +234,9 @@ const STAFF_NAME_COL_FALLBACK = 12; // M列
 let staff = []; 
 let dutyMap = JSON.parse(localStorage.getItem('staff.duty.map') || '{}');
 
+window.staff   = staff;
+window.dutyMap = dutyMap;
+
 /* ================= 席データ（localStorage保持） ================= */
 const seats = (() => {
   const saved = localStorage.getItem('seats.v2');
@@ -359,7 +362,8 @@ function render(){
 // 既存スクリプトの一番最後に追加
 window.seats  = seats;   // module から参照するため公開
 window.render = render;  // module から再描画呼び出しに使う
-
+window.fillDatalists = fillDatalists;
+window.renderRoster  = renderRoster;
   
 function tick(){
   nowEl.textContent = new Date().toLocaleString('ja-JP',{hour12:false});
@@ -665,12 +669,6 @@ window.addEventListener('resize', resizeFloor);
 if (STAFF_CSV_URL) loadStaff();
 setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
 
-  <script>
-  // ← いつもの非moduleスクリプト（あなたの本体コード）
-  // ここで window.seats / window.render を公開しておく
-  window.seats  = seats;
-  window.render = render;
-</script>
 
   
 </script>
@@ -709,7 +707,8 @@ signInAnonymously(auth).catch(console.error);
 onAuthStateChanged(auth, async (u) => {
   if (!u) return;
   await ensureInitialSeats();
-  listenSeats();
+  listenSeats();  
+  listenDuty();
 });
 
 // 初期座席が無ければ作る
