@@ -403,41 +403,50 @@ function formatRemain(ms){
 }
 
 /* ================= モーダル操作 ================= */
-function openModal(id){
-  lastFocus = document.activeElement; // 戻す先を保存
-  const s = seats.find(x=>x.id===id);
-  currentId=id;
-  title.textContent=`席を編集：${s.label}`;
-  castI.value=s.cast||''; boyI.value=s.boy||''; manI.value='';
+// すでにあれば重複定義は不要
+// const wrap = document.getElementById('modalWrap'); // ←あなたのコードだと wrap = $('#modalWrap') でOK
+// const pageRoots = document.querySelectorAll('header, main');
+// let lastFocus = null;
 
-  // 背景を操作不可に
+function openModal(id){
+  lastFocus = document.activeElement; // 戻す先
+  const s = seats.find(x=>x.id===id);
+  currentId = id;
+  title.textContent = `席を編集：${s.label}`;
+  castI.value = s.cast || '';
+  boyI.value  = s.boy  || '';
+  manI.value  = '';
+
+  // 背景は操作不可（フォーカス不可）に
   pageRoots.forEach(el => el.setAttribute('inert',''));
 
-  // モーダル表示（まず aria-hidden を外す → 表示）
+  // 先に aria-hidden を外してから表示
   wrap.removeAttribute('aria-hidden');
-  wrap.hidden = false;   
-  wrap.style.display='grid';
+  wrap.hidden = false;
+  wrap.style.display = 'grid';
 
   fillSuggestionBlocks();
-  // フォーカスをモーダル内へ移す（次フレームで）
+
+  // 次フレームでモーダル内にフォーカス
   requestAnimationFrame(()=> castI.focus());
 }
-  
+
 function closeModal(){
-  // 先にフォーカスをモーダル外へ逃がす
- if (wrap.contains(document.activeElement)) {
-    const fallback = document.getElementById('q') || document.body;
+  // 先にフォーカスをモーダルの外へ逃がす（警告回避のキモ）
+  const fallback = document.getElementById('q') || document.body;
+  if (wrap.contains(document.activeElement)) {
     (lastFocus && document.contains(lastFocus) ? lastFocus : fallback).focus();
   }
 
-  // 背景を解放
+  // 背景の操作を解放
   pageRoots.forEach(el => el.removeAttribute('inert'));
 
-  // 非表示＋aria-hidden
-  wrap.setAttribute('aria-hidden', 'true');
+  // その後、非表示＋ aria-hidden
+  wrap.setAttribute('aria-hidden','true');
   wrap.hidden = true;
   wrap.style.display = 'none';
 }
+
 document.getElementById('close').addEventListener('click', closeModal);
 wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
 
@@ -501,7 +510,7 @@ if (reloadBtn) reloadBtn.addEventListener('click', loadStaff);
 function parseCSV(str){
   const rows=[];  
   let cur=[], val='', inQ=false;
-  for( i=0;i<str.length;i++){
+  for(let i=0;i<str.length;i++){
     const c=str[i];
     if(inQ){
       if(c=='"'){ if(str[i+1]=='"'){ val+='"'; i++; } else inQ=false; }
@@ -527,7 +536,7 @@ function parseStaffNamesFromCSV(csv){
   // 先頭～10行で「従業員」を見出し検出。見つからなければ M列(0始まりで12)を使う
   let headerRowIdx = -1, nameIdx = -1;
   const MAX_SCAN = Math.min(rows.length, 10);
-  for ( i=0; i<MAX_SCAN; i++){
+  for (let i=0; i<MAX_SCAN; i++){
     const idx = rows[i].findIndex(c => String(c||'').trim() === '従業員');
     if (idx >= 0){ headerRowIdx = i; nameIdx = idx; break; }
   }
