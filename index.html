@@ -1,10 +1,17 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>卓タイマー管理 + 控室（スプシ連携）</title>
   <link rel="icon" href="data:,">
-
-  
+  <style>
+    /* ここに今のCSSを全部入れる */
+  </style>
 </head>
+
+
   
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -323,7 +330,7 @@ function addSeatToFloor(s){
   d.style.left=pos.left+'%';
   d.style.width=pos.width+'%';
   d.innerHTML=cardHTML(s);
-  d.addEventListener('click', ()=>(s.id));
+  d.addEventListener('click', () => openModal(s.id));
   floor.appendChild(d);
 }
 
