@@ -818,15 +818,14 @@ function listenDuty(){
     // ローカル dutyMap を更新して保存（オフライン用）
     window.dutyMap = { ...(window.dutyMap||{}), ...remote };
     localStorage.setItem('staff.duty.map', JSON.stringify(window.dutyMap));
-
-    // staff が読めているなら Duty を反映して再描画
-    if ((window.staff||[]).length){
-      window.staff = window.staff.map(s => ({
-        ...s, duty: !!window.dutyMap[s.name]
-      }));
-      window.fillDatalists && window.fillDatalists();
-      window.renderRoster && window.renderRoster();
+    
+    // staff 配列を置き換えず、要素を in-place 更新
+    const arr = Array.isArray(window.staff) ? window.staff : [];
+    for (let i = 0; i < arr.length; i++) {
+    + arr[i].duty = !!window.dutyMap[arr[i].name];
     }
+    window.fillDatalists && window.fillDatalists();
+    window.renderRoster && window.renderRoster();
   });
 }
 
