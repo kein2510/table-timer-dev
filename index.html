@@ -415,6 +415,7 @@ function openModal(id){
 
   // モーダル表示（まず aria-hidden を外す → 表示）
   wrap.removeAttribute('aria-hidden');
+  wrap.hidden = false;   
   wrap.style.display='grid';
 
   fillSuggestionBlocks();
@@ -424,19 +425,18 @@ function openModal(id){
   
 function closeModal(){
   // 先にフォーカスをモーダル外へ逃がす
-  if (wrap.contains(document.activeElement)) {
-    (lastFocus && document.contains(lastFocus)
-      ? lastFocus
-      : document.getElementById('q') || document.body
-    ).focus();
+ if (wrap.contains(document.activeElement)) {
+    const fallback = document.getElementById('q') || document.body;
+    (lastFocus && document.contains(lastFocus) ? lastFocus : fallback).focus();
   }
 
   // 背景を解放
   pageRoots.forEach(el => el.removeAttribute('inert'));
 
   // 非表示＋aria-hidden
-  wrap.style.display = 'none';
   wrap.setAttribute('aria-hidden', 'true');
+  wrap.hidden = true;
+  wrap.style.display = 'none';
 }
 document.getElementById('close').addEventListener('click', closeModal);
 wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
