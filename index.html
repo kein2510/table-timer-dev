@@ -725,6 +725,21 @@ window.addEventListener('resize', resizeFloor);
 if (STAFF_CSV_URL) loadStaff();
 setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
 
+async function migrateSeatLabels(){
+  const map = { red:'ノーマル', blue:'VIP', vip:'超VIP' };
+  for (const s of seats){
+    const num = (s.id.match(/\d+/)||[''])[0];
+    const newLabel = `${map[s.group]||s.label} ${num}`;
+    if (s.label !== newLabel){
+      s.label = newLabel;
+      if (window.syncSeat) await window.syncSeat(s); // Firestoreへ
+    }
+  }
+  save(); // localStorageへ
+  render();
+}
+// ★1回だけ呼ぶ：
+// migrateSeatLabels();
 
   
 </script>
