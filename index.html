@@ -258,8 +258,8 @@ const seats = (() => {
     return arr;
   }
   const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`ノーマル ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`VIP ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`VIP ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`ノーマル ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
   for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`超VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
   return a;
 })();
@@ -289,7 +289,7 @@ const pageRoots = document.querySelectorAll('header, main'); // 背景側
 
 // 表示用の席ラベル（グループ名→新名称 + 番号）を作る
 function displayLabel(s){
-  const nameByGroup = { red: 'ノーマル', blue: 'VIP', vip: '超VIP' };
+  const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
   const num = (s.id.match(/\d+/) || [''])[0];   // R7/B3/V2 → "7/3/2"
   return `${nameByGroup[s.group] || s.label} ${num}`;
 }
@@ -301,7 +301,7 @@ function displayLabel(s){
 /* ================= UI生成 ================= */
 function cardHTML(s){
   // グループ→表示名の対応
-  const nameByGroup = { red: 'ノーマル', blue: 'VIP', vip: '超VIP' };
+  const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
   const num = (s.id.match(/\d+/) || [''])[0];      // R7/B3/V2 → "7/3/2"
   const label = `${nameByGroup[s.group] || s.label} ${num}`;
 
@@ -441,7 +441,7 @@ function openModal(id){
   const s = seats.find(x=>x.id===id);
   currentId = id;
   {
-  const nameByGroup = { red: 'ノーマル', blue: 'VIP', vip: '超VIP' };
+  const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
   const num = (s.id.match(/\d+/) || [''])[0];
   const label = `${nameByGroup[s.group] || s.label} ${num}`;
   title.textContent = `席を編集：${label}`;
