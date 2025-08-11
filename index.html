@@ -582,32 +582,31 @@ function renderRoster(){
     d.textContent = name;
 
     if(editSwitch && editSwitch.checked){
-      // 編集モードON → 出勤トグル（サイト内のみ）
+      // 編集モードON → 出勤トグル
       d.disabled = false;
       d.addEventListener('click', ()=> toggleDuty(name));
     }else{
-      // 通常 → モーダルの入力欄に反映
-      if(!duty){ d.disabled = true; }
-      else{
+      // 通常 → モーダル入力補助
+      if(!duty){
+        d.disabled = true;
+      }else{
         d.addEventListener('click', ()=>{
           if(wrap.getAttribute('aria-hidden')==='false'){
-            const name = d.textContent.trim();
-            // boy欄にフォーカス中ならボーイ、そうでなければキャストへ
             if (document.activeElement === boyI) {
               boyI.value = name;
               boyI.focus();
             } else {
               addCastName(name);
               castI.focus();
+            }
           }
+        });
       }
-  });
-}
     }
     rosterBox.appendChild(d);
   };
 
-  // 出勤ON→先、OFF→後で表示
+  // 出勤ON → 先、OFF → 後に表示
   staff.filter(s=>s.duty).forEach(s=>addChip(s.name, true, isNameBusy(s.name)));
   const off = staff.filter(s=>!s.duty);
   if(off.length){
@@ -618,6 +617,7 @@ function renderRoster(){
     off.forEach(s=>addChip(s.name, false, false));
   }
 }
+
 function fillDatalists(){
   const castDL = document.getElementById('castList');
   const boyDL  = document.getElementById('boyList');
@@ -754,9 +754,7 @@ async function saveSeatRemote(s){
 }
 
 // ====== 控室（出勤オン/オフ）同期 ======
-import {
-  collection, doc, setDoc, onSnapshot, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"; // 既にimport済みならOK
+
 
 const dutyCol = collection(db, "rooms", ROOM_ID, "duty");
 
