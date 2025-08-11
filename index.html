@@ -822,7 +822,7 @@ function listenDuty(){
     // staff 配列を置き換えず、要素を in-place 更新
     const arr = Array.isArray(window.staff) ? window.staff : [];
     for (let i = 0; i < arr.length; i++) {
-    + arr[i].duty = !!window.dutyMap[arr[i].name];
+      arr[i].duty = !!window.dutyMap[arr[i].name];
     }
     window.fillDatalists && window.fillDatalists();
     window.renderRoster && window.renderRoster();
