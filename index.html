@@ -772,9 +772,9 @@ async function ensureInitialSeats(){
 // 既存の初期化ロジックと同じ配列を作成
 function getInitialSeatsArray(){
   const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`ノーマル ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`VIP ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`超VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
   return a;
 }
 
