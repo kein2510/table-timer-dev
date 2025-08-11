@@ -293,12 +293,18 @@ function displayLabel(s){
 
 /* ================= UI生成 ================= */
 function cardHTML(s){
+  // グループ→表示名の対応
+  const nameByGroup = { red: 'ノーマル', blue: 'VIP', vip: '超VIP' };
+  const num = (s.id.match(/\d+/) || [''])[0];      // R7/B3/V2 → "7/3/2"
+  const label = `${nameByGroup[s.group] || s.label} ${num}`;
+
   return `
-    <div class="line1"><span>${displayLabel(s)}</span></div>
+    <div class="line1"><span>${label}</span></div>
     <div class="timer">${s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')}</div>
     <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>
   `;
 }
+
 function addVipSeat(s){
   const d=document.createElement('div');
   d.className='vipSeat';
@@ -427,7 +433,13 @@ function openModal(id){
   lastFocus = document.activeElement; // 戻す先
   const s = seats.find(x=>x.id===id);
   currentId = id;
-  title.textContent = `席を編集：${displayLabel(s)}`;
+  {
+  const nameByGroup = { red: 'ノーマル', blue: 'VIP', vip: '超VIP' };
+  const num = (s.id.match(/\d+/) || [''])[0];
+  const label = `${nameByGroup[s.group] || s.label} ${num}`;
+  title.textContent = `席を編集：${label}`;
+  }
+
   castI.value = s.cast || '';
   boyI.value  = s.boy  || '';
   manI.value  = '';
