@@ -272,6 +272,9 @@ const wrap = $('#modalWrap'), title = $('#modalTitle');
 const castI = $('#cast'), boyI = $('#boy'), manI = $('#manual');
 const suggCast = $('#suggCast'), suggBoy = $('#suggBoy');
 let currentId = null;
+let lastFocus = null;
+const pageRoots = document.querySelectorAll('header, main'); // 背景側
+
 
 /* ================= UI生成 ================= */
 function cardHTML(s){
@@ -401,15 +404,32 @@ function formatRemain(ms){
 
 /* ================= モーダル操作 ================= */
 function openModal(id){
+  lastFocus = document.activeElement; // 戻す先を保存
   const s = seats.find(x=>x.id===id);
   currentId=id;
   title.textContent=`席を編集：${s.label}`;
   castI.value=s.cast||''; boyI.value=s.boy||''; manI.value='';
-  // 出勤者の候補を表示
+
+  // 背景を操作不可に
+  pageRoots.forEach(el => el.setAttribute('inert',''));
+
+  // モーダル表示（まず aria-hidden を外す → 表示）
+  wrap.removeAttribute('aria-hidden');
+  wrap.style.display='grid';
+
   fillSuggestionBlocks();
-  wrap.style.display='grid'; wrap.setAttribute('aria-hidden','false');
+  // フォーカスをモーダル内へ移す（次フレームで）
+  requestAnimationFrame(()=> castI.focus());
 }
-function closeModal(){ wrap.style.display='none'; wrap.setAttribute('aria-hidden','true'); }
+  
+function closeModal()
+    if (wrap.contains(document.activeElement)) {
+    (lastFocus && document.contains(lastFocus) ? lastFocus : document.getElementById('q') || document.body).focus();
+  }
+
+  // 背景を解放
+  pageRoots.forEach(el => el.removeAttribute('inert'));
+{ wrap.style.display='none'; wrap.setAttribute('aria-hidden','true'); }
 document.getElementById('close').addEventListener('click', closeModal);
 wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
 
@@ -471,8 +491,8 @@ if (reloadBtn) reloadBtn.addEventListener('click', loadStaff);
 
 /* ================== 控室（スタッフ） ================== */
 function parseCSV(str){
-  const rows=[]; let cur=[], val='', inQ=false;
-  for(let i=0;i<str.length;i++){
+  const rows=[];  cur=[], val='', inQ=false;
+  for( i=0;i<str.length;i++){
     const c=str[i];
     if(inQ){
       if(c=='"'){ if(str[i+1]=='"'){ val+='"'; i++; } else inQ=false; }
@@ -496,9 +516,9 @@ function parseStaffNamesFromCSV(csv){
   if(!rows.length) return [];
 
   // 先頭～10行で「従業員」を見出し検出。見つからなければ M列(0始まりで12)を使う
-  let headerRowIdx = -1, nameIdx = -1;
+   headerRowIdx = -1, nameIdx = -1;
   const MAX_SCAN = Math.min(rows.length, 10);
-  for (let i=0; i<MAX_SCAN; i++){
+  for ( i=0; i<MAX_SCAN; i++){
     const idx = rows[i].findIndex(c => String(c||'').trim() === '従業員');
     if (idx >= 0){ headerRowIdx = i; nameIdx = idx; break; }
   }
@@ -726,9 +746,9 @@ async function ensureInitialSeats(){
 // 既存の初期化ロジックと同じ配列を作成
 function getInitialSeatsArray(){
   const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
+  for( i=1;i<=8;i++) a.push({id:`R${i}`, label:`赤 ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
+  for( i=1;i<=7;i++) a.push({id:`B${i}`, label:`青 ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
+  for( i=1;i<=3;i++) a.push({id:`V${i}`, label:`VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
   return a;
 }
 
@@ -800,7 +820,7 @@ async function saveDutyRemote(name, duty){
 
 // 既存コードから呼べるように公開（toggle 時に使う）
 window.syncDuty = saveDutyRemote;
-
+window.syncSeat = saveSeatRemote;
 </script>
 
 
