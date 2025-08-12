@@ -8,6 +8,13 @@
   <link rel="icon" href="data:,">
   <style>
     /* ここに今のCSSを全部入れる */
+    .line1 .endAt{
+      font-weight:700;
+      font-size:12px;
+      opacity:.8;         /* 少し薄く */
+      margin-left:8px;    /* ラベルとの間隔 */
+    }
+
   </style>
 </head>
 
@@ -300,17 +307,21 @@ function displayLabel(s){
 
 /* ================= UI生成 ================= */
 function cardHTML(s){
-  // グループ→表示名の対応
   const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
-  const num = (s.id.match(/\d+/) || [''])[0];      // R7/B3/V2 → "7/3/2"
+  const num   = (s.id.match(/\d+/) || [''])[0];
   const label = `${nameByGroup[s.group] || s.label} ${num}`;
+  const endAt = s.end ? `～ ${formatClock(s.end)}` : '';
 
   return `
-    <div class="line1"><span>${label}</span></div>
+    <div class="line1">
+      <span>${label}</span>
+      <span class="endAt">${endAt}</span>
+    </div>
     <div class="timer">${s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')}</div>
     <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>
   `;
 }
+
 
 function addVipSeat(s){
   const d=document.createElement('div');
@@ -402,6 +413,9 @@ function tick(){
     const s = seats.find(x=>x.id===el.dataset.id);
     const t = el.querySelector('.timer');
     el.classList.remove('active','warn','danger');
+    const endAtEl = el.querySelector('.endAt');
+    if (endAtEl) endAtEl.textContent = s.end ? `～ ${formatClock(s.end)}` : '';
+
 
     if (!s.end){
       t.textContent = s.finished ? '終了' : '空';
@@ -428,6 +442,11 @@ function tick(){
 function formatRemain(ms){
   const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60;
   return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+
+function formatClock(ts){
+  const d = new Date(ts);
+  return d.toLocaleTimeString('ja-JP', { hour12:false, hour:'2-digit', minute:'2-digit' });
 }
 
 /* ================= モーダル操作 ================= */
