@@ -20,9 +20,12 @@
       /* ── タブ & 売上入力UI ─────────────────────────── */
   .top-tabs{display:inline-flex;gap:.5rem;margin-left:1rem}
   .top-tabs .tab{padding:.35rem .8rem;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer}
-  .top-tabs .tab.active{font-weight:700;box-shadow:0 1px 4px #0001}
+  /* タブの文字色を明示（上書き）*/
+  .top-tabs .tab{ color:#111 !important; }
+  .top-tabs .tab.active{ color:#111 !important; }
 
-  #salesSection{display:none;margin-top:12px}
+
+  salesSection{display:none;margin-top:12px}
   .sales-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
   .sales-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
   .sales-row{display:grid;grid-template-columns:1.2fr .6fr .6fr .8fr auto;gap:8px;align-items:center;margin:6px 0}
