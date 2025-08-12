@@ -34,11 +34,13 @@
   .sales-actions{display:flex;gap:8px;margin-top:10px}
   .sales-pill{padding:.35rem .6rem;border:1px dashed #cbd5e1;border-radius:999px;background:#f9fafb;cursor:pointer}
   .sales-total{font-size:1.1rem;font-weight:700;text-align:right;margin-top:.5rem}
-    
+
+  .page{ display:none; }
+  
   </style>
 
-
 </head>
+
 
 
 
@@ -232,7 +234,10 @@
   </div>
 </section>
 
-
+<section id="pageSales" class="page">
+    <!-- ここにあなたの売上入力UI（#salesSectionの中身）をそのまま移植 -->
+    …売上カード、ボーイ/キャスト選択、明細行、合計、送信ボタン…
+  </section>
 
 </main>
 
@@ -1161,6 +1166,25 @@ document.getElementById('submitSales').addEventListener('click', async ()=>{
 loadProducts();     // 商品マスタ
 updateSalesStaffOptions(); // 名簿（控室CSV 読み込み後にも再実行されます）
 buildLine();        // 1行目
+</script>
+<script>
+  function route(){
+    const page = (location.hash || '#timer').replace('#','');
+    const isTimer = page === 'timer';
+
+    document.getElementById('pageTimer').style.display = isTimer ? 'block' : 'none';
+    document.getElementById('pageSales').style.display = isTimer ? 'none'  : 'block';
+
+    document.getElementById('navTimer').classList.toggle('active', isTimer);
+    document.getElementById('navSales').classList.toggle('active', !isTimer);
+
+    // 画面切替時に上へ
+    window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
+  }
+
+  window.addEventListener('hashchange', route);
+  // 初期表示
+  route();
 </script>
 
 
