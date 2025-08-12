@@ -11,9 +11,11 @@
     .line1 .endAt{
       font-weight:700;
       font-size:12px;
-      opacity:.8;         /* 少し薄く */
-      margin-left:8px;    /* ラベルとの間隔 */
-    }
+      opacity:.8;
+      margin-left:8px;
+      white-space:nowrap; /* 折返し防止 */
+}
+
 
   </style>
 </head>
@@ -444,8 +446,23 @@ function formatRemain(ms){
   return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
 }
 
-function formatClock(ts){
-  const d = new Date(ts);
+function formatClock(ts) {
+  // 正規化: number / string(数字) / Firestore Timestamp を全部 ms にそろえる
+  let ms = null;
+  if (ts == null) {
+    return '';
+  } else if (typeof ts === 'number') {
+    ms = ts;
+  } else if (typeof ts === 'string' && /^\d+$/.test(ts)) {
+    ms = Number(ts);
+  } else if (typeof ts === 'object' && typeof ts.toMillis === 'function') {
+    ms = ts.toMillis();                           // Firestore Timestamp
+  } else if (typeof ts === 'object' && typeof ts.seconds === 'number') {
+    ms = ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6); // {seconds,nanoseconds}
+  }
+
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleTimeString('ja-JP', { hour12:false, hour:'2-digit', minute:'2-digit' });
 }
 
