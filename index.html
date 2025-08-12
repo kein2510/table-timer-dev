@@ -992,7 +992,7 @@ const SALES_GAS_URL = '<<上で発行したWebアプリURL>>';
 /* ============ 売上入力：DOM参照 ============ */
 const tabTimerBtn = document.getElementById('tabTimer');
 const tabSalesBtn = document.getElementById('tabSales');
-const timerSection = document.getElementById('floor').parentElement; // <section class="floor"> を含むmain配下
+const floorSection     = document.getElementById('floor');
 const backstageSection = document.querySelector('.backstage');
 const salesSection = document.getElementById('salesSection');
 
@@ -1005,10 +1005,18 @@ let PRODUCTS = []; // {name, price}
 let LINE_SEQ = 0;
 
 /* ============ タブ切替 ============ */
-function showTimer(){ tabTimerBtn.classList.add('active'); tabSalesBtn.classList.remove('active');
-  timerSection.style.display='block'; backstageSection.style.display='block'; salesSection.style.display='none'; }
-function showSales(){ tabSalesBtn.classList.add('active'); tabTimerBtn.classList.remove('active');
-  timerSection.style.display='none'; backstageSection.style.display='none'; salesSection.style.display='block'; }
+ function showTimer(){
+   tabTimerBtn.classList.add('active'); tabSalesBtn.classList.remove('active');
+   floorSection.style.display='block';
+   backstageSection.style.display='block';
+   salesSection.style.display='none';
+ }
+ function showSales(){
+   tabSalesBtn.classList.add('active'); tabTimerBtn.classList.remove('active');
+   floorSection.style.display='none';
+   backstageSection.style.display='none';
+   salesSection.style.display='block';
+ }
 tabTimerBtn.addEventListener('click', showTimer);
 tabSalesBtn.addEventListener('click', showSales);
 
