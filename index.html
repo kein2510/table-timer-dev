@@ -204,8 +204,9 @@
       </div>
     </div>
     <div id="roster" class="roster"></div>
-
-    <section id="salesSection">
+  </section>
+  
+  <section id="salesSection">
   <div class="sales-card">
     <div class="sales-grid">
       <label>ボーイ
@@ -416,7 +417,7 @@ function render(){
   });
 
   // 状態色・タイマー表示・検索ハイライト
-  document.querySelectorAll('[data-id]').forEach(el=>{
+  floor.querySelectorAll('[data-id]').forEach(el=>{
     const s = seats.find(x => x.id === el.dataset.id);
     const t = el.querySelector('.timer');
 
@@ -458,7 +459,7 @@ window.renderRoster  = renderRoster;
   
 function tick(){
   nowEl.textContent = new Date().toLocaleString('ja-JP',{hour12:false});
-  document.querySelectorAll('[data-id]').forEach(el=>{
+  floor.querySelectorAll('[data-id]').forEach(el=>{
     const s = seats.find(x=>x.id===el.dataset.id);
     const t = el.querySelector('.timer');
     el.classList.remove('active','warn','danger');
@@ -684,6 +685,7 @@ async function loadStaff(){
     fillDatalists();
     renderRoster();
     console.log(`[Roster] CSV読込: ${names.length}件`);
+    updateSalesStaffOptions(); // ←これを足す
   }catch(e){
     console.error('スタッフ読み込み失敗', e);
     const cache = JSON.parse(localStorage.getItem('staff.cache.names') || '[]');
@@ -1049,7 +1051,7 @@ window.updateSalesStaffOptions = updateSalesStaffOptions;
 function buildLine(init){
   const id = ++LINE_SEQ;
   const row = document.createElement('div');
-  row.className = 'sales-row'; row.dataset.id = id;
+  row.className = 'sales-row'; row.dataset.lineId = id; // 衝突回避
 
   const sel = document.createElement('select');
   sel.innerHTML = `<option value="">（商品を選択）</option>` + PRODUCTS.map(p=>`<option data-price="${p.price}" value="${p.name}">${p.name}</option>`).join('');
