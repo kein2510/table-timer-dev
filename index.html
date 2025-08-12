@@ -1,242 +1,189 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>卓タイマー管理 + 控室（スプシ連携）</title>
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="data:," />
   <style>
-    /* ここに全部のCSSを1つにまとめる（分けたいなら <style> を2つでもOKだが両方 head 内に） */
-    /* …既存CSS… */
-
-    /* 終了時刻の見た目 */
-    .line1 .endAt{
-      font-weight:700;
-      font-size:18px;
-      opacity:.8;
-      margin-left:10px;
-      white-space:nowrap;
+    :root{
+      --bg:#f4f6f8; --panel:#fff; --text:#111;
+      --red:#e74c3c; --blue:#2e86de; --vip:#9b59b6;
+      --ok:#e7ffe7; --warn:#fff3cd; --danger:#ffe0e0; --gold:#ffdd57;
+      --staff-on-bg:#e6f4ea; --staff-on-border:#34a853; --staff-on-text:#0b6630;
+      --staff-busy-bg:#fff3cd; --staff-busy-border:#f59e0b; --staff-busy-text:#7a4e00;
+      --staff-off-bg:#f1f5f9; --staff-off-border:#cbd5e1; --staff-off-text:#94a3b8;
     }
-      /* ── タブ & 売上入力UI ─────────────────────────── */
-  .top-tabs{display:inline-flex;gap:.5rem;margin-left:1rem}
-  .top-tabs .tab{padding:.35rem .8rem;border:1px solid #ddd;border-radius:999px;background:#fff;cursor:pointer}
-  /* タブの文字色を明示（上書き）*/
-  .top-tabs .tab{ color:#111 !important; }
-  .top-tabs .tab.active{ color:#111 !important; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;background:#1f1f23;color:#fff;position:sticky;top:0;z-index:5}
+    header h1{margin:0;font-size:18px}
+    .toolbar{display:flex;gap:8px;align-items:center}
+    .toolbar input{padding:8px;border-radius:8px;border:1px solid #ccc;min-width:220px}
+    .now{opacity:.85}
 
+    /* タブ */
+    .top-tabs{display:inline-flex;gap:.5rem;margin-left:1rem}
+    .top-tabs .tab{
+      padding:.35rem .8rem;border:1px solid #ddd;border-radius:999px;background:#fff;
+      color:#111 !important;text-decoration:none;display:inline-block
+    }
+    .top-tabs .tab.active{box-shadow:0 1px 4px #0001;font-weight:700}
 
-  salesSection{display:none;margin-top:12px}
-  .sales-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
-  .sales-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
-  .sales-row{display:grid;grid-template-columns:1.2fr .6fr .6fr .8fr auto;gap:8px;align-items:center;margin:6px 0}
-  .sales-row select,.sales-row input{padding:.45rem;border:1px solid #dcdfe3;border-radius:.6rem}
-  .sales-yen{min-width:6em;text-align:right;padding:.45rem .6rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:.6rem}
-  .sales-actions{display:flex;gap:8px;margin-top:10px}
-  .sales-pill{padding:.35rem .6rem;border:1px dashed #cbd5e1;border-radius:999px;background:#f9fafb;cursor:pointer}
-  .sales-total{font-size:1.1rem;font-weight:700;text-align:right;margin-top:.5rem}
+    main{padding:12px;display:block}
+    .page{display:none}
 
-  .page{ display:none; }
-  
+    /* Floor */
+    .floor{
+      position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
+      overflow:hidden;padding:4px;min-height:750px;
+    }
+    .legend{position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;opacity:.9;background:#fff9;border-radius:8px;padding:6px}
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
+    .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.danger{background:var(--danger)} .dot.empty{background:#eee}
+    .seat{
+      position:absolute;background:#fff;border:2px solid #bbb;border-radius:10px;
+      padding:6px;min-height:64px;min-width:80px;cursor:pointer;
+      display:flex;flex-direction:column;gap:4px;transition:transform .05s ease, box-shadow .1s, background .2s;
+      box-shadow:0 1px 0 #0001;
+    }
+    .seat:hover{transform:translateY(-1px)}
+    .seat.red{border-color:var(--red)}
+    .seat.blue{border-color:var(--blue)}
+    .seat.active{background:var(--ok)} .seat.warn{background:var(--warn)} .seat.danger{background:var(--danger)}
+    .seat.highlight{box-shadow:0 0 0 3px var(--gold) inset}
+    .line1{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+    .line1 .endAt{font-weight:700;font-size:18px;opacity:.8;margin-left:10px;white-space:nowrap}
+    .timer{font-size:18px;font-weight:800}
+    .meta{font-size:18px;line-height:1.25;opacity:.95;overflow-wrap:anywhere}
+
+    /* VIP row */
+    .vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
+    .vipSeat{
+      background:#fff;border:2px dashed var(--vip);border-radius:12px;
+      padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px;
+    }
+    .vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
+    .vipSeat .timer{font-size:22px}
+
+    /* Backstage */
+    .backstage{background:var(--panel);border:1px solid #ddd;border-radius:12px;padding:10px;margin-top:12px}
+    .backstage h2{margin:0 0 8px;font-size:16px}
+    .legend-staff{font-size:12px;opacity:.8;display:flex;gap:12px;align-items:center}
+    .dotS{width:10px;height:10px;border-radius:50%;display:inline-block}
+    .dotS.on{background:#145768} .dotS.busy{background:#6b480a} .dotS.off{background:#9ca3af}
+    .roster{display:flex;flex-wrap:wrap;gap:8px}
+    .staffChip{padding:6px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-size:14px}
+    .staffChip.on{background:var(--staff-on-bg);border:1px solid var(--staff-on-border);color:var(--staff-on-text);box-shadow:0 0 0 1px #0e3d49 inset}
+    .staffChip.busy{background:var(--staff-busy-bg);border:1px solid var(--staff-busy-border);color:var(--staff-busy-text);box-shadow:0 0 0 1px #3a2706 inset}
+    .staffChip.off{background:var(--staff-off-bg);border:1px solid var(--staff-off-border);color:var(--staff-off-text)}
+    .staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:#475569}
+
+    /* Modal */
+    .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
+    .modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
+    .modal h3{margin:0 0 10px 0}
+    .row{display:flex;gap:8px;margin:8px 0}
+    .row input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+    .btns{display:flex;flex-wrap:wrap;gap:8px}
+    button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;background:#111;color:#fff}
+    button.secondary{background:#e5e7eb;color:#111}
+    button.danger{background:#dc2626}
+    .chips button{background:#fff;border:1px solid #111;color:#111}
+    .label{font-weight:700;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1;align-self:center;white-space:nowrap}
+    .label-extend{color:var(--vip);border:1px solid var(--vip);background:#f7ecff}
+    .twoCols{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+    .suggBlock{display:flex;flex-direction:column;gap:4px;flex:1}
+    .suggTitle{font-size:12px;color:#6b7280}
+    .suggList{display:flex;flex-wrap:wrap;gap:6px}
+    .suggList .staffChip{padding:4px 8px;font-size:12px}
+
+    /* 売上入力 */
+    #salesSection{margin-top:12px}
+    .sales-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+    .sales-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+    .sales-row{display:grid;grid-template-columns:1.2fr .6fr .6fr .8fr auto;gap:8px;align-items:center;margin:6px 0}
+    .sales-row select,.sales-row input{padding:.45rem;border:1px solid #dcdfe3;border-radius:.6rem}
+    .sales-yen{min-width:6em;text-align:right;padding:.45rem .6rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:.6rem}
+    .sales-actions{display:flex;gap:8px;margin-top:10px}
+    .sales-pill{padding:.35rem .6rem;border:1px dashed #cbd5e1;border-radius:999px;background:#f9fafb;cursor:pointer}
+    .sales-total{font-size:1.1rem;font-weight:700;text-align:right;margin-top:.5rem}
+
+    @media(max-width:900px){
+      .toolbar input{min-width:160px}
+      .seat{min-width:72px;min-height:60px}
+    }
   </style>
-
 </head>
 
-
-
-
-  
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>卓タイマー管理 + 控室（スプシ連携）</title>
-<style>
-  :root{
-    --bg:#f4f6f8; --panel:#fff; --text:#111;
-    --red:#e74c3c; --blue:#2e86de; --vip:#9b59b6;
-    --ok:#e7ffe7; --warn:#fff3cd; --danger:#ffe0e0; --gold:#ffdd57;
-    --staff-on-bg:#e6f4ea;      /* 出勤(空き) 背景 */
-    --staff-on-border:#34a853;  /* 出勤(空き) 枠線 */
-    --staff-on-text:#0b6630;    /* 出勤(空き) 文字 */
-
-    --staff-busy-bg:#fff3cd;    /* 接客中 背景 */
-    --staff-busy-border:#f59e0b;/* 接客中 枠線 */
-    --staff-busy-text:#7a4e00;  /* 接客中 文字 */
-
-    --staff-off-bg:#f1f5f9;     /* 非出勤 背景 */
-    --staff-off-border:#cbd5e1; /* 非出勤 枠線 */
-    --staff-off-text:#94a3b8;   /* 非出勤 文字 */
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
-  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;background:#1f1f23;color:#fff;position:sticky;top:0;z-index:5}
-  header h1{margin:0;font-size:18px}
-  .toolbar{display:flex;gap:8px;align-items:center}
-  .toolbar input{padding:8px;border-radius:8px;border:1px solid #ccc;min-width:220px}
-  .now{opacity:.85}
-  main{padding:12px;display:grid;gap:12px}
-  /* Floor */
-  .floor{
-    position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
-    overflow:hidden; padding:4px; min-height:750px;
-  }
-  .legend{position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;opacity:.9;background:#fff9;border-radius:8px;padding:6px}
-  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
-  .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.danger{background:var(--danger)} .dot.empty{background:#eee}
-  .seat{
-    position:absolute;background:#fff;border:2px solid #bbb;border-radius:10px;
-    padding:6px;min-height:64px;min-width:80px;cursor:pointer;
-    display:flex;flex-direction:column;gap:4px;transition:transform .05s ease, box-shadow .1s, background .2s;
-    box-shadow:0 1px 0 #0001;
-  }
-  .seat:hover{transform:translateY(-1px)}
-  .seat.red{border-color:var(--red)}
-  .seat.blue{border-color:var(--blue)}
-  .seat.active{background:var(--ok)} .seat.warn{background:var(--warn)} .seat.danger{background:var(--danger)}
-  .seat.highlight{box-shadow:0 0 0 3px var(--gold) inset}
-  .line1{display:flex;justify-content:space-between;align-items:center;font-weight:700}
-  .timer{font-size:18px;font-weight:800}
-  .meta{font-size:18px;line-height:1.25;opacity:.95;overflow-wrap:anywhere}
-
-  /* VIP row */
-  .vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
-  .vipSeat{
-    background:#fff; border:2px dashed var(--vip); border-radius:12px;
-    padding:10px; min-height:100px; flex:1; cursor:pointer;
-    display:flex; flex-direction:column; gap:6px;
-  }
-  .vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
-  .vipSeat .timer{font-size:22px}
-
-  /* Backstage (控室) */
-  .backstage{background:var(--panel); border:1px solid #ddd; border-radius:12px; padding:10px;}
-  .backstage h2{margin:0 0 8px; font-size:16px}
-  .legend-staff{font-size:12px; opacity:.8; display:flex; gap:12px; align-items:center}
-  .dotS{width:10px; height:10px; border-radius:50%; display:inline-block}
-  .dotS.on{background:#145768}      /* 出勤・空き */
-  .dotS.busy{background:#6b480a}    /* 接客中 */
-  .dotS.off{background:#9ca3af}     /* 休み */
-  .roster{display:flex; flex-wrap:wrap; gap:8px}
-  .staffChip{
-    padding:6px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#f8fafc;
-    cursor:pointer; font-size:14px;
-  }
-  .staffChip.cast{border-color:#6b480a}
-  .staffChip.boy{border-color:#60a5fa}
-  .staffChip.on,
-  .suggList .staffChip.on{
-    background:var(--staff-on-bg);
-    border:1px solid var(--staff-on-border);
-    color:var(--staff-on-text);
-    box-shadow:0 0 0 1px #0e3d49 inset;
-  }
-  .staffChip.on:hover{ filter:brightness(0.95); }
-  .staffChip.busy,
-  .suggList .staffChip.busy{
-    background:var(--staff-busy-bg);
-    border:1px solid var(--staff-busy-border);
-    color:var(--staff-busy-text);
-    box-shadow:0 0 0 1px #3a2706 inset;
-  }
-  .staffChip.off,
-  .suggList .staffChip.off{
-    background:var(--staff-off-bg);
-    border:1px solid var(--staff-off-border);
-    color:var(--staff-off-text);
-  }
-  .staffSectionTitle{flex-basis:100%; margin-top:6px; font-size:12px; color:#475569}
-
-  /* Modal */
-  .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
-  .modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
-  .modal h3{margin:0 0 10px 0}
-  .row{display:flex;gap:8px;margin:8px 0}
-  .row input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
-  .btns{display:flex;flex-wrap:wrap;gap:8px}
-  button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;background:#111;color:#fff}
-  button.secondary{background:#e5e7eb;color:#111}
-  button.danger{background:#dc2626}
-  .chips button{background:#fff;border:1px solid #111;color:#111}
-  .label{font-weight:700;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1;align-self:center;white-space:nowrap;}
-  .label-extend{color: var(--vip);border: 1px solid var(--vip);background: #f7ecff;}
-  .twoCols{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-  .suggBlock{display:flex; flex-direction:column; gap:4px; flex:1;}
-  .suggTitle{font-size:12px; color:#6b7280}
-  .suggList{display:flex; flex-wrap:wrap; gap:6px}
-  .suggList .staffChip{padding:4px 8px; font-size:12px}
-
-  @media(max-width:900px){
-    .toolbar input{min-width:160px}
-    .seat{min-width:72px;min-height:60px}
-  }
-</style>
-</head>
 <body>
 <header>
   <h1>卓タイマー管理</h1>
   <div class="toolbar">
-    <input id="q" type="search" placeholder="キャスト名で検索（例: あや）">
+    <input id="q" type="search" placeholder="キャスト名で検索（例: あや）" />
     <div class="now" id="now"></div>
   </div>
   <nav class="top-tabs">
-    <button id="tabTimer" class="tab active">卓タイマー管理</button>
-    <button id="tabSales" class="tab">売上入力</button>
+    <a id="navTimer" class="tab active" href="#timer">卓タイマー管理</a>
+    <a id="navSales" class="tab" href="#sales">売上入力</a>
   </nav>
-
 </header>
 
 <main>
-  <section class="floor" id="floor">
-    <div class="legend">
-      <span><i class="dot empty"></i>空席</span>
-      <span><i class="dot ok"></i>計時中</span>
-      <span><i class="dot warn"></i>残り10分未満</span>
-      <span><i class="dot danger"></i>残り3分未満</span>
-    </div>
-    <div class="vipRow" id="vip"></div>
-  </section>
 
-  <!-- 控室 -->
-  <section class="backstage">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
-      <h2>控室（スプレッドシート連携）</h2>
-      <div style="display:flex; align-items:center; gap:12px">
-        <div class="legend-staff">
-          <span><i class="dotS on"></i> 出勤（空き）</span>
-          <span><i class="dotS busy"></i> 接客中</span>
-          <span><i class="dotS off"></i> 休み/退勤</span>
-        </div>
-        <label style="font-size:12px"><input type="checkbox" id="editDuty"> 出勤を編集</label>
-        <button id="reloadStaff" class="secondary" type="button">更新</button>
+  <!-- ページ①：タイマー -->
+  <section id="pageTimer" class="page">
+    <section class="floor" id="floor">
+      <div class="legend">
+        <span><i class="dot empty"></i>空席</span>
+        <span><i class="dot ok"></i>計時中</span>
+        <span><i class="dot warn"></i>残り10分未満</span>
+        <span><i class="dot danger"></i>残り3分未満</span>
       </div>
-    </div>
-    <div id="roster" class="roster"></div>
+      <div class="vipRow" id="vip"></div>
+    </section>
+
+    <section class="backstage">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <h2>控室（スプレッドシート連携）</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="legend-staff">
+            <span><i class="dotS on"></i> 出勤（空き）</span>
+            <span><i class="dotS busy"></i> 接客中</span>
+            <span><i class="dotS off"></i> 休み/退勤</span>
+          </div>
+          <label style="font-size:12px"><input type="checkbox" id="editDuty" /> 出勤を編集</label>
+          <button id="reloadStaff" class="secondary" type="button">更新</button>
+        </div>
+      </div>
+      <div id="roster" class="roster"></div>
+    </section>
   </section>
-  
-  <section id="salesSection">
-  <div class="sales-card">
-    <div class="sales-grid">
-      <label>ボーイ
-        <select id="boySelect"></select>
-      </label>
-      <label>キャスト（複数可）
-        <select id="castSelect" multiple size="6"></select>
-      </label>
-    </div>
 
-    <div id="salesLines"></div>
+  <!-- ページ②：売上入力 -->
+  <section id="pageSales" class="page">
+    <section id="salesSection">
+      <div class="sales-card">
+        <div class="sales-grid">
+          <label>ボーイ
+            <select id="boySelect"></select>
+          </label>
+          <label>キャスト（複数可）
+            <select id="castSelect" multiple size="6"></select>
+          </label>
+        </div>
 
-    <div class="sales-actions">
-      <button id="addSalesLine" type="button" class="sales-pill">＋ 明細行を追加</button>
-      <button id="submitSales"  type="button" class="sales-pill">送信</button>
-      <button id="reloadSales"  type="button" class="sales-pill">更新（商品・名簿）</button>
-    </div>
+        <div id="salesLines"></div>
 
-    <div class="sales-total">合計：<span id="salesTotal">¥0</span></div>
-  </div>
-</section>
+        <div class="sales-actions">
+          <button id="addSalesLine" type="button" class="sales-pill">＋ 明細行を追加</button>
+          <button id="submitSales"  type="button" class="sales-pill">送信</button>
+          <button id="reloadSales"  type="button" class="sales-pill">更新（商品・名簿）</button>
+        </div>
 
-<section id="pageSales" class="page">
-    <!-- ここにあなたの売上入力UI（#salesSectionの中身）をそのまま移植 -->
-    …売上カード、ボーイ/キャスト選択、明細行、合計、送信ボタン…
+        <div class="sales-total">合計：<span id="salesTotal">¥0</span></div>
+      </div>
+    </section>
   </section>
 
 </main>
@@ -246,8 +193,8 @@
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="modalTitle">卓を編集</h3>
     <div class="row">
-      <input id="cast" placeholder="キャスト（カンマ区切り）" list="castList">
-      <input id="boy" placeholder="担当ボーイ" list="boyList">
+      <input id="cast" placeholder="キャスト（カンマ区切り）" list="castList" />
+      <input id="boy" placeholder="担当ボーイ" list="boyList" />
       <datalist id="castList"></datalist>
       <datalist id="boyList"></datalist>
     </div>
@@ -269,7 +216,6 @@
       </div>
     </div>
 
-    <!-- 出勤メンバーのクイック選択 -->
     <div class="row" style="gap:12px">
       <div class="suggBlock">
         <div class="suggTitle">出勤キャスト（タップで追加）</div>
@@ -282,7 +228,7 @@
     </div>
 
     <div class="row twoCols">
-      <input id="manual" inputmode="numeric" placeholder="分を入力 → 開始">
+      <input id="manual" inputmode="numeric" placeholder="分を入力 → 開始" />
       <button id="start" type="button">開始</button>
     </div>
     <div class="row btns" style="justify-content:space-between">
@@ -296,580 +242,234 @@
 </div>
 
 <script>
-/* ================= スタッフ（スプレッドシート）設定 ================= */
-/* 手順:
-   1) スプシで「ファイル → ウェブに公開」を選び、スタッフ表のシートを CSV で公開
-   2) 生成された URL を下の STAFF_CSV_URL に貼り付ける
-   3) 列は「名前 / 役割(キャスト|ボーイ) / 出勤(1|0 or TRUE|FALSE)」を推奨
-*/
-const STAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRyaTH8TVNV12iTbB9I2pL65t3ImLMB4-nA2--vaHU5Gc1ok1sCSEw1FUSDfZlVO0Cs8WWMVzF_7MaR/pub?gid=1348648909&single=true&output=csv'; // ここに直接文字列を入れてもOK
-// M列（従業員）を読む。ヘッダー名が見つからない時の保険で列番号(0始まり)も指定
-const STAFF_NAME_HEADER = '従業員';
-const STAFF_NAME_COL_FALLBACK = 12; // M列
-
-// 読み込んだ人リスト（{name, duty}）と、出勤フラグの保存場所（localStorage）
+/* ================= スタッフ（スプシ） ================= */
+const STAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRyaTH8TVNV12iTbB9I2pL65t3ImLMB4-nA2--vaHU5Gc1ok1sCSEw1FUSDfZlVO0Cs8WWMVzF_7MaR/pub?gid=1348648909&single=true&output=csv';
 let staff = []; 
 let dutyMap = JSON.parse(localStorage.getItem('staff.duty.map') || '{}');
+window.staff = staff; window.dutyMap = dutyMap;
 
-window.staff   = staff;
-window.dutyMap = dutyMap;
-
-/* ================= 席データ（localStorage保持） ================= */
-const seats = (() => {
-  const saved = localStorage.getItem('seats.v2');
-  if (saved) {
-    const arr = JSON.parse(saved);
-    arr.forEach(s => { if (s.finished === undefined) s.finished = false; });
-    return arr;
-  }
-  const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`VIP ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`ノーマル ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`超VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
-  return a;
-})();
+/* ================= 席データ ================= */
+const seats = (()=>{const saved=localStorage.getItem('seats.v2');if(saved){const arr=JSON.parse(saved);arr.forEach(s=>{if(s.finished===undefined)s.finished=false});return arr;}
+const a=[];for(let i=1;i<=8;i++)a.push({id:`R${i}`,label:`VIP ${i}`,group:'red',cast:'',boy:'',end:null,finished:false});
+for(let i=1;i<=7;i++)a.push({id:`B${i}`,label:`ノーマル ${i}`,group:'blue',cast:'',boy:'',end:null,finished:false});
+for(let i=1;i<=3;i++)a.push({id:`V${i}`,label:`超VIP ${i}`,group:'vip',cast:'',boy:'',end:null,finished:false});return a;})();
 const save = () => localStorage.setItem('seats.v2', JSON.stringify(seats));
 
-/* --------- 座席座標（%） --------- */
-const POS = {
-  R8:{top:15,left:25,width:13}, R7:{top:15,left:39,width:13},
-  R6:{top:15,left:53,width:13}, R5:{top:15,left:67,width:13},
-  R1:{top:30,left:67,width:13}, R2:{top:45,left:67,width:13},
-  R3:{top:30,left:18,width:13}, R4:{top:45,left:18,width:13},
-  B1:{top:22,left:87,width:10}, B2:{top:36,left:87,width:10}, B3:{top:50,left:87,width:10},
-  B4:{top:7,left:2,width:10},  B5:{top:7,left:12,width:10},
-  B6:{top:65,left:7,width:11}, B7:{top:65,left:84,width:11}
-};
+/* --------- 座席座標 --------- */
+const POS={R8:{top:15,left:25,width:13},R7:{top:15,left:39,width:13},R6:{top:15,left:53,width:13},R5:{top:15,left:67,width:13},
+R1:{top:30,left:67,width:13},R2:{top:45,left:67,width:13},R3:{top:30,left:18,width:13},R4:{top:45,left:18,width:13},
+B1:{top:22,left:87,width:10},B2:{top:36,left:87,width:10},B3:{top:50,left:87,width:10},B4:{top:7,left:2,width:10},B5:{top:7,left:12,width:10},B6:{top:65,left:7,width:11},B7:{top:65,left:84,width:11}};
 
 /* ================= 要素参照 ================= */
-const $ = s=>document.querySelector(s);
-const floor = $('#floor'), vipWrap = $('#vip'), nowEl = $('#now');
-const rosterBox = $('#roster');
-const wrap = $('#modalWrap'), title = $('#modalTitle');
-const castI = $('#cast'), boyI = $('#boy'), manI = $('#manual');
-const suggCast = $('#suggCast'), suggBoy = $('#suggBoy');
-let currentId = null;
-let lastFocus = null;
-const pageRoots = document.querySelectorAll('header, main'); // 背景側
-
-// 表示用の席ラベル（グループ名→新名称 + 番号）を作る
-function displayLabel(s){
-  const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
-  const num = (s.id.match(/\d+/) || [''])[0];   // R7/B3/V2 → "7/3/2"
-  return `${nameByGroup[s.group] || s.label} ${num}`;
-}
-
-
-
-
+const $=s=>document.querySelector(s);
+const floor=$('#floor'), vipWrap=$('#vip'), nowEl=$('#now');
+const wrap=$('#modalWrap'), title=$('#modalTitle');
+const castI=$('#cast'), boyI=$('#boy'), manI=$('#manual');
+const suggCast=$('#suggCast'), suggBoy=$('#suggBoy');
+let currentId=null, lastFocus=null;
+const pageRoots=document.querySelectorAll('header, main');
 
 /* ================= UI生成 ================= */
 function cardHTML(s){
-  const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
-  const num   = (s.id.match(/\d+/) || [''])[0];
-  const label = `${nameByGroup[s.group] || s.label} ${num}`;
-  const endAt = s.end ? `～ ${formatClock(s.end)}` : '';
-
+  const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'};
+  const num=(s.id.match(/\d+/)||[''])[0];
+  const label=`${nameByGroup[s.group]||s.label} ${num}`;
+  const endAt=s.end?`～ ${formatClock(s.end)}`:'';
   return `
-    <div class="line1">
-      <span>${label}</span>
-      <span class="endAt">${endAt}</span>
-    </div>
-    <div class="timer">${s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')}</div>
-    <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>
-  `;
+    <div class="line1"><span>${label}</span><span class="endAt">${endAt}</span></div>
+    <div class="timer">${s.end?formatRemain(s.end-Date.now()):(s.finished?'終了':'空')}</div>
+    <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>`;
 }
-
-
-function addVipSeat(s){
-  const d=document.createElement('div');
-  d.className='vipSeat';
-  d.dataset.id=s.id;
-  d.innerHTML=cardHTML(s);
-  d.addEventListener('click', ()=>openModal(s.id));
-  vipWrap.appendChild(d);
-}
-function addSeatToFloor(s){
-  const pos = POS[s.id];
-  if(!pos) return;
-  const d=document.createElement('div');
-  d.className=`seat ${s.group}`;
-  d.dataset.id=s.id;
-  d.style.top=pos.top+'%';
-  d.style.left=pos.left+'%';
-  d.style.width=pos.width+'%';
-  d.innerHTML=cardHTML(s);
-  d.addEventListener('click', () => openModal(s.id));
-  floor.appendChild(d);
-}
+function addVipSeat(s){const d=document.createElement('div');d.className='vipSeat';d.dataset.id=s.id;d.innerHTML=cardHTML(s);d.addEventListener('click',()=>openModal(s.id));vipWrap.appendChild(d);}
+function addSeatToFloor(s){const pos=POS[s.id];if(!pos)return;const d=document.createElement('div');d.className=`seat ${s.group}`;d.dataset.id=s.id;d.style.top=pos.top+'%';d.style.left=pos.left+'%';d.style.width=pos.width+'%';d.innerHTML=cardHTML(s);d.addEventListener('click',()=>openModal(s.id));floor.appendChild(d);}
 
 /* ================= レイアウト補正 ================= */
-function resizeFloor(){
-  const pad = 12; // VIPの下の余白（px）
-  const needed = vipWrap.offsetTop + vipWrap.offsetHeight + pad;
-  floor.style.height = needed + 'px';
-}
+function resizeFloor(){const pad=12;const needed=vipWrap.offsetTop+vipWrap.offsetHeight+pad;$('#floor').style.height=needed+'px';}
 
 /* ================= 描画 ================= */
 function render(){
-  // いったん全部作り直し
   floor.querySelectorAll('.seat').forEach(n=>n.remove());
-  vipWrap.innerHTML = '';
+  vipWrap.innerHTML='';
+  const q=$('#q').value.trim();
 
-  const q = $('#q').value.trim();
+  seats.forEach(s=>{ if(s.group==='vip') addVipSeat(s); else addSeatToFloor(s); });
 
-  // 要素を配置（VIPは下段、他はfloor上）
-  seats.forEach(s=>{
-    if (s.group === 'vip') addVipSeat(s);
-    else addSeatToFloor(s);
-  });
-
-  // 状態色・タイマー表示・検索ハイライト
   floor.querySelectorAll('[data-id]').forEach(el=>{
-    const s = seats.find(x => x.id === el.dataset.id);
-    const t = el.querySelector('.timer');
-
+    const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.timer');
     el.classList.remove('active','warn','danger','highlight');
-
-    if (s.end){
-      const r = s.end - Date.now();
-      if (r > 0){
-        // 計時中
-        t.textContent = formatRemain(r);
-        el.classList.add('active');
-        if (r <= 3*60*1000) el.classList.add('danger');
-        else if (r <= 10*60*1000) el.classList.add('warn');
-      } else {
-        // 時間切れ → 終了
-        s.end = null;
-        s.finished = true;
-        save();
-        t.textContent = '終了';
-      }
-    } else {
-      // タイマーが無いときは「終了」or「空」
-      t.textContent = s.finished ? '終了' : '空';
-    }
-
-    // 検索ハイライト
-    if (q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
+    if(s.end){
+      const r=s.end-Date.now();
+      if(r>0){ t.textContent=formatRemain(r); el.classList.add('active'); if(r<=3*60*1000)el.classList.add('danger'); else if(r<=10*60*1000)el.classList.add('warn'); }
+      else{ s.end=null; s.finished=true; save(); t.textContent='終了'; }
+    }else{ t.textContent=s.finished?'終了':'空'; }
+    if(q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
   });
-
-  resizeFloor();
-  renderRoster(); // 控室も更新
+  resizeFloor(); renderRoster();
 }
+window.seats=seats; window.render=render;
 
-// 既存スクリプトの一番最後に追加
-window.seats  = seats;   // module から参照するため公開
-window.render = render;  // module から再描画呼び出しに使う
-window.fillDatalists = fillDatalists;
-window.renderRoster  = renderRoster;
-  
+/* ================= タイマー進行 ================= */
 function tick(){
-  nowEl.textContent = new Date().toLocaleString('ja-JP',{hour12:false});
+  nowEl.textContent=new Date().toLocaleString('ja-JP',{hour12:false});
   floor.querySelectorAll('[data-id]').forEach(el=>{
-    const s = seats.find(x=>x.id===el.dataset.id);
-    const t = el.querySelector('.timer');
+    const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.timer');
     el.classList.remove('active','warn','danger');
-    const endAtEl = el.querySelector('.endAt');
-    if (endAtEl) endAtEl.textContent = s.end ? `～ ${formatClock(s.end)}` : '';
-
-
-    if (!s.end){
-      t.textContent = s.finished ? '終了' : '空';
-      return;
-    }
-
-    const r = s.end-Date.now();
-    if(r<=0){ 
-      s.end=null; 
-      s.finished = true;
-      save(); t.textContent='終了'; 
-      return; 
-    }
-
-    t.textContent = formatRemain(r);
-    el.classList.add('active');
-    if(r<=3*60*1000) el.classList.add('danger');
-    else if(r<=10*60*1000) el.classList.add('warn');
+    const endAtEl=el.querySelector('.endAt'); if(endAtEl) endAtEl.textContent=s.end?`～ ${formatClock(s.end)}`:'';
+    if(!s.end){ t.textContent=s.finished?'終了':'空'; return; }
+    const r=s.end-Date.now(); if(r<=0){ s.end=null; s.finished=true; save(); t.textContent='終了'; return; }
+    t.textContent=formatRemain(r); el.classList.add('active');
+    if(r<=3*60*1000) el.classList.add('danger'); else if(r<=10*60*1000) el.classList.add('warn');
   });
-
-  // 接客中の判定が変わる可能性があるので控室も軽く再描画
-  if (staff.length) renderRoster();
+  if(staff.length) renderRoster();
 }
-function formatRemain(ms){
-  const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60;
-  return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
-}
+function formatRemain(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
+function formatClock(ts){let ms=null;if(ts==null)return'';if(typeof ts==='number')ms=ts;else if(typeof ts==='string'&&/^\d+$/.test(ts))ms=Number(ts);else if(typeof ts==='object'&&typeof ts.toMillis==='function')ms=ts.toMillis();else if(typeof ts==='object'&&typeof ts.seconds==='number')ms=ts.seconds*1000+Math.floor((ts.nanoseconds||0)/1e6);const d=new Date(ms);if(Number.isNaN(d.getTime()))return'';return d.toLocaleTimeString('ja-JP',{hour12:false,hour:'2-digit',minute:'2-digit'});}
 
-function formatClock(ts) {
-  // 正規化: number / string(数字) / Firestore Timestamp を全部 ms にそろえる
-  let ms = null;
-  if (ts == null) {
-    return '';
-  } else if (typeof ts === 'number') {
-    ms = ts;
-  } else if (typeof ts === 'string' && /^\d+$/.test(ts)) {
-    ms = Number(ts);
-  } else if (typeof ts === 'object' && typeof ts.toMillis === 'function') {
-    ms = ts.toMillis();                           // Firestore Timestamp
-  } else if (typeof ts === 'object' && typeof ts.seconds === 'number') {
-    ms = ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6); // {seconds,nanoseconds}
-  }
-
-  const d = new Date(ms);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('ja-JP', { hour12:false, hour:'2-digit', minute:'2-digit' });
-}
-
-/* ================= モーダル操作 ================= */
-// すでにあれば重複定義は不要
-// const wrap = document.getElementById('modalWrap'); // ←あなたのコードだと wrap = $('#modalWrap') でOK
-// const pageRoots = document.querySelectorAll('header, main');
-// let lastFocus = null;
-
+/* ================= モーダル ================= */
 function openModal(id){
-  lastFocus = document.activeElement; // 戻す先
-  const s = seats.find(x=>x.id===id);
-  currentId = id;
-  {
-  const nameByGroup = { red: 'VIP', blue: 'ノーマル', vip: '超VIP' };
-  const num = (s.id.match(/\d+/) || [''])[0];
-  const label = `${nameByGroup[s.group] || s.label} ${num}`;
-  title.textContent = `席を編集：${label}`;
-  }
-
-  castI.value = s.cast || '';
-  boyI.value  = s.boy  || '';
-  manI.value  = '';
-
-  // 背景は操作不可（フォーカス不可）に
-  pageRoots.forEach(el => el.setAttribute('inert',''));
-
-  // 先に aria-hidden を外してから表示
-  wrap.removeAttribute('aria-hidden');
-  wrap.hidden = false;
-  wrap.style.display = 'grid';
-
-  fillSuggestionBlocks();
-
-  // 次フレームでモーダル内にフォーカス
-  requestAnimationFrame(()=> castI.focus());
+  lastFocus=document.activeElement; const s=seats.find(x=>x.id===id); currentId=id;
+  const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'}; const num=(s.id.match(/\d+/)||[''])[0];
+  title.textContent=`席を編集：${nameByGroup[s.group]||s.label} ${num}`;
+  castI.value=s.cast||''; boyI.value=s.boy||''; manI.value='';
+  pageRoots.forEach(el=>el.setAttribute('inert','')); 
+  wrap.removeAttribute('aria-hidden'); wrap.hidden=false; wrap.style.display='grid';
+  fillSuggestionBlocks(); requestAnimationFrame(()=>castI.focus());
 }
-
 function closeModal(){
-  // 先にフォーカスをモーダルの外へ逃がす（警告回避のキモ）
-  const fallback = document.getElementById('q') || document.body;
-  if (wrap.contains(document.activeElement)) {
-    (lastFocus && document.contains(lastFocus) ? lastFocus : fallback).focus();
-  }
-
-  // 背景の操作を解放
-  pageRoots.forEach(el => el.removeAttribute('inert'));
-
-  // その後、非表示＋ aria-hidden
-  wrap.setAttribute('aria-hidden','true');
-  wrap.hidden = true;
-  wrap.style.display = 'none';
+  const fallback=document.getElementById('q')||document.body;
+  if(wrap.contains(document.activeElement)){ (lastFocus && document.contains(lastFocus)?lastFocus:fallback).focus(); }
+  pageRoots.forEach(el=>el.removeAttribute('inert'));
+  wrap.setAttribute('aria-hidden','true'); wrap.hidden=true; wrap.style.display='none';
 }
-
 document.getElementById('close').addEventListener('click', closeModal);
 wrap.addEventListener('click', e=>{ if(e.target===wrap) closeModal(); });
 
 document.getElementById('saveMeta').addEventListener('click', ()=>{
-  const s=seats.find(x=>x.id===currentId);
-  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); 
-  if (window.syncSeat) window.syncSeat(s);
-  render(); closeModal();
+  const s=seats.find(x=>x.id===currentId); s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); if(window.syncSeat) window.syncSeat(s); render(); closeModal();
 });
 document.getElementById('clear').addEventListener('click', ()=>{
-  const s=seats.find(x=>x.id===currentId);
-  s.end  = null;
-  s.cast = '';
-  s.boy  = '';
-  s.finished = false;
-  save(); 
-  if (window.syncSeat) window.syncSeat(s);
-  render(); 
-  castI.value = ''; boyI.value  = ''; manI.value  = '';
-  closeModal();
+  const s=seats.find(x=>x.id===currentId); s.end=null; s.cast=''; s.boy=''; s.finished=false; save(); if(window.syncSeat) window.syncSeat(s); render(); castI.value=''; boyI.value=''; manI.value=''; closeModal();
 });
 document.getElementById('start').addEventListener('click', ()=>{
   const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
-  const s=seats.find(x=>x.id===currentId);
-  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+v*60*1000;
-  s.finished = false;
-  save(); 
-  if (window.syncSeat) window.syncSeat(s);
-  render(); closeModal();
+  const s=seats.find(x=>x.id===currentId); s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+v*60*1000; s.finished=false; save(); if(window.syncSeat) window.syncSeat(s); render(); closeModal();
 });
-document.querySelectorAll('button.quick').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const mins=Number(b.dataset.min);
-    const s=seats.find(x=>x.id===currentId);
-    s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+mins*60*1000;
-    s.finished = false;
-    save(); 
-    if (window.syncSeat) window.syncSeat(s);
-    render(); closeModal();
-  });
-});
-document.querySelectorAll('button.extend').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const mins=Number(b.dataset.min);
-    const s=seats.find(x=>x.id===currentId);
-    const base = s.end && s.end>Date.now()? s.end: Date.now();
-    s.end = base + mins*60*1000;
-    s.finished = false;
-    if(!s.cast) s.cast=castI.value.trim();
-    if(!s.boy)  s.boy=boyI.value.trim();
-    save(); 
-    if (window.syncSeat) window.syncSeat(s);
-    render(); closeModal();
-  });
-});
+document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', ()=>{
+  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+mins*60*1000; s.finished=false; save(); if(window.syncSeat) window.syncSeat(s); render(); closeModal();
+}));
+document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', ()=>{
+  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+  const base=s.end && s.end>Date.now()? s.end:Date.now(); s.end=base+mins*60*1000; s.finished=false;
+  if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
+  save(); if(window.syncSeat) window.syncSeat(s); render(); closeModal();
+}));
 document.getElementById('q').addEventListener('input', render);
-const reloadBtn = document.getElementById('reloadStaff');
-if (reloadBtn) reloadBtn.addEventListener('click', loadStaff);
 
-/* ================== 控室（スタッフ） ================== */
-function parseCSV(str){
-  const rows=[];  
-  let cur=[], val='', inQ=false;
-  for(let i=0;i<str.length;i++){
-    const c=str[i];
-    if(inQ){
-      if(c=='"'){ if(str[i+1]=='"'){ val+='"'; i++; } else inQ=false; }
-      else val+=c;
-    }else{
-      if(c=='"'){ inQ=true; }
-      else if(c==','){ cur.push(val); val=''; }
-      else if(c=='\n'){ cur.push(val); rows.push(cur); cur=[]; val=''; }
-      else if(c=='\r'){ /* skip */ }
-      else val+=c;
-    }
-  }
-  if(val.length>0 || cur.length>0){ cur.push(val); rows.push(cur); }
-  return rows;
-}
-
-// M列（従業員）だけ取り出す
+/* ================= CSVパース/控室 ================= */
+function parseCSV(str){const rows=[];let cur=[],val='',inQ=false;for(let i=0;i<str.length;i++){const c=str[i];if(inQ){if(c=='"'){if(str[i+1]=='"'){val+='"';i++;}else inQ=false;}else val+=c;}else{if(c=='"'){inQ=true;}else if(c==','){cur.push(val);val='';}else if(c=='\n'){cur.push(val);rows.push(cur);cur=[];val='';}else if(c=='\r'){}else val+=c;}} if(val.length>0||cur.length>0){cur.push(val);rows.push(cur);} return rows;}
 function parseStaffNamesFromCSV(csv){
-  const rowsRaw = parseCSV(csv);
-  const rows = rowsRaw.filter(r => r && r.some(c => (c||'').trim() !== ''));
+  const rowsRaw=parseCSV(csv); const rows=rowsRaw.filter(r=>r&&r.some(c=>(c||'').trim()!==''));
   if(!rows.length) return [];
-
-  // 先頭～10行で「従業員」を見出し検出。見つからなければ M列(0始まりで12)を使う
-  let headerRowIdx = -1, nameIdx = -1;
-  const MAX_SCAN = Math.min(rows.length, 10);
-  for (let i=0; i<MAX_SCAN; i++){
-    const idx = rows[i].findIndex(c => String(c||'').trim() === '従業員');
-    if (idx >= 0){ headerRowIdx = i; nameIdx = idx; break; }
-  }
-  if (headerRowIdx < 0) headerRowIdx = 0;
-  if (nameIdx < 0) nameIdx = 12;     // ← M列フォールバック
-
-  const names = rows.slice(headerRowIdx+1)
-    .map(r => (r[nameIdx] || '').trim())
-    .filter(v => v && v !== '従業員');
-
-  return [...new Set(names)];        // 重複除去
+  let headerRowIdx=-1,nameIdx=-1; const MAX_SCAN=Math.min(rows.length,10);
+  for(let i=0;i<MAX_SCAN;i++){const idx=rows[i].findIndex(c=>String(c||'').trim()==='従業員'); if(idx>=0){headerRowIdx=i;nameIdx=idx;break;}}
+  if(headerRowIdx<0) headerRowIdx=0; if(nameIdx<0) nameIdx=12;
+  const names=rows.slice(headerRowIdx+1).map(r=>(r[nameIdx]||'').trim()).filter(v=>v&&v!=='従業員'); return [...new Set(names)];
 }
-
 async function loadStaff(){
   if(!STAFF_CSV_URL) return;
   try{
-    const res = await fetch(STAFF_CSV_URL, {cache:'no-store'});
-    const csv = await res.text();
-    const names = parseStaffNamesFromCSV(csv);
-
-    // duty はサイト内だけで保持
-    // 参照を保ったまま中身だけ置換
-    const newStaff = names.map(n => ({ name:n, duty: !!(window.dutyMap?.[n]) }));
-    staff.splice(0, staff.length, ...newStaff);
-    window.staff = staff; // 念のため同期
-    
-    localStorage.setItem('staff.cache.names', JSON.stringify(names));
-    fillDatalists();
-    renderRoster();
+    const res=await fetch(STAFF_CSV_URL,{cache:'no-store'});
+    const csv=await res.text(); const names=parseStaffNamesFromCSV(csv);
+    const newStaff=names.map(n=>({name:n,duty:!!(window.dutyMap?.[n])}));
+    staff.splice(0,staff.length,...newStaff); window.staff=staff;
+    localStorage.setItem('staff.cache.names',JSON.stringify(names));
+    fillDatalists(); renderRoster(); updateSalesStaffOptions();
     console.log(`[Roster] CSV読込: ${names.length}件`);
-    updateSalesStaffOptions(); // ←これを足す
   }catch(e){
-    console.error('スタッフ読み込み失敗', e);
-    const cache = JSON.parse(localStorage.getItem('staff.cache.names') || '[]');
-    staff = cache.map(n => ({ name:n, duty: !!dutyMap[n] }));
-    fillDatalists();
-    renderRoster();
-    updateSalesStaffOptions();
+    console.error('スタッフ読み込み失敗',e);
+    const cache=JSON.parse(localStorage.getItem('staff.cache.names')||'[]');
+    staff=cache.map(n=>({name:n,duty:!!dutyMap[n]}));
+    fillDatalists(); renderRoster(); updateSalesStaffOptions();
   }
 }
-
-
 function toggleDuty(name){
-  // まずローカルを即時更新（体感をキビキビに）
-  dutyMap[name] = !dutyMap[name];
-  localStorage.setItem('staff.duty.map', JSON.stringify(dutyMap));
-  staff.forEach(s => { if (s.name === name) s.duty = !!dutyMap[name]; });
-  fillDatalists();
-  renderRoster();
-
-  // そしてクラウドに送信（全員に配信される）
-  if (window.syncDuty) window.syncDuty(name, dutyMap[name]);
+  dutyMap[name]=!dutyMap[name]; localStorage.setItem('staff.duty.map',JSON.stringify(dutyMap));
+  staff.forEach(s=>{ if(s.name===name) s.duty=!!dutyMap[name]; }); fillDatalists(); renderRoster();
+  if(window.syncDuty) window.syncDuty(name,dutyMap[name]);
 }
-
-
-
 function isNameBusy(name){
-  name = name.trim();
+  name=name.trim();
   return seats.some(s=>{
-    const castNames = (s.cast||'').split(',').map(x=>x.trim()).filter(Boolean);
-    if(castNames.includes(name) || (s.boy||'').trim()===name){
-      return !!(s.end || s.finished);
-    }
+    const castNames=(s.cast||'').split(',').map(x=>x.trim()).filter(Boolean);
+    if(castNames.includes(name) || (s.boy||'').trim()===name){ return !!(s.end || s.finished); }
     return false;
   });
 }
 function addCastName(name){
-  const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
-  if(!list.includes(name)){ list.push(name); castI.value = list.join(', '); }
+  const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean);
+  if(!list.includes(name)){ list.push(name); castI.value=list.join(', '); }
 }
 function renderRoster(){
-  const rosterBox = document.getElementById('roster');
-  if(!rosterBox) return;
-  rosterBox.innerHTML = '';
-
+  const rosterBox=document.getElementById('roster'); if(!rosterBox) return;
+  rosterBox.innerHTML='';
   if(!staff.length){
-    const small=document.createElement('div');
-    small.style.color='#64748b'; small.style.fontSize='12px';
+    const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
     small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
-    rosterBox.appendChild(small);
-    return;
+    rosterBox.appendChild(small); return;
   }
-
-  const editSwitch = document.getElementById('editDuty');
-
-  const addChip = (name, duty, busy)=>{
-    const d = document.createElement('button');
-    d.type='button';
-    d.className = `staffChip ${duty ? (busy?'busy':'on') : 'off'}`;
-    d.textContent = name;
-
-    if(editSwitch && editSwitch.checked){
-      d.disabled = false;
-      d.addEventListener('click', ()=> toggleDuty(name));
-    }else{
-      if(!duty){
-        d.disabled = true;
-      }else{
-        d.addEventListener('click', ()=>{
-          if(wrap.getAttribute('aria-hidden')==='false'){
-            if (document.activeElement === boyI) {
-              boyI.value = name;
-              boyI.focus();
-            } else {
-              addCastName(name);
-              castI.focus();
-            }
-          }
-        });
-      }
+  const editSwitch=document.getElementById('editDuty');
+  const addChip=(name,duty,busy)=>{
+    const d=document.createElement('button'); d.type='button';
+    d.className=`staffChip ${duty?(busy?'busy':'on'):'off'}`; d.textContent=name;
+    if(editSwitch && editSwitch.checked){ d.disabled=false; d.addEventListener('click',()=>toggleDuty(name)); }
+    else{
+      if(!duty) d.disabled=true;
+      else d.addEventListener('click',()=>{
+        if(wrap.getAttribute('aria-hidden')==='false'){
+          if(document.activeElement===boyI){ boyI.value=name; boyI.focus(); }
+          else{ addCastName(name); castI.focus(); }
+        }
+      });
     }
     rosterBox.appendChild(d);
   };
-
-  staff.filter(s=>s.duty).forEach(s=>addChip(s.name, true, isNameBusy(s.name)));
-  const off = staff.filter(s=>!s.duty);
+  staff.filter(s=>s.duty).forEach(s=>addChip(s.name,true,isNameBusy(s.name)));
+  const off=staff.filter(s=>!s.duty);
   if(off.length){
-    const title=document.createElement('div');
-    title.className='staffSectionTitle';
-    title.textContent='— 非出勤 —';
-    rosterBox.appendChild(title);
-    off.forEach(s=>addChip(s.name, false, false));
+    const title=document.createElement('div'); title.className='staffSectionTitle'; title.textContent='— 非出勤 —'; rosterBox.appendChild(title);
+    off.forEach(s=>addChip(s.name,false,false));
   }
 }
-
-
 function fillDatalists(){
-  const castDL = document.getElementById('castList');
-  const boyDL  = document.getElementById('boyList');
-  const onList = staff.filter(s=>s.duty).map(s=>s.name);
-  castDL.innerHTML = onList.map(n=>`<option value="${n}">`).join('');
-  boyDL.innerHTML  = onList.map(n=>`<option value="${n}">`).join('');
+  const castDL=document.getElementById('castList');
+  const boyDL=document.getElementById('boyList');
+  const onList=staff.filter(s=>s.duty).map(s=>s.name);
+  castDL.innerHTML=onList.map(n=>`<option value="${n}">`).join('');
+  boyDL.innerHTML =onList.map(n=>`<option value="${n}">`).join('');
 }
-
 function fillSuggestionBlocks(){
-  const onList = staff.filter(s=>s.duty).map(s=>s.name);
-
-  // 出勤キャスト → castI のみ「追加入力」
-  suggCast.innerHTML = onList
-    .map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`)
-    .join('');
-  suggCast.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const name = b.dataset.name;
-      const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
-      if(!list.includes(name)) list.push(name);
-      castI.value = list.join(', ');
-      castI.focus();
-    });
-  });
-
-  // 出勤ボーイ → boyI のみ「上書き」
-  suggBoy.innerHTML = onList
-    .map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`)
-    .join('');
-  suggBoy.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      boyI.value = b.dataset.name;
-      boyI.focus();
-    });
-  });
+  const onList=staff.filter(s=>s.duty).map(s=>s.name);
+  suggCast.innerHTML=onList.map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`).join('');
+  suggCast.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    const name=b.dataset.name; const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean);
+    if(!list.includes(name)) list.push(name); castI.value=list.join(', '); castI.focus();
+  }));
+  suggBoy.innerHTML=onList.map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`).join('');
+  suggBoy.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ boyI.value=b.dataset.name; boyI.focus(); }));
 }
-
-
-
 
 /* ================= 初期化 ================= */
-render();
-setInterval(tick,1000);
-window.addEventListener('resize', resizeFloor);
-
-// スタッフ読み込み（60秒ごと再読込）
-if (STAFF_CSV_URL) loadStaff();
-setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); }, 60000);
-
-async function migrateSeatLabels(){
-  const map = { red:'VIP', blue:'ノーマル', vip:'超VIP' };
-  for (const s of seats){
-    const num = (s.id.match(/\d+/)||[''])[0];
-    const newLabel = `${map[s.group]||s.label} ${num}`;
-    if (s.label !== newLabel){
-      s.label = newLabel;
-      if (window.syncSeat) await window.syncSeat(s); // Firestoreへ
-    }
-  }
-  save(); // localStorageへ
-  render();
-}
-// ★1回だけ呼ぶ：
-// migrateSeatLabels();
-
-  
+render(); setInterval(tick,1000); window.addEventListener('resize', resizeFloor);
+if(STAFF_CSV_URL) loadStaff(); setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); },60000);
 </script>
 
-<!-- 追加コードはこの1つの <script> に置き換えてください -->
+<!-- Firebase 同期（変更なし） -->
 <script type="module">
-// --- Firebase SDK (CDN) ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import {
-  getFirestore, collection, doc, setDoc, getDocs,
-  serverTimestamp, onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-import {
-  getAuth, signInAnonymously, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDocs, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-// ★あなたの firebaseConfig を貼り付け（コンソールのWebアプリ設定の値）
 const firebaseConfig = {
   apiKey: "AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
   authDomain: "alexandria-8d142.firebaseapp.com",
@@ -880,314 +480,149 @@ const firebaseConfig = {
   measurementId: "G-6TJNLEHJXQ"
 };
 
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const auth= getAuth(app);
+const ROOM_ID="default";
 
-const ROOM_ID = "default"; // 共有部屋ID。必要なら ?room=xxx で切替もOK
-
-// 匿名ログイン → 初期化 → 購読開始
 signInAnonymously(auth).catch(console.error);
 onAuthStateChanged(auth, async (u) => {
-  if (!u) return;
-  await ensureInitialSeats();
-  listenSeats();  
-  listenDuty();
+  if(!u) return;
+  await ensureInitialSeats(); listenSeats(); listenDuty();
 });
 
-// 初期座席が無ければ作る
 async function ensureInitialSeats(){
-  const colRef = collection(db, "rooms", ROOM_ID, "seats");
-  const snap = await getDocs(colRef);
-  if (!snap.empty) return;
-  const init = getInitialSeatsArray();
-  await Promise.all(init.map(s =>
-    setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
-      { ...s, updatedAt: serverTimestamp() })
-  ));
+  const colRef=collection(db,"rooms",ROOM_ID,"seats");
+  const snap=await getDocs(colRef);
+  if(!snap.empty) return;
+  const init=[]; for(let i=1;i<=8;i++) init.push({id:`R${i}`,label:`VIP ${i}`,group:'red',cast:'',boy:'',end:null,finished:false});
+  for(let i=1;i<=7;i++) init.push({id:`B${i}`,label:`ノーマル ${i}`,group:'blue',cast:'',boy:'',end:null,finished:false});
+  for(let i=1;i<=3;i++) init.push({id:`V${i}`,label:`超VIP ${i}`,group:'vip',cast:'',boy:'',end:null,finished:false});
+  await Promise.all(init.map(s=> setDoc(doc(db,"rooms",ROOM_ID,"seats",s.id),{...s,updatedAt:serverTimestamp()})));
 }
-
-// 既存の初期化ロジックと同じ配列を作成
-function getInitialSeatsArray(){
-  const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`, label:`VIP ${i}`, group:'red',  cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`, label:`ノーマル ${i}`, group:'blue', cast:'', boy:'', end:null, finished:false});
-  for(let i=1;i<=3;i++) a.push({id:`V${i}`, label:`超VIP ${i}`, group:'vip',  cast:'', boy:'', end:null, finished:false});
-  return a;
-}
-
-// Firestoreの変更を購読 → window.seats を更新して再描画
 function listenSeats(){
-  const colRef = collection(db, "rooms", ROOM_ID, "seats");
-  onSnapshot(colRef, (qs) => {
-    const byId = {};
-    qs.forEach(d => byId[d.id] = d.data());
-
-    // window.seats が未定義でも安全に動くようにガード
-    const base = Array.isArray(window.seats) ? window.seats : [];
-    const ordered = base.map(s => byId[s.id] ?? s);
-
-    // 初回は Firestore の内容で埋める
-    if (!ordered.length) Object.keys(byId).sort().forEach(id => ordered.push(byId[id]));
-
-    if (!Array.isArray(window.seats)) window.seats = []; // ガード
-    window.seats.splice(0, window.seats.length, ...ordered);
-
-    if (typeof window.render === 'function') window.render();
+  const colRef=collection(db,"rooms",ROOM_ID,"seats");
+  onSnapshot(colRef,(qs)=>{
+    const byId={}; qs.forEach(d=>byId[d.id]=d.data());
+    const base=Array.isArray(window.seats)?window.seats:[];
+    const ordered=base.map(s=>byId[s.id]??s);
+    if(!ordered.length) Object.keys(byId).sort().forEach(id=>ordered.push(byId[id]));
+    if(!Array.isArray(window.seats)) window.seats=[];
+    window.seats.splice(0,window.seats.length,...ordered);
+    if(typeof window.render==='function') window.render();
   });
 }
-
-
-// 1席ぶんをクラウド保存
 async function saveSeatRemote(s){
-  await setDoc(doc(db, "rooms", ROOM_ID, "seats", s.id),
-    { ...s, updatedAt: serverTimestamp() }, { merge:true });
-  
-
+  await setDoc(doc(db,"rooms",ROOM_ID,"seats",s.id),{...s,updatedAt:serverTimestamp()},{merge:true});
 }
-
-// ====== 控室（出勤オン/オフ）同期 ======
-
-
-const dutyCol = collection(db, "rooms", ROOM_ID, "duty");
-
-// Firestore -> 画面（購読）
+const dutyCol=collection(db,"rooms",ROOM_ID,"duty");
 function listenDuty(){
-  onSnapshot(dutyCol, (qs) => {
-    // Firestoreにある出勤フラグを取り込む
-    const remote = {};
-    qs.forEach(d => remote[d.id] = !!(d.data()?.duty));
-
-    // ローカル dutyMap を更新して保存（オフライン用）
-    window.dutyMap = { ...(window.dutyMap||{}), ...remote };
-    localStorage.setItem('staff.duty.map', JSON.stringify(window.dutyMap));
-    
-    // staff 配列を置き換えず、要素を in-place 更新
-    const arr = Array.isArray(window.staff) ? window.staff : [];
-    for (let i = 0; i < arr.length; i++) {
-      arr[i].duty = !!window.dutyMap[arr[i].name];
-    }
+  onSnapshot(dutyCol,(qs)=>{
+    const remote={}; qs.forEach(d=>remote[d.id]=!!(d.data()?.duty));
+    window.dutyMap={...(window.dutyMap||{}),...remote};
+    localStorage.setItem('staff.duty.map',JSON.stringify(window.dutyMap));
+    const arr=Array.isArray(window.staff)?window.staff:[];
+    for(let i=0;i<arr.length;i++){ arr[i].duty=!!window.dutyMap[arr[i].name]; }
     window.fillDatalists && window.fillDatalists();
     window.renderRoster && window.renderRoster();
   });
 }
-
-// 画面 -> Firestore（1名ぶん保存）
-async function saveDutyRemote(name, duty){
-  const id = name.replace(/\//g, '／'); // Firestore docIDに「/」は使えないので置換
-  await setDoc(doc(dutyCol, id),
-    { duty: !!duty, updatedAt: serverTimestamp() }, { merge:true });
+async function saveDutyRemote(name,duty){
+  const id=name.replace(/\//g,'／');
+  await setDoc(doc(dutyCol,id),{duty:!!duty,updatedAt:serverTimestamp()},{merge:true});
 }
-
-
-
-// 既存コードから呼べるように公開（toggle 時に使う）
-window.syncDuty = saveDutyRemote;
-window.syncSeat = saveSeatRemote;
+window.syncDuty=saveDutyRemote; window.syncSeat=saveSeatRemote;
 </script>
 
+<!-- 売上入力（商品CSV/送信） -->
 <script>
-/* ============ 売上入力：設定 ============ */
-/** 素材シート（B:商品 / C:値段）を「ウェブに公開→CSV」で発行したURLを貼る */
 const PRODUCTS_CSV_URL = '<<素材シートのCSV URLをここに>>';
+const SALES_GAS_URL    = '<<上で発行したWebアプリURL>>';
 
-/** Apps Script（給料専用スプシ側）WebアプリのURLを貼る */
-const SALES_GAS_URL = '<<上で発行したWebアプリURL>>';
+const boySel=document.getElementById('boySelect');
+const castSel=document.getElementById('castSelect');
+const linesBox=document.getElementById('salesLines');
+const totalEl=document.getElementById('salesTotal');
+let PRODUCTS=[], LINE_SEQ=0;
 
-/* ============ 売上入力：DOM参照 ============ */
-const tabTimerBtn = document.getElementById('tabTimer');
-const tabSalesBtn = document.getElementById('tabSales');
-const floorSection     = document.getElementById('floor');
-const backstageSection = document.querySelector('.backstage');
-const salesSection = document.getElementById('salesSection');
-
-const boySel   = document.getElementById('boySelect');
-const castSel  = document.getElementById('castSelect');
-const linesBox = document.getElementById('salesLines');
-const totalEl  = document.getElementById('salesTotal');
-
-let PRODUCTS = []; // {name, price}
-let LINE_SEQ = 0;
-
-/* ============ タブ切替 ============ */
- function showTimer(){
-   tabTimerBtn.classList.add('active'); tabSalesBtn.classList.remove('active');
-   floorSection.style.display='block';
-   backstageSection.style.display='block';
-   salesSection.style.display='none';
- }
- function showSales(){
-   tabSalesBtn.classList.add('active'); tabTimerBtn.classList.remove('active');
-   floorSection.style.display='none';
-   backstageSection.style.display='none';
-   salesSection.style.display='block';
- }
-tabTimerBtn.addEventListener('click', showTimer);
-tabSalesBtn.addEventListener('click', showSales);
-
-/* ============ ユーティリティ ============ */
 const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
 const toNum = v => Number(String(v||'').replace(/[^\d.-]/g,''))||0;
 
-/* ============ 商品読み込み（CSV） ============ */
 function parseProductsFromCSV(csv){
-  const rows = parseCSV(csv).filter(r => r && r.some(c => (c||'').trim() !== ''));
-  if (!rows.length) return [];
-  // 見出しを探す（商品/値段/価格）
-  let h=rows[0], nameIdx=-1, priceIdx=-1;
-  for(let i=0;i<Math.min(3, rows.length); i++){
-    const rr = rows[i];
-    const n = rr.findIndex(c => /商品/.test(c||''));
-    const p = rr.findIndex(c => /(値段|価格)/.test(c||''));
-    if(n>=0 && p>=0){ h=rr; nameIdx=n; priceIdx=p; rows.splice(0,i+1); break; }
+  const rows=parseCSV(csv).filter(r=>r&&r.some(c=>(c||'').trim()!==''));
+  if(!rows.length) return [];
+  let nameIdx=-1, priceIdx=-1;
+  for(let i=0;i<Math.min(3,rows.length);i++){
+    const rr=rows[i], n=rr.findIndex(c=>/商品/.test(c||'')), p=rr.findIndex(c=>/(値段|価格)/.test(c||''));
+    if(n>=0&&p>=0){ nameIdx=n; priceIdx=p; rows.splice(0,i+1); break; }
   }
-  if(nameIdx<0) nameIdx = 1; // B列
-  if(priceIdx<0) priceIdx = 2; // C列
-  return rows.map(r => ({ name: r[nameIdx] || '', price: toNum(r[priceIdx]) }))
-             .filter(p => p.name);
+  if(nameIdx<0) nameIdx=1; if(priceIdx<0) priceIdx=2;
+  return rows.map(r=>({name:r[nameIdx]||'',price:toNum(r[priceIdx])})).filter(p=>p.name);
 }
 async function loadProducts(){
   if(!PRODUCTS_CSV_URL) return;
-  const res = await fetch(PRODUCTS_CSV_URL, {cache:'no-store'});
-  const csv = await res.text();
-  PRODUCTS  = parseProductsFromCSV(csv);
-  rebuildAllLines();
+  const res=await fetch(PRODUCTS_CSV_URL,{cache:'no-store'});
+  const csv=await res.text(); PRODUCTS=parseProductsFromCSV(csv); rebuildAllLines();
 }
-
-/* ============ スタッフ（キャスト/ボーイ） ============ */
 function updateSalesStaffOptions(){
-  const onList = (window.staff||[]).filter(s=>s.duty).map(s=>s.name);
-  boySel.innerHTML  = `<option value="">（選択）</option>` + onList.map(n=>`<option>${n}</option>`).join('');
-  castSel.innerHTML = onList.map(n=>`<option>${n}</option>`).join('');
+  const onList=(window.staff||[]).filter(s=>s.duty).map(s=>s.name);
+  boySel.innerHTML=`<option value="">（選択）</option>`+onList.map(n=>`<option>${n}</option>`).join('');
+  castSel.innerHTML=onList.map(n=>`<option>${n}</option>`).join('');
 }
-// 既存の loadStaff / listenDuty の最後で呼びたい → 既存関数内に1行追加してOK
-window.updateSalesStaffOptions = updateSalesStaffOptions;
+window.updateSalesStaffOptions=updateSalesStaffOptions;
 
-/* ============ 明細UI ============ */
 function buildLine(init){
-  const id = ++LINE_SEQ;
-  const row = document.createElement('div');
-  row.className = 'sales-row'; row.dataset.lineId = id; // 衝突回避
+  const id=++LINE_SEQ; const row=document.createElement('div'); row.className='sales-row'; row.dataset.lineId=id;
+  const sel=document.createElement('select');
+  sel.innerHTML=`<option value="">（商品を選択）</option>`+PRODUCTS.map(p=>`<option data-price="${p.price}" value="${p.name}">${p.name}</option>`).join('');
+  if(init?.product) sel.value=init.product;
 
-  const sel = document.createElement('select');
-  sel.innerHTML = `<option value="">（商品を選択）</option>` + PRODUCTS.map(p=>`<option data-price="${p.price}" value="${p.name}">${p.name}</option>`).join('');
-  if (init?.product) sel.value = init.product;
+  const unitEl=document.createElement('div'); unitEl.className='sales-yen'; unitEl.textContent=yen(init?.unitPrice||0);
+  const qty=document.createElement('input'); qty.type='number'; qty.min='0'; qty.step='1'; qty.value=init?.qty ?? 0;
+  const subEl=document.createElement('div'); subEl.className='sales-yen'; subEl.textContent=yen((init?.unitPrice||0)*(init?.qty||0));
+  const del=document.createElement('button'); del.type='button'; del.className='sales-pill'; del.textContent='－ 削除'; del.addEventListener('click',()=>{ row.remove(); recalcTotal(); });
 
-  const unitEl = document.createElement('div');
-  unitEl.className='sales-yen';
-  unitEl.textContent = yen(init?.unitPrice || 0);
+  sel.addEventListener('change',()=>{ const price=Number(sel.selectedOptions[0]?.dataset.price||0); unitEl.textContent=yen(price); subEl.textContent=yen(price*Number(qty.value||0)); recalcTotal(); });
+  qty.addEventListener('input',()=>{ const price=Number(sel.selectedOptions[0]?.dataset.price||0); subEl.textContent=yen(price*Number(qty.value||0)); recalcTotal(); });
 
-  const qty = document.createElement('input');
-  qty.type='number'; qty.min='0'; qty.step='1'; qty.value = init?.qty ?? 0;
-
-  const subEl = document.createElement('div');
-  subEl.className='sales-yen';
-  subEl.textContent = yen((init?.unitPrice||0) * (init?.qty||0));
-
-  const del = document.createElement('button');
-  del.type='button'; del.className='sales-pill'; del.textContent='－ 削除';
-  del.addEventListener('click', ()=>{ row.remove(); recalcTotal(); });
-
-  sel.addEventListener('change', ()=>{
-    const price = Number(sel.selectedOptions[0]?.dataset.price || 0);
-    unitEl.textContent = yen(price);
-    subEl.textContent  = yen(price * Number(qty.value||0));
-    recalcTotal();
-  });
-  qty.addEventListener('input', ()=>{
-    const price = Number(sel.selectedOptions[0]?.dataset.price || 0);
-    subEl.textContent = yen(price * Number(qty.value||0));
-    recalcTotal();
-  });
-
-  row.appendChild(sel);
-  row.appendChild(unitEl);
-  row.appendChild(qty);
-  row.appendChild(subEl);
-  row.appendChild(del);
+  row.appendChild(sel); row.appendChild(unitEl); row.appendChild(qty); row.appendChild(subEl); row.appendChild(del);
   linesBox.appendChild(row);
 }
-function rebuildAllLines(){
-  const keep = [...linesBox.querySelectorAll('.sales-row')].length || 1;
-  linesBox.innerHTML = '';
-  for(let i=0;i<keep;i++) buildLine();
-  recalcTotal();
-}
-function recalcTotal(){
-  let sum=0;
-  linesBox.querySelectorAll('.sales-row').forEach(row=>{
-    const sel=row.querySelector('select');
-    const unit=Number(sel.selectedOptions[0]?.dataset.price||0);
-    const qty =Number(row.querySelector('input').value||0);
-    sum += unit*qty;
-  });
-  totalEl.textContent = yen(sum);
-}
+function rebuildAllLines(){ const keep=[...linesBox.querySelectorAll('.sales-row')].length || 1; linesBox.innerHTML=''; for(let i=0;i<keep;i++) buildLine(); recalcTotal(); }
+function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
 function collectPayload(){
-  const rows = [...linesBox.querySelectorAll('.sales-row')].map(row=>{
-    const sel=row.querySelector('select');
-    const unit=Number(sel.selectedOptions[0]?.dataset.price||0);
-    const qty =Number(row.querySelector('input').value||0);
-    const product = sel.value || '';
-    return { product, unitPrice: unit, qty, amount: unit*qty };
-  }).filter(r=>r.product && r.qty>0);
-
-  const cast = [...castSel.selectedOptions].map(o=>o.value);
-  const boy  = boySel.value || '';
-  const total= rows.reduce((a,b)=>a+b.amount,0);
-
+  const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); const product=sel.value||''; return {product,unitPrice:unit,qty,amount:unit*qty}; }).filter(r=>r.product && r.qty>0);
+  const cast=[...castSel.selectedOptions].map(o=>o.value); const boy=boySel.value||''; const total=rows.reduce((a,b)=>a+b.amount,0);
   return { rows, cast, boy, total, timestamp: Date.now() };
 }
-
-/* ============ イベント ============ */
-document.getElementById('addSalesLine').addEventListener('click', ()=> buildLine());
-document.getElementById('reloadSales').addEventListener('click', ()=>{ loadProducts(); updateSalesStaffOptions(); });
+document.getElementById('addSalesLine').addEventListener('click',()=>buildLine());
+document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); updateSalesStaffOptions(); });
 document.getElementById('submitSales').addEventListener('click', async ()=>{
-  const payload = collectPayload();
-  if(!payload.rows.length) return alert('明細がありません');
-  if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
-
+  const payload=collectPayload(); if(!payload.rows.length) return alert('明細がありません'); if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
   try{
-    // application/json はプリフライトが走るので text/plain で送る
-    await fetch(SALES_GAS_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify(payload)
-    });
-    alert('登録しました');
-    // フォームを軽くリセット
-    linesBox.innerHTML=''; buildLine(); recalcTotal();
-  }catch(e){
-    alert('送信エラー: ' + e.message);
-  }
+    await fetch(SALES_GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload)});
+    alert('登録しました'); linesBox.innerHTML=''; buildLine(); recalcTotal();
+  }catch(e){ alert('送信エラー: '+e.message); }
 });
 
 /* 初期起動 */
-loadProducts();     // 商品マスタ
-updateSalesStaffOptions(); // 名簿（控室CSV 読み込み後にも再実行されます）
-buildLine();        // 1行目
+loadProducts(); updateSalesStaffOptions(); buildLine();
 </script>
+
+<!-- ルーター（#timer / #sales） -->
 <script>
   function route(){
-    const page = (location.hash || '#timer').replace('#','');
-    const isTimer = page === 'timer';
-
-    document.getElementById('pageTimer').style.display = isTimer ? 'block' : 'none';
-    document.getElementById('pageSales').style.display = isTimer ? 'none'  : 'block';
-
-    document.getElementById('navTimer').classList.toggle('active', isTimer);
-    document.getElementById('navSales').classList.toggle('active', !isTimer);
-
-    // 画面切替時に上へ
-    window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
+    const page=(location.hash||'#timer').replace('#','');
+    const isTimer=page==='timer';
+    document.getElementById('pageTimer').style.display=isTimer?'block':'none';
+    document.getElementById('pageSales').style.display=isTimer?'none':'block';
+    document.getElementById('navTimer').classList.toggle('active',isTimer);
+    document.getElementById('navSales').classList.toggle('active',!isTimer);
+    window.scrollTo(0,0);
   }
-
   window.addEventListener('hashchange', route);
-  // 初期表示
-  route();
+  route(); // 初期表示
 </script>
-
-
 
 </body>
 </html>
