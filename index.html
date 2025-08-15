@@ -657,7 +657,7 @@ window.syncDuty=saveDutyRemote; window.syncSeat=saveSeatRemote;
 <script>
 // ★商品はスタッフと同じCSVから取る（B:商品 / C:値段）
 const PRODUCTS_CSV_URL = STAFF_CSV_URL;
-const SALES_GAS_URL    = 'https://script.google.com/macros/s/AKfycbzak8PccfnIIudEyZOh8fDZ6Fb1BXKn2qNS1rKHX7lig09VsrlAlYYRfugnCldGngLH/exec';
+const SALES_GAS_URL    = 'https://script.google.com/macros/s/AKfycbw5Y5qZVyGccP7imCWWF-PZjO_LnfkowCMXcCmR3pPH5NxZctYeJ_28K1Ran_004DHw/exec';
 
 
 const linesBox=document.getElementById('salesLines');
@@ -727,12 +727,33 @@ function collectPayload(){
 document.getElementById('addSalesLine').addEventListener('click',()=>buildLine());
 document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); renderSalesFields(); });
 document.getElementById('submitSales').addEventListener('click', async ()=>{
-  const payload=collectPayload(); if(!payload.rows.length) return alert('明細がありません'); if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
+  const payload = collectPayload();
+  if(!payload.rows.length) return alert('明細がありません');
+  if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
+
   try{
-    await fetch(SALES_GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload)});
-    alert('登録しました'); linesBox.innerHTML=''; buildLine(); recalcTotal();
-  }catch(e){ alert('送信エラー: '+e.message); }
+    const res = await fetch(SALES_GAS_URL, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    // 401/500 なども拾う
+    const text = await res.text();
+    let json = {};
+    try { json = JSON.parse(text); } catch(_) {}
+    if(!res.ok || json.ok === false){
+      throw new Error(json.error || `HTTP ${res.status}`);
+    }
+
+    alert('登録しました');
+    linesBox.innerHTML=''; buildLine(); recalcTotal();
+
+  }catch(e){
+    alert('送信エラー: ' + e.message);
+    console.error(e);
+  }
 });
+
 
 /* 初期起動 */
 loadProducts(); renderSalesFields(); buildLine();
