@@ -78,10 +78,9 @@
     .staffChip.busy{background:var(--staff-busy-bg);border:1px solid var(--staff-busy-border);color:var(--staff-busy-text);box-shadow:0 0 0 1px #3a2706 inset}
     .staffChip.off{background:var(--staff-off-bg);border:1px solid var(--staff-off-border);color:var(--staff-off-text)}
     .staffChip.selected{box-shadow:0 0 0 2px #111 inset;font-weight:700}
-
     .staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:#475569}
 
-    /* Modal */
+    /* モーダル（卓編集） */
     .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
     .modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
     .modal h3{margin:0 0 10px 0}
@@ -104,6 +103,19 @@
     #salesSection{margin-top:12px}
     .sales-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
     .sales-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+
+    /* ← NEW: 選択“マス”と選択モーダル */
+    .pickerField{
+      border:1px solid #dcdfe3;background:#f9fafb;border-radius:12px;
+      padding:8px; min-height:46px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+      cursor:pointer;
+    }
+    .pickerField.empty{color:#94a3b8}
+    .pill{padding:4px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;font-size:12px}
+    .pickerWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:10}
+    .pickerPanel{background:#fff;border-radius:14px;padding:14px;max-width:92vw;max-height:80vh;overflow:auto;box-shadow:0 20px 60px #0006}
+    .pickerHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+    .pickerBtns{display:flex;gap:8px;flex-wrap:wrap}
     .sales-row{display:grid;grid-template-columns:1.2fr .6fr .6fr .8fr auto;gap:8px;align-items:center;margin:6px 0}
     .sales-row select,.sales-row input{padding:.45rem;border:1px solid #dcdfe3;border-radius:.6rem}
     .sales-yen{min-width:6em;text-align:right;padding:.45rem .6rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:.6rem}
@@ -114,6 +126,7 @@
     @media(max-width:900px){
       .toolbar input{min-width:160px}
       .seat{min-width:72px;min-height:60px}
+      .sales-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -167,14 +180,12 @@
     <section id="salesSection">
       <div class="sales-card">
         <div class="sales-grid">
-          <div>
-            <div class="suggTitle">ボーイ（1名）</div>
-            <div id="boyPicker" class="suggList"></div>
-          </div>
-          <div>
-            <div class="suggTitle">キャスト（複数可）</div>
-            <div id="castPicker" class="suggList"></div>
-          </div>
+          <label>ボーイ（1名）
+            <div id="boyField" class="pickerField empty" aria-label="ボーイを選択">タップして選択</div>
+          </label>
+          <label>キャスト（複数可）
+            <div id="castField" class="pickerField empty" aria-label="キャストを選択">タップして選択</div>
+          </label>
         </div>
 
         <div id="salesLines"></div>
@@ -192,7 +203,7 @@
 
 </main>
 
-<!-- モーダル -->
+<!-- 卓編集モーダル（既存） -->
 <div class="modalWrap" id="modalWrap" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="modalTitle">卓を編集</h3>
@@ -242,6 +253,21 @@
         <button id="close" class="secondary" type="button">閉じる</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- NEW: ボーイ/キャスト ピッカーモーダル -->
+<div class="pickerWrap" id="pickerWrap" aria-hidden="true">
+  <div class="pickerPanel" role="dialog" aria-modal="true">
+    <div class="pickerHead">
+      <h3 id="pickerTitle" style="margin:0;font-size:16px">選択</h3>
+      <div class="pickerBtns">
+        <button id="pickerClear" class="secondary" type="button">全クリア</button>
+        <button id="pickerOk" type="button">決定</button>
+        <button id="pickerClose" class="secondary" type="button">キャンセル</button>
+      </div>
+    </div>
+    <div id="pickerList" class="suggList"></div>
   </div>
 </div>
 
@@ -329,7 +355,7 @@ function tick(){
 function formatRemain(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
 function formatClock(ts){let ms=null;if(ts==null)return'';if(typeof ts==='number')ms=ts;else if(typeof ts==='string'&&/^\d+$/.test(ts))ms=Number(ts);else if(typeof ts==='object'&&typeof ts.toMillis==='function')ms=ts.toMillis();else if(typeof ts==='object'&&typeof ts.seconds==='number')ms=ts.seconds*1000+Math.floor((ts.nanoseconds||0)/1e6);const d=new Date(ms);if(Number.isNaN(d.getTime()))return'';return d.toLocaleTimeString('ja-JP',{hour12:false,hour:'2-digit',minute:'2-digit'});}
 
-/* ================= モーダル ================= */
+/* ================= モーダル（卓編集） ================= */
 function openModal(id){
   lastFocus=document.activeElement; const s=seats.find(x=>x.id===id); currentId=id;
   const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'}; const num=(s.id.match(/\d+/)||[''])[0];
@@ -388,13 +414,13 @@ async function loadStaff(){
     const newStaff=names.map(n=>({name:n,duty:!!(window.dutyMap?.[n])}));
     staff.splice(0,staff.length,...newStaff); window.staff=staff;
     localStorage.setItem('staff.cache.names',JSON.stringify(names));
-    fillDatalists(); renderRoster(); renderSalesStaffPickers();
+    fillDatalists(); renderRoster(); renderSalesFields();
     console.log(`[Roster] CSV読込: ${names.length}件`);
   }catch(e){
     console.error('スタッフ読み込み失敗',e);
     const cache=JSON.parse(localStorage.getItem('staff.cache.names')||'[]');
     staff=cache.map(n=>({name:n,duty:!!dutyMap[n]}));
-    fillDatalists(); renderRoster(); renderSalesStaffPickers();
+    fillDatalists(); renderRoster(); renderSalesFields();
   }
 }
 function toggleDuty(name){
@@ -463,12 +489,94 @@ function fillSuggestionBlocks(){
   suggBoy.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ boyI.value=b.dataset.name; boyI.focus(); }));
 }
 
-/* ================= 初期化 ================= */
+/* ==================== 売上：ピッカー（NEW） ==================== */
+const boyField  = document.getElementById('boyField');
+const castField = document.getElementById('castField');
+const pickerWrap   = document.getElementById('pickerWrap');
+const pickerTitle  = document.getElementById('pickerTitle');
+const pickerList   = document.getElementById('pickerList');
+const pickerOk     = document.getElementById('pickerOk');
+const pickerClear  = document.getElementById('pickerClear');
+const pickerClose  = document.getElementById('pickerClose');
+
+let salesBoy = '';      // 単一
+let salesCast = [];     // 複数
+let pickerMode = null;  // 'boy' | 'cast'
+let tmpBoy = '';
+let tmpCast = [];
+
+function renderSalesFields(){
+  // Boy field
+  boyField.classList.toggle('empty', !salesBoy);
+  boyField.innerHTML = salesBoy ? `<span class="pill">${salesBoy}</span>` : 'タップして選択';
+
+  // Cast field
+  castField.classList.toggle('empty', salesCast.length===0);
+  castField.innerHTML = salesCast.length
+    ? salesCast.map(n=>`<span class="pill">${n}</span>`).join('')
+    : 'タップして選択';
+}
+window.renderSalesFields = renderSalesFields;
+// 互換（Firebaseの購読で呼ばれてもOK）
+window.renderSalesStaffPickers = renderSalesFields;
+
+boyField.addEventListener('click', ()=>openPicker('boy'));
+castField.addEventListener('click', ()=>openPicker('cast'));
+
+function openPicker(mode){
+  pickerMode = mode;
+  pickerTitle.textContent = (mode==='boy') ? 'ボーイを選択（1名）' : 'キャストを選択（複数可）';
+  tmpBoy  = salesBoy;
+  tmpCast = [...salesCast];
+
+  buildPickerList();
+  pickerWrap.style.display='grid';
+  pickerWrap.removeAttribute('aria-hidden');
+}
+function closePicker(){
+  pickerWrap.style.display='none';
+  pickerWrap.setAttribute('aria-hidden','true');
+}
+pickerWrap.addEventListener('click', e=>{ if(e.target===pickerWrap) closePicker(); });
+pickerClose.addEventListener('click', closePicker);
+pickerClear.addEventListener('click', ()=>{
+  if(pickerMode==='boy') tmpBoy='';
+  else tmpCast=[];
+  buildPickerList();
+});
+pickerOk.addEventListener('click', ()=>{
+  if(pickerMode==='boy') salesBoy = tmpBoy;
+  else salesCast = [...tmpCast];
+  renderSalesFields();
+  closePicker();
+});
+
+function buildPickerList(){
+  const onList=(window.staff||[]).filter(s=>s.duty).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
+  pickerList.innerHTML = onList.map(x=>{
+    const selected = (pickerMode==='boy') ? (tmpBoy===x.name) : tmpCast.includes(x.name);
+    return `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${selected?'selected':''}" data-name="${x.name}">${x.name}</button>`;
+  }).join('');
+  pickerList.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name=b.dataset.name;
+      if(pickerMode==='boy'){
+        tmpBoy = (tmpBoy===name) ? '' : name;
+      }else{
+        if(tmpCast.includes(name)) tmpCast = tmpCast.filter(n=>n!==name);
+        else tmpCast = [...tmpCast, name];
+      }
+      buildPickerList();
+    });
+  });
+}
+
+/* ================= 初期化（共通） ================= */
 render(); setInterval(tick,1000); window.addEventListener('resize', resizeFloor);
 if(STAFF_CSV_URL) loadStaff(); setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); },60000);
 </script>
 
-<!-- Firebase 同期（変更なし） -->
+<!-- Firebase 同期（そのまま） -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, getDocs, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
@@ -529,7 +637,7 @@ function listenDuty(){
     for(let i=0;i<arr.length;i++){ arr[i].duty=!!window.dutyMap[arr[i].name]; }
     window.fillDatalists && window.fillDatalists();
     window.renderRoster && window.renderRoster();
-    window.renderSalesStaffPickers && window.renderSalesStaffPickers();
+    window.renderSalesFields && window.renderSalesFields();
   });
 }
 async function saveDutyRemote(name,duty){
@@ -546,53 +654,11 @@ const SALES_GAS_URL    = '<<上で発行したWebアプリURL>>';
 
 const linesBox=document.getElementById('salesLines');
 const totalEl=document.getElementById('salesTotal');
-const boyPicker=document.getElementById('boyPicker');
-const castPicker=document.getElementById('castPicker');
-
 let PRODUCTS=[], LINE_SEQ=0;
-let salesBoy = '';           // 単一選択
-let salesCast = [];          // 複数選択
 
 const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
 const toNum = v => Number(String(v||'').replace(/[^\d.-]/g,''))||0;
 
-/* ==== ピッカー描画（控室と同じチップ式） ==== */
-function renderSalesStaffPickers(){
-  const onList = (window.staff||[])
-    .filter(s=>s.duty)
-    .map(s=>({ name:s.name, busy:isNameBusy(s.name) }));
-
-  // Boy（単一）
-  boyPicker.innerHTML = onList.map(x =>
-    `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${salesBoy===x.name?'selected':''}" data-name="${x.name}">${x.name}</button>`
-  ).join('');
-  boyPicker.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const name=b.dataset.name;
-      salesBoy = (salesBoy===name) ? '' : name;        // トグル
-      renderSalesStaffPickers();
-    });
-  });
-
-  // Cast（複数）
-  castPicker.innerHTML = onList.map(x =>
-    `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${salesCast.includes(x.name)?'selected':''}" data-name="${x.name}">${x.name}</button>`
-  ).join('');
-  castPicker.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const name=b.dataset.name;
-      if (salesCast.includes(name)){
-        salesCast = salesCast.filter(n=>n!==name);
-      } else {
-        salesCast = [...salesCast, name];
-      }
-      renderSalesStaffPickers();
-    });
-  });
-}
-window.renderSalesStaffPickers = renderSalesStaffPickers;
-
-/* ==== 商品CSV ==== */
 function parseProductsFromCSV(csv){
   const rows=parseCSV(csv).filter(r=>r&&r.some(c=>(c||'').trim()!==''));
   if(!rows.length) return [];
@@ -610,7 +676,6 @@ async function loadProducts(){
   const csv=await res.text(); PRODUCTS=parseProductsFromCSV(csv); rebuildAllLines();
 }
 
-/* ==== 明細 ==== */
 function buildLine(init){
   const id=++LINE_SEQ; const row=document.createElement('div'); row.className='sales-row'; row.dataset.lineId=id;
   const sel=document.createElement('select');
@@ -631,30 +696,27 @@ function buildLine(init){
 function rebuildAllLines(){ const keep=[...linesBox.querySelectorAll('.sales-row')].length || 1; linesBox.innerHTML=''; for(let i=0;i<keep;i++) buildLine(); recalcTotal(); }
 function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
 
-/* ==== 送信ペイロード ==== */
+/* 送信 */
 function collectPayload(){
   const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); const product=sel.value||''; return {product,unitPrice:unit,qty,amount:unit*qty}; }).filter(r=>r.product && r.qty>0);
   const cast=[...salesCast]; const boy=salesBoy||''; const total=rows.reduce((a,b)=>a+b.amount,0);
   return { rows, cast, boy, total, timestamp: Date.now() };
 }
-
-/* ==== イベント ==== */
 document.getElementById('addSalesLine').addEventListener('click',()=>buildLine());
-document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); renderSalesStaffPickers(); });
+document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); renderSalesFields(); });
 document.getElementById('submitSales').addEventListener('click', async ()=>{
   const payload=collectPayload(); if(!payload.rows.length) return alert('明細がありません'); if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
   try{
     await fetch(SALES_GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload)});
     alert('登録しました'); linesBox.innerHTML=''; buildLine(); recalcTotal();
-    // 選択は残す（必要ならここで salesBoy/salesCast を初期化）
   }catch(e){ alert('送信エラー: '+e.message); }
 });
 
 /* 初期起動 */
-loadProducts(); renderSalesStaffPickers(); buildLine();
+loadProducts(); renderSalesFields(); buildLine();
 </script>
 
-<!-- ルーター（#timer / #sales） -->
+<!-- ルーター -->
 <script>
   function route(){
     const page=(location.hash||'#timer').replace('#','');
@@ -666,7 +728,7 @@ loadProducts(); renderSalesStaffPickers(); buildLine();
     window.scrollTo(0,0);
   }
   window.addEventListener('hashchange', route);
-  route(); // 初期表示
+  route();
 </script>
 
 </body>
