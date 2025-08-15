@@ -746,7 +746,12 @@ document.getElementById('submitSales').addEventListener('click', async ()=>{
     }
 
     alert('登録しました');
-    linesBox.innerHTML=''; buildLine(); recalcTotal();
+    // 送信成功 → ボーイ/キャストをリセット
+    salesBoy = ''; salesCast = []; tmpBoy = ''; tmpCast = []; renderSalesFields();
+    
+    linesBox.innerHTML=''; 
+    buildLine(); 
+    recalcTotal();
 
   }catch(e){
     alert('送信エラー: ' + e.message);
