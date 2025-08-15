@@ -77,6 +77,8 @@
     .staffChip.on{background:var(--staff-on-bg);border:1px solid var(--staff-on-border);color:var(--staff-on-text);box-shadow:0 0 0 1px #0e3d49 inset}
     .staffChip.busy{background:var(--staff-busy-bg);border:1px solid var(--staff-busy-border);color:var(--staff-busy-text);box-shadow:0 0 0 1px #3a2706 inset}
     .staffChip.off{background:var(--staff-off-bg);border:1px solid var(--staff-off-border);color:var(--staff-off-text)}
+    .staffChip.selected{box-shadow:0 0 0 2px #111 inset;font-weight:700}
+
     .staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:#475569}
 
     /* Modal */
@@ -165,12 +167,14 @@
     <section id="salesSection">
       <div class="sales-card">
         <div class="sales-grid">
-          <label>ボーイ
-            <select id="boySelect"></select>
-          </label>
-          <label>キャスト（複数可）
-            <select id="castSelect" multiple size="6"></select>
-          </label>
+          <div>
+            <div class="suggTitle">ボーイ（1名）</div>
+            <div id="boyPicker" class="suggList"></div>
+          </div>
+          <div>
+            <div class="suggTitle">キャスト（複数可）</div>
+            <div id="castPicker" class="suggList"></div>
+          </div>
         </div>
 
         <div id="salesLines"></div>
@@ -384,13 +388,13 @@ async function loadStaff(){
     const newStaff=names.map(n=>({name:n,duty:!!(window.dutyMap?.[n])}));
     staff.splice(0,staff.length,...newStaff); window.staff=staff;
     localStorage.setItem('staff.cache.names',JSON.stringify(names));
-    fillDatalists(); renderRoster(); updateSalesStaffOptions();
+    fillDatalists(); renderRoster(); renderSalesStaffPickers();
     console.log(`[Roster] CSV読込: ${names.length}件`);
   }catch(e){
     console.error('スタッフ読み込み失敗',e);
     const cache=JSON.parse(localStorage.getItem('staff.cache.names')||'[]');
     staff=cache.map(n=>({name:n,duty:!!dutyMap[n]}));
-    fillDatalists(); renderRoster(); updateSalesStaffOptions();
+    fillDatalists(); renderRoster(); renderSalesStaffPickers();
   }
 }
 function toggleDuty(name){
@@ -525,6 +529,7 @@ function listenDuty(){
     for(let i=0;i<arr.length;i++){ arr[i].duty=!!window.dutyMap[arr[i].name]; }
     window.fillDatalists && window.fillDatalists();
     window.renderRoster && window.renderRoster();
+    window.renderSalesStaffPickers && window.renderSalesStaffPickers();
   });
 }
 async function saveDutyRemote(name,duty){
@@ -539,15 +544,55 @@ window.syncDuty=saveDutyRemote; window.syncSeat=saveSeatRemote;
 const PRODUCTS_CSV_URL = '<<素材シートのCSV URLをここに>>';
 const SALES_GAS_URL    = '<<上で発行したWebアプリURL>>';
 
-const boySel=document.getElementById('boySelect');
-const castSel=document.getElementById('castSelect');
 const linesBox=document.getElementById('salesLines');
 const totalEl=document.getElementById('salesTotal');
+const boyPicker=document.getElementById('boyPicker');
+const castPicker=document.getElementById('castPicker');
+
 let PRODUCTS=[], LINE_SEQ=0;
+let salesBoy = '';           // 単一選択
+let salesCast = [];          // 複数選択
 
 const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
 const toNum = v => Number(String(v||'').replace(/[^\d.-]/g,''))||0;
 
+/* ==== ピッカー描画（控室と同じチップ式） ==== */
+function renderSalesStaffPickers(){
+  const onList = (window.staff||[])
+    .filter(s=>s.duty)
+    .map(s=>({ name:s.name, busy:isNameBusy(s.name) }));
+
+  // Boy（単一）
+  boyPicker.innerHTML = onList.map(x =>
+    `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${salesBoy===x.name?'selected':''}" data-name="${x.name}">${x.name}</button>`
+  ).join('');
+  boyPicker.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name=b.dataset.name;
+      salesBoy = (salesBoy===name) ? '' : name;        // トグル
+      renderSalesStaffPickers();
+    });
+  });
+
+  // Cast（複数）
+  castPicker.innerHTML = onList.map(x =>
+    `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${salesCast.includes(x.name)?'selected':''}" data-name="${x.name}">${x.name}</button>`
+  ).join('');
+  castPicker.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name=b.dataset.name;
+      if (salesCast.includes(name)){
+        salesCast = salesCast.filter(n=>n!==name);
+      } else {
+        salesCast = [...salesCast, name];
+      }
+      renderSalesStaffPickers();
+    });
+  });
+}
+window.renderSalesStaffPickers = renderSalesStaffPickers;
+
+/* ==== 商品CSV ==== */
 function parseProductsFromCSV(csv){
   const rows=parseCSV(csv).filter(r=>r&&r.some(c=>(c||'').trim()!==''));
   if(!rows.length) return [];
@@ -564,13 +609,8 @@ async function loadProducts(){
   const res=await fetch(PRODUCTS_CSV_URL,{cache:'no-store'});
   const csv=await res.text(); PRODUCTS=parseProductsFromCSV(csv); rebuildAllLines();
 }
-function updateSalesStaffOptions(){
-  const onList=(window.staff||[]).filter(s=>s.duty).map(s=>s.name);
-  boySel.innerHTML=`<option value="">（選択）</option>`+onList.map(n=>`<option>${n}</option>`).join('');
-  castSel.innerHTML=onList.map(n=>`<option>${n}</option>`).join('');
-}
-window.updateSalesStaffOptions=updateSalesStaffOptions;
 
+/* ==== 明細 ==== */
 function buildLine(init){
   const id=++LINE_SEQ; const row=document.createElement('div'); row.className='sales-row'; row.dataset.lineId=id;
   const sel=document.createElement('select');
@@ -590,23 +630,28 @@ function buildLine(init){
 }
 function rebuildAllLines(){ const keep=[...linesBox.querySelectorAll('.sales-row')].length || 1; linesBox.innerHTML=''; for(let i=0;i<keep;i++) buildLine(); recalcTotal(); }
 function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
+
+/* ==== 送信ペイロード ==== */
 function collectPayload(){
   const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); const product=sel.value||''; return {product,unitPrice:unit,qty,amount:unit*qty}; }).filter(r=>r.product && r.qty>0);
-  const cast=[...castSel.selectedOptions].map(o=>o.value); const boy=boySel.value||''; const total=rows.reduce((a,b)=>a+b.amount,0);
+  const cast=[...salesCast]; const boy=salesBoy||''; const total=rows.reduce((a,b)=>a+b.amount,0);
   return { rows, cast, boy, total, timestamp: Date.now() };
 }
+
+/* ==== イベント ==== */
 document.getElementById('addSalesLine').addEventListener('click',()=>buildLine());
-document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); updateSalesStaffOptions(); });
+document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); renderSalesStaffPickers(); });
 document.getElementById('submitSales').addEventListener('click', async ()=>{
   const payload=collectPayload(); if(!payload.rows.length) return alert('明細がありません'); if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
   try{
     await fetch(SALES_GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload)});
     alert('登録しました'); linesBox.innerHTML=''; buildLine(); recalcTotal();
+    // 選択は残す（必要ならここで salesBoy/salesCast を初期化）
   }catch(e){ alert('送信エラー: '+e.message); }
 });
 
 /* 初期起動 */
-loadProducts(); updateSalesStaffOptions(); buildLine();
+loadProducts(); renderSalesStaffPickers(); buildLine();
 </script>
 
 <!-- ルーター（#timer / #sales） -->
