@@ -608,7 +608,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const auth= getAuth(app);
-const ROOM_ID="default";
+const ROOM_ID="dev";
 
 signInAnonymously(auth).catch(console.error);
 onAuthStateChanged(auth, async (u) => {
