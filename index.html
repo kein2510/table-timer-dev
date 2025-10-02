@@ -801,3 +801,85 @@ loadProducts(); renderSalesFields(); buildLine();
 
 </body>
 </html>
+
+
+<script type="module">
+import { getFirestore, collection, doc, setDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+const db = window.db || (await (async()=>{ return null; })()); // 既存の db を使う想定（initializeApp済み）
+const ROOM_ID = "dev"; // ← 本番へ移行時は "default" 等に
+
+// ★いま使っているスプシのCSV公開URLに置き換えてください
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/xxxxxxxx/pub?gid=0&single=true&output=csv";
+
+function parseCSV(str){
+  const rows=[]; let cur=[],val='',inQ=false;
+  for(let i=0;i<str.length;i++){
+    const c=str[i];
+    if(inQ){
+      if(c=='"'){ if(str[i+1]=='"'){ val+='"'; i++; } else inQ=false; }
+      else val+=c;
+    }else{
+      if(c=='"') inQ=true;
+      else if(c==','){ cur.push(val); val=''; }
+      else if(c=='\n'){ cur.push(val); rows.push(cur); cur=[]; val=''; }
+      else if(c!='\r'){ val+=c; }
+    }
+  }
+  if(val.length>0||cur.length>0){ cur.push(val); rows.push(cur); }
+  return rows;
+}
+const yenToNum = v => Number(String(v||'').replace(/[^\d.-]/g,''))||0;
+
+// A～C 商品名/価格、L～P 従業員/役職 を抽出して Firestore に投入
+async function importOnceFromSheet(){
+  const res = await fetch(SHEET_CSV_URL,{cache:'no-store'});
+  const csv = await res.text();
+  const rows = parseCSV(csv).filter(r => r && r.some(c => (c||'').trim()!==''));
+  if(!rows.length){ alert('CSVが空です'); return; }
+
+  // ---- 商品（A:番号, B:商品名, C:値段）※見出し行をスキップ想定
+  const prodStart = 1;               // データ開始行（行番号2行目 = index 1）
+  const prods = [];
+  for(let i=prodStart;i<rows.length;i++){
+    const B = (rows[i][1]||'').trim();    // 商品名
+    const C = yenToNum(rows[i][2]||'');   // 価格
+    if(!B) break;                          // 空行で終わり
+    prods.push({ name:B, price:C, active:true });
+  }
+
+  // ---- 従業員（L:従業員名, M～P:役職のいずれか「キャスト/ボーイ/解雇」）
+  const staff = [];
+  for(let i=1;i<rows.length;i++){
+    const L = (rows[i][11]||'').trim();   // 従業員
+    if(!L) break;
+    const M=(rows[i][12]||'').trim(), N=(rows[i][13]||'').trim(), O=(rows[i][14]||'').trim(), P=(rows[i][15]||'').trim();
+    const roles = [M,N,O,P].filter(Boolean);
+
+    // role を決める（キャスト/ボーイ を優先。O列が「解雇」等なら active=false）
+    let role = roles.find(r=>/ボーイ/.test(r)) ? 'boy' :
+               roles.find(r=>/キャスト/.test(r)) ? 'cast' : 'cast';
+    const inactive = roles.some(r=>/解雇|退職/.test(r));
+    staff.push({ name:L, role, duty:false, active:!inactive });
+  }
+
+  // ---- Firestore へ書き込み
+  for(const p of prods){
+    const id = p.name.replace(/\//g,'／');
+    await setDoc(doc(db,'rooms',ROOM_ID,'products',id), {
+      name:p.name, price:p.price, active:p.active, updatedAt:serverTimestamp()
+    }, {merge:true});
+  }
+  for(const s of staff){
+    const id = s.name.replace(/\//g,'／');
+    await setDoc(doc(db,'rooms',ROOM_ID,'staff',id), {
+      name:s.name, role:s.role, duty:!!s.duty, active:!!s.active, updatedAt:serverTimestamp()
+    }, {merge:true});
+  }
+
+  alert(`インポート完了：商品 ${prods.length} 件、従業員 ${staff.length} 件`);
+}
+window.importOnceFromSheet = importOnceFromSheet;
+</script>
+
