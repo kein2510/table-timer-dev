@@ -79,7 +79,7 @@
     .staffChip.selected{box-shadow:0 0 0 2px #111 inset;font-weight:700}
     .staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:#475569}
 
-    /* モーダル（卓編集） */
+    /* モーダル（編集） */
     .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
     .modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
     .modal h3{margin:0 0 10px 0}
@@ -142,7 +142,7 @@
   開発用（DEV） / ROOM_ID: dev
 </div>
 
-<>
+<header>
   <h1>卓タイマー管理</h1>
   <div class="toolbar">
     <input id="q" type="search" placeholder="キャスト名で検索（例: あや）" />
@@ -153,7 +153,7 @@
     <a id="navSales" class="tab" href="#sales">売上入力</a>
 
   </nav>
-</>
+</header>
 
 <main>
 
@@ -323,7 +323,7 @@ const wrap=$('#modalWrap'), title=$('#modalTitle');
 const castI=$('#cast'), boyI=$('#boy'), manI=$('#manual');
 const suggCast=$('#suggCast'), suggBoy=$('#suggBoy');
 let currentId=null, lastFocus=null;
-const pageRoots=document.querySelectorAll(', main');
+const pageRoots=document.querySelectorAll('header, main');
 
 /* ================= UI生成 ================= */
 function cardHTML(s){
@@ -427,10 +427,10 @@ function parseCSV(str){const rows=[];let cur=[],val='',inQ=false;for(let i=0;i<s
 function parseStaffNamesFromCSV(csv){
   const rowsRaw=parseCSV(csv); const rows=rowsRaw.filter(r=>r&&r.some(c=>(c||'').trim()!==''));
   if(!rows.length) return [];
-  let RowIdx=-1,nameIdx=-1; const MAX_SCAN=Math.min(rows.length,10);
-  for(let i=0;i<MAX_SCAN;i++){const idx=rows[i].findIndex(c=>String(c||'').trim()==='従業員'); if(idx>=0){RowIdx=i;nameIdx=idx;break;}}
-  if(RowIdx<0) RowIdx=0; if(nameIdx<0) nameIdx=12;
-  const names=rows.slice(RowIdx+1).map(r=>(r[nameIdx]||'').trim()).filter(v=>v&&v!=='従業員'); return [...new Set(names)];
+  let headerRowIdx=-1,nameIdx=-1; const MAX_SCAN=Math.min(rows.length,10);
+  for(let i=0;i<MAX_SCAN;i++){const idx=rows[i].findIndex(c=>String(c||'').trim()==='従業員'); if(idx>=0){headerRowIdx=i;nameIdx=idx;break;}}
+  if(headerRowIdx<0) headerRowIdx=0; if(nameIdx<0) nameIdx=12;
+  const names=rows.slice(headerRowIdx+1).map(r=>(r[nameIdx]||'').trim()).filter(v=>v&&v!=='従業員'); return [...new Set(names)];
 }
 async function loadStaff(){
   if(!STAFF_CSV_URL) return;
@@ -696,19 +696,19 @@ function parseProductsFromCSV(csv){
   if (!rows.length) return [];
 
   // 先頭～10行で「商品 / 値段|価格|金額」の見出しがあるか探す
-  let nameIdx = -1, priceIdx = -1, Row = -1;
+  let nameIdx = -1, priceIdx = -1, headerRow = -1;
   for (let i = 0; i < Math.min(10, rows.length); i++){
     const rr = rows[i];
     const n  = rr.findIndex(c => /商品/.test(String(c||'')));
     const p  = rr.findIndex(c => /(値段|価格|金額)/.test(String(c||'')));
-    if (n >= 0 && p >= 0){ nameIdx = n; priceIdx = p; Row = i; break; }
+    if (n >= 0 && p >= 0){ nameIdx = n; priceIdx = p; headerRow = i; break; }
   }
   // 見出しが無い場合は B/C を使う（0始まりで1/2）
   if (nameIdx < 0) nameIdx = 1;
   if (priceIdx < 0) priceIdx = 2;
 
   // データ開始行（見出しが見つかったらその次の行から）
-  const dataRows = rows.slice(Row >= 0 ? Row + 1 : 0);
+  const dataRows = rows.slice(headerRow >= 0 ? headerRow + 1 : 0);
 
   return dataRows
     .map(r => ({ name: (r[nameIdx]||'').trim(), price: Number(String(r[priceIdx]||'').replace(/[^\d.-]/g,'')) || 0 }))
@@ -757,7 +757,7 @@ document.getElementById('submitSales').addEventListener('click', async ()=>{
   try{
     const res = await fetch(SALES_GAS_URL, {
       method:'POST',
-      s:{ 'Content-Type':'text/plain;charset=utf-8' },
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     });
     const text = await res.text();
