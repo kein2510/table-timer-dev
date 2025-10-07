@@ -214,6 +214,84 @@
     </section>
   </section>
 
+  <!-- ページ③：幹部 -->
+<section id="pageAdmin" class="page">
+  <section class="backstage" style="margin-top:0">
+    <h2 style="margin-bottom:8px">幹部用ページ</h2>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <span id="adminLoginState" class="pill" style="padding:4px 10px;border:1px solid #cbd5e1;border-radius:999px;background:#fff">未ログイン</span>
+      <button id="adminBtnLogin"  type="button" class="secondary">ログイン</button>
+      <button id="adminBtnLogout" type="button" class="secondary" style="display:none">ログアウト</button>
+      <small style="opacity:.7">※ 管理権限ユーザーのみ編集可（roles/{uid}.manager=true）</small>
+    </div>
+
+    <!-- ログインフォーム -->
+    <div id="adminLoginBox" class="sales-card" style="display:none">
+      <div class="sales-grid" style="grid-template-columns:1fr 1fr">
+        <label>メール<input id="adminEmail" type="email" placeholder="admin@example.com" /></label>
+        <label>パスワード<input id="adminPass" type="password" placeholder="********" /></label>
+      </div>
+      <button id="adminDoLogin" type="button" class="sales-pill" style="background:#111;color:#fff;border-color:#111">ログイン</button>
+    </div>
+
+    <!-- 権限なし表示 -->
+    <div id="adminNoPerm" class="sales-card" style="display:none">
+      権限がありません。管理者にお問い合わせください。
+    </div>
+
+    <!-- 管理UI -->
+    <div id="adminPanel" style="display:none">
+
+      <!-- メンバー管理 -->
+      <div class="sales-card">
+        <h3 style="margin:0 0 8px">メンバー管理</h3>
+        <div class="sales-grid">
+          <label>名前<input id="staffName" placeholder="例: あやか" /></label>
+          <label>役職
+            <select id="staffRole">
+              <option value="cast">キャスト</option>
+              <option value="boy">ボーイ</option>
+            </select>
+          </label>
+          <label>出勤
+            <select id="staffDuty">
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          </label>
+          <label>有効
+            <select id="staffActive">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </label>
+        </div>
+        <button id="addStaff" type="button" class="sales-pill">＋ 追加</button>
+        <div id="staffList" style="margin-top:8px"></div>
+      </div>
+
+      <!-- 商品管理 -->
+      <div class="sales-card">
+        <h3 style="margin:0 0 8px">商品管理</h3>
+        <div class="sales-grid">
+          <label>商品名<input id="prodName" placeholder="例: 生ビール" /></label>
+          <label>価格（円）<input id="prodPrice" type="number" min="0" step="1" placeholder="700" /></label>
+          <label>有効
+            <select id="prodActive">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </label>
+        </div>
+        <button id="addProd" type="button" class="sales-pill">＋ 追加</button>
+        <div id="prodList" style="margin-top:8px"></div>
+      </div>
+
+    </div>
+  </section>
+</section>
+
+
 </main>
 
 <!-- 卓編集モーダル（既存） -->
