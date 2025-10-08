@@ -159,6 +159,35 @@
 <main>
 
 <!-- ページ③：幹部（管理） -->
+<section id="pageTimer" class="page">
+  <!-- ここに元のフロア/控室のHTML（floor, roster など）を戻す -->
+  <div class="floor" id="floor"><div class="vipRow" id="vip"></div></div>
+  <section class="backstage">
+    <h2>控室（スプレッドシート連携）</h2>
+    <div id="roster" class="roster"></div>
+  </section>
+</section>
+
+<section id="pageSales" class="page">
+  <!-- ここに元の売上入力のカード（#salesSection など）を戻す -->
+  <section id="salesSection">
+    <div class="sales-card">
+      <div class="sales-grid">
+        <label>ボーイ（1名）<div id="boyField" class="pickerField empty">タップして選択</div></label>
+        <label>キャスト（複数可）<div id="castField" class="pickerField empty">タップして選択</div></label>
+      </div>
+      <div id="salesLines"></div>
+      <div class="sales-actions">
+        <button id="addSalesLine"  type="button" class="sales-pill">＋ 明細行を追加</button>
+        <button id="submitSales"   type="button" class="sales-pill">送信</button>
+        <button id="reloadSales"   type="button" class="sales-pill">更新（商品・名簿）</button>
+      </div>
+      <div class="sales-total">合計：<span id="salesTotal">¥0</span></div>
+    </div>
+  </section>
+</section>
+
+
 <section id="pageAdmin" class="page">
   <div class="sales-card" style="margin-top:12px">
     <h2 style="margin:0 0 8px">ログイン</h2>
@@ -340,6 +369,34 @@
 
 
 </main>
+<script>
+  function show(id, on){ const el=document.getElementById(id); if(el) el.style.display = on?'block':'none'; }
+  function active(id, on){ const el=document.getElementById(id); if(el) el.classList.toggle('active', !!on); }
+
+  function route(){
+    const page=(location.hash||'#timer').replace('#','');
+    const hasTimer=!!document.getElementById('pageTimer');
+    const hasSales=!!document.getElementById('pageSales');
+    const hasAdmin=!!document.getElementById('pageAdmin');
+
+    let target=page;
+    if(target==='timer'&&!hasTimer) target = hasSales?'sales':(hasAdmin?'admin':null);
+    if(target==='sales'&&!hasSales) target = hasTimer?'timer':(hasAdmin?'admin':null);
+    if(target==='admin'&&!hasAdmin) target = hasTimer?'timer':(hasSales?'sales':null);
+    if(!target) return;
+
+    show('pageTimer', target==='timer');
+    show('pageSales', target==='sales');
+    show('pageAdmin', target==='admin');
+
+    active('navTimer', target==='timer');
+    active('navSales', target==='sales');
+    active('navAdmin', target==='admin');
+    window.scrollTo(0,0);
+  }
+  window.addEventListener('hashchange', route);
+  route();
+</script>
 
 <!-- 卓編集モーダル（既存） -->
 <div class="modalWrap" id="modalWrap" aria-hidden="true">
