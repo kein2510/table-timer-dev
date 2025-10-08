@@ -31,52 +31,92 @@
     /* ← JSが落ちても白画面にしない保険 */
     #pageTimer{display:block}
 
-    /* ==== Floor / VIP / Roster ==== */
-    .floor{position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;overflow:hidden;padding:4px;min-height:750px}
-    .seat{position:absolute;background:#fff;border:2px solid #bbb;border-radius:10px;padding:6px;min-height:64px;min-width:80px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:transform .05s, box-shadow .1s, background .2s;box-shadow:0 1px 0 #0001}
-    .seat:hover{transform:translateY(-1px)} .seat.red{border-color:var(--red)} .seat.blue{border-color:var(--blue)}
-    .seat.active{background:var(--ok)} .seat.warn{background:var(--warn)} .seat.danger{background:var(--danger)}
-    .seat.highlight{box-shadow:0 0 0 3px var(--gold) inset}
-    .line1{display:flex;justify-content:space-between;align-items:center;font-weight:700}
-    .line1 .endAt{font-weight:700;font-size:18px;opacity:.8;margin-left:10px;white-space:nowrap}
-    .timer{font-size:18px;font-weight:800} .meta{font-size:18px;line-height:1.25;opacity:.95;overflow-wrap:anywhere}
-    .vipRow{position:absolute;left:15%;right:15%;bottom:7%;display:flex;gap:12px;z-index:2}
-    .vipSeat{background:#fff;border:2px dashed var(--vip);border-radius:12px;padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px}
-    .vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
-    .vipSeat .timer{font-size:22px}
-    .backstage{background:var(--panel);border:1px solid #ddd;border-radius:12px;padding:10px;margin-top:12px}
-    .roster{display:flex;flex-wrap:wrap;gap:8px}
-    .staffChip{padding:6px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-size:14px}
-    .staffChip.on{background:var(--staff-on-bg);border:1px solid var(--staff-on-border);color:var(--staff-on-text)}
-    .staffChip.busy{background:var(--staff-busy-bg);border:1px solid var(--staff-busy-border);color:var(--staff-busy-text)}
-    .staffChip.off{background:var(--staff-off-bg);border:1px solid var(--staff-off-border);color:var(--staff-off-text)}
+    /* ====== Floor / VIP / Roster（本鯖UI） ====== */
+.floor{
+  position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
+  overflow:hidden;padding:4px;min-height:750px;
+}
+.legend{position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;opacity:.9;background:#fff9;border-radius:8px;padding:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.danger{background:var(--danger)} .dot.empty{background:#eee}
 
-    /* ==== Modal ==== */
-    .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
-    .modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
-    .row{display:flex;gap:8px;margin:8px 0}
-    .row input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
-    .btns{display:flex;flex-wrap:wrap;gap:8px}
-    button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;background:#111;color:#fff}
-    button.secondary{background:#e5e7eb;color:#111}
-    button.danger{background:#dc2626}
-    .label{font-weight:700;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1}
-    .label-extend{color:var(--vip);border:1px solid var(--vip);background:#f7ecff}
-    .suggList{display:flex;flex-wrap:wrap;gap:6px}
-    .suggList .staffChip{padding:4px 8px;font-size:12px}
+.seat{
+  position:absolute;background:#fff;border:2px solid #bbb;border-radius:10px;
+  padding:6px;min-height:64px;min-width:80px;cursor:pointer;
+  display:flex;flex-direction:column;gap:4px;transition:transform .05s, box-shadow .1s, background .2s;
+  box-shadow:0 1px 0 #0001;
+}
+.seat:hover{transform:translateY(-1px)}
+.seat.red{border-color:var(--red)} .seat.blue{border-color:var(--blue)}
+.seat.active{background:var(--ok)} .seat.warn{background:var(--warn)} .seat.danger{background:var(--danger)}
+.seat.highlight{box-shadow:0 0 0 3px var(--gold) inset}
+.line1{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+.line1 .endAt{font-weight:700;font-size:18px;opacity:.8;margin-left:10px;white-space:nowrap}
+.timer{font-size:18px;font-weight:800}
+.meta{font-size:18px;line-height:1.25;opacity:.95;overflow-wrap:anywhere}
 
-    /* ==== Sales ==== */
-    .sales-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
-    .sales-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
-    .pickerField{border:1px solid #dcdfe3;background:#f9fafb;border-radius:12px;padding:8px;min-height:46px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;cursor:pointer}
-    .pickerField.empty{color:#94a3b8}
-    .pill{padding:4px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;font-size:12px}
-    .sales-row{display:grid;grid-template-columns:1.2fr .6fr .6fr .8fr auto;gap:8px;align-items:center;margin:6px 0}
-    .sales-row select,.sales-row input{padding:.45rem;border:1px solid #dcdfe3;border-radius:.6rem}
-    .sales-yen{min-width:6em;text-align:right;padding:.45rem .6rem;background:#f8fafc;border:1px solid #e5e7eb;border-radius:.6rem}
-    .sales-actions{display:flex;gap:8px;margin-top:10px}
-    .sales-pill{padding:.35rem .6rem;border:1px dashed #cbd5e1;border-radius:999px;background:#f9fafb;cursor:pointer;color:#111!important}
-    #submitSales.sales-pill{background:#111;color:#fff!important;border-color:#111}
+/* VIP row */
+.vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
+.vipSeat{
+  background:#fff;border:2px dashed var(--vip);border-radius:12px;
+  padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px;
+}
+.vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
+.vipSeat .timer{font-size:22px}
+
+/* Backstage */
+.backstage{background:var(--panel);border:1px solid #ddd;border-radius:12px;padding:10px;margin-top:12px}
+.backstage h2{margin:0 0 8px;font-size:16px}
+.legend-staff{font-size:12px;opacity:.8;display:flex;gap:12px;align-items:center}
+.dotS{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dotS.on{background:#145768} .dotS.busy{background:#6b480a} .dotS.off{background:#9ca3af}
+.roster{display:flex;flex-wrap:wrap;gap:8px}
+.staffChip{padding:6px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-size:14px}
+.staffChip.on{background:var(--staff-on-bg);border:1px solid var(--staff-on-border);color:var(--staff-on-text);box-shadow:0 0 0 1px #0e3d49 inset}
+.staffChip.busy{background:var(--staff-busy-bg);border:1px solid var(--staff-busy-border);color:var(--staff-busy-text);box-shadow:0 0 0 1px #3a2706 inset}
+.staffChip.off{background:var(--staff-off-bg);border:1px solid var(--staff-off-border);color:var(--staff-off-text)}
+.staffChip.selected{box-shadow:0 0 0 2px #111 inset;font-weight:700}
+.staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:#475569}
+
+/* Modal（本鯖UI） */
+.modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
+.modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
+.modal h3{margin:0 0 10px 0}
+.row{display:flex;gap:8px;margin:8px 0}
+.row input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;background:#111;color:#fff}
+button.secondary{background:#e5e7eb;color:#111}
+button.danger{background:#dc2626}
+.chips button{background:#fff;border:1px solid #111;color:#111}
+.label{font-weight:700;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1;align-self:center;white-space:nowrap}
+.label-extend{color:var(--vip);border:1px solid var(--vip);background:#f7ecff}
+.twoCols{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.suggBlock{display:flex;flex-direction:column;gap:4px;flex:1}
+.suggTitle{font-size:12px;color:#6b7280}
+.suggList{display:flex;flex-wrap:wrap;gap:6px}
+.suggList .staffChip{padding:4px 8px;font-size:12px}
+
+/* 売上入力ピッカー（本鯖UI） */
+.pickerField{border:1px solid #dcdfe3;background:#f9fafb;border-radius:12px;padding:8px;min-height:46px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;cursor:pointer}
+.pickerField.empty{color:#94a3b8}
+.pill{padding:4px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;font-size:12px}
+.pickerWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:10}
+.pickerPanel{background:#fff;border-radius:14px;padding:14px;max-width:92vw;max-height:80vh;overflow:auto;box-shadow:0 20px 60px #0006}
+.pickerHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.pickerBtns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* 延長回数バッジ（本鯖UI） */
+.extBadge{
+  display:inline-block;margin-left:8px;padding:2px 6px;border-radius:999px;border:1px solid #6b7280;
+  font-size:12px;line-height:1;opacity:.85;background:#fff;
+}
+
+/* 売上のボタン文字が薄くなる問題の固定（本鯖と同じ） */
+.sales-pill{ color:#111 !important; }
+.sales-row .sales-pill{ color:#111 !important; }
+#submitSales.sales-pill{ background:#111; color:#fff !important; border-color:#111; }
+
 
     @media(max-width:900px){
       .toolbar input{min-width:160px}
@@ -106,13 +146,33 @@
 
   <main>
     <!-- タイマー -->
-    <section id="pageTimer" class="page">
-      <div class="floor" id="floor"><div class="vipRow" id="vip"></div></div>
-      <section class="backstage">
-        <h2>控室（スプレッドシート連携）</h2>
-        <div id="roster" class="roster"></div>
-      </section>
-    </section>
+<section id="pageTimer" class="page">
+  <section class="floor" id="floor">
+    <div class="legend">
+      <span><i class="dot empty"></i>空席</span>
+      <span><i class="dot ok"></i>計時中</span>
+      <span><i class="dot warn"></i>残り10分未満</span>
+      <span><i class="dot danger"></i>残り3分未満</span>
+    </div>
+    <div class="vipRow" id="vip"></div>
+  </section>
+
+    <section class="backstage">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <h2>控室（スプレッドシート連携）</h2>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="legend-staff">
+          <span><i class="dotS on"></i> 出勤（空き）</span>
+          <span><i class="dotS busy"></i> 接客中</span>
+          <span><i class="dotS off"></i> 休み/退勤</span>
+        </div>
+        <label style="font-size:12px"><input type="checkbox" id="editDuty" /> 出勤を編集</label>
+        <button id="reloadStaff" class="secondary" type="button">更新</button>
+      </div>
+    </div>
+    <div id="roster" class="roster"></div>
+  </section>
+</section>
 
     <!-- 売上 -->
     <section id="pageSales" class="page">
@@ -324,13 +384,23 @@
   window.LS_PREFIX = LS_PREFIX;
 
   /* === 席データ === */
-  const seats = (()=>{ const saved=localStorage.getItem(LS_PREFIX+'seats.v2');
-    if(saved){ const arr=JSON.parse(saved); arr.forEach(s=>{ if(s.finished===undefined) s.finished=false; }); return arr; }
-    const a=[]; for(let i=1;i<=8;i++) a.push({id:`R${i}`,group:'red',label:`VIP ${i}`,cast:'',boy:'',end:null,finished:false});
-    for(let i=1;i<=7;i++) a.push({id:`B${i}`,group:'blue',label:`ノーマル ${i}`,cast:'',boy:'',end:null,finished:false});
-    for(let i=1;i<=3;i++) a.push({id:`V${i}`,group:'vip',label:`超VIP ${i}`,cast:'',boy:'',end:null,finished:false});
-    return a;
-  })();
+const seats = (()=>{ 
+  const saved=localStorage.getItem(LS_PREFIX+'seats.v2');
+  if(saved){
+    const arr=JSON.parse(saved);
+    arr.forEach(s=>{
+      if(s.finished===undefined) s.finished=false;
+      if(s.extendCount===undefined) s.extendCount=0;   // ← 追加
+    });
+    return arr;
+  }
+  const a=[];
+  for(let i=1;i<=8;i++) a.push({id:`R${i}`,group:'red',label:`VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+  for(let i=1;i<=7;i++) a.push({id:`B${i}`,group:'blue',label:`ノーマル ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+  for(let i=1;i<=3;i++) a.push({id:`V${i}`,group:'vip',label:`超VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+  return a;
+})();
+
   const save = () => localStorage.setItem(LS_PREFIX+'seats.v2', JSON.stringify(seats));
 
   /* === 座標 === */
@@ -349,51 +419,56 @@
 
   /* === UI生成 === */
   function cardHTML(s){
-    const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'};
-    const num=(s.id.match(/\d+/)||[''])[0];
-    const label=`${nameByGroup[s.group]||s.label} ${num}`;
-    const endAt=s.end?`～ ${formatClock(s.end)}`:'';
-    return `<div class="line1"><span>${label}</span><span class="endAt">${endAt}</span></div>
-            <div class="timer">${s.end?formatRemain(s.end-Date.now()):(s.finished?'終了':'空')}</div>
-            <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>`;
-  }
-  function addVipSeat(s){const d=document.createElement('div');d.className='vipSeat';d.dataset.id=s.id;d.innerHTML=cardHTML(s);d.addEventListener('click',()=>openModal(s.id));vipWrap.appendChild(d);}
-  function addSeatToFloor(s){const pos=POS[s.id];if(!pos)return;const d=document.createElement('div');d.className=`seat ${s.group}`;d.dataset.id=s.id;d.style.top=pos.top+'%';d.style.left=pos.left+'%';d.style.width=pos.width+'%';d.innerHTML=cardHTML(s);d.addEventListener('click',()=>openModal(s.id));floor.appendChild(d);}
+  const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'};
+  const num=(s.id.match(/\d+/)||[''])[0];
+  const label=`${nameByGroup[s.group]||s.label} ${num}`;
+  const endAt=s.end?`～ ${formatClock(s.end)}`:'';
+  const ext = (s.extendCount||0)>0 ? `<span class="extBadge">延×${s.extendCount}</span>` : '';
+  return `
+    <div class="line1">
+      <span>${label}</span>
+      <span class="endAt">${endAt}</span>
+    </div>
+    <div class="timer"><span class="remain">${
+      s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')
+    }</span>${ext}</div>
+    <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>`;
+}
 
-  function resizeFloor(){const pad=12;const needed=vipWrap.offsetTop+vipWrap.offsetHeight+pad;$('#floor').style.height=needed+'px';}
+function render(){
+  floor.querySelectorAll('.seat').forEach(n=>n.remove());
+  vipWrap.innerHTML='';
+  const q=$('#q').value.trim();
 
-  function render(){
-    floor.querySelectorAll('.seat').forEach(n=>n.remove());
-    vipWrap.innerHTML='';
-    const q=$('#q').value.trim();
-    seats.forEach(s=>{ if(s.group==='vip') addVipSeat(s); else addSeatToFloor(s); });
-    floor.querySelectorAll('[data-id]').forEach(el=>{
-      const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.timer');
-      el.classList.remove('active','warn','danger','highlight');
-      if(s.end){
-        const r=s.end-Date.now();
-        if(r>0){ t.textContent=formatRemain(r); el.classList.add('active'); if(r<=3*60*1000)el.classList.add('danger'); else if(r<=10*60*1000)el.classList.add('warn'); }
-        else { s.end=null; s.finished=true; save(); t.textContent='終了'; }
-      }else{ t.textContent=s.finished?'終了':'空'; }
-      if(q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
-    });
-    resizeFloor(); renderRoster();
-  }
-  window.seats=seats; window.render=render;
+  seats.forEach(s=>{ if(s.group==='vip') addVipSeat(s); else addSeatToFloor(s); });
 
-  function tick(){
-    nowEl.textContent=new Date().toLocaleString('ja-JP',{hour12:false});
-    floor.querySelectorAll('[data-id]').forEach(el=>{
-      const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.timer');
-      el.classList.remove('active','warn','danger');
-      const endAtEl=el.querySelector('.endAt'); if(endAtEl) endAtEl.textContent=s.end?`～ ${formatClock(s.end)}`:'';
-      if(!s.end){ t.textContent=s.finished?'終了':'空'; return; }
-      const r=s.end-Date.now(); if(r<=0){ s.end=null; s.finished=true; save(); t.textContent='終了'; return; }
-      t.textContent=formatRemain(r); el.classList.add('active');
-      if(r<=3*60*1000) el.classList.add('danger'); else if(r<=10*60*1000) el.classList.add('warn');
-    });
-    if(staff.length) renderRoster();
-  }
+  floor.querySelectorAll('[data-id]').forEach(el=>{
+    const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
+    el.classList.remove('active','warn','danger','highlight');
+    if(s.end){
+      const r=s.end-Date.now();
+      if(r>0){ t.textContent=formatRemain(r); el.classList.add('active'); if(r<=3*60*1000)el.classList.add('danger'); else if(r<=10*60*1000)el.classList.add('warn'); }
+      else { s.end=null; s.finished=true; save(); t.textContent='終了'; }
+    }else{ t.textContent=s.finished?'終了':'空'; }
+    if(q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
+  });
+  resizeFloor(); renderRoster();
+}
+
+function tick(){
+  nowEl.textContent=new Date().toLocaleString('ja-JP',{hour12:false});
+  floor.querySelectorAll('[data-id]').forEach(el=>{
+    const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
+    el.classList.remove('active','warn','danger');
+    const endAtEl=el.querySelector('.endAt'); if(endAtEl) endAtEl.textContent=s.end?`～ ${formatClock(s.end)}`:'';
+    if(!s.end){ t.textContent=s.finished?'終了':'空'; return; }
+    const r=s.end-Date.now(); if(r<=0){ s.end=null; s.finished=true; save(); t.textContent='終了'; return; }
+    t.textContent=formatRemain(r); el.classList.add('active');
+    if(r<=3*60*1000) el.classList.add('danger'); else if(r<=10*60*1000) el.classList.add('warn');
+  });
+  if(staff.length) renderRoster();
+}
+
   function formatRemain(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
   function formatClock(ts){let ms=null;if(ts==null)return'';if(typeof ts==='number')ms=ts;else if(typeof ts==='string'&&/^\d+$/.test(ts))ms=Number(ts);else if(typeof ts==='object'&&typeof ts.toMillis==='function')ms=ts.toMillis();else if(typeof ts==='object'&&typeof ts.seconds==='number')ms=ts.seconds*1000+Math.floor((ts.nanoseconds||0)/1e6);const d=new Date(ms);if(Number.isNaN(d.getTime()))return'';return d.toLocaleTimeString('ja-JP',{hour12:false,hour:'2-digit',minute:'2-digit'});}
 
@@ -421,21 +496,40 @@
   document.getElementById('clear').addEventListener('click', ()=>{
     const s=seats.find(x=>x.id===currentId); s.end=null; s.cast=''; s.boy=''; s.finished=false; save(); render(); castI.value=''; boyI.value=''; manI.value=''; closeModal();
   });
-  document.getElementById('start').addEventListener('click', ()=>{
-    const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
-    const s=seats.find(x=>x.id===currentId); s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+v*60*1000; s.finished=false; save(); render(); closeModal();
-  });
-  document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', ()=>{
-    const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
-    s.cast=castI.value.trim(); s.boy=boyI.value.trim(); s.end=Date.now()+mins*60*1000; s.finished=false; save(); render(); closeModal();
-  }));
-  document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', ()=>{
-    const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
-    const base=s.end && s.end>Date.now()? s.end:Date.now(); s.end=base+mins*60*1000; s.finished=false;
-    if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
-    save(); render(); closeModal();
-  }));
-  document.getElementById('q').addEventListener('input', render);
+// 開始（手入力）
+document.getElementById('start').addEventListener('click', ()=>{
+  const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
+  const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim();
+  s.end=Date.now()+v*60*1000; s.finished=false; s.extendCount=0;   // reset
+  save(); render(); closeModal();
+});
+
+// クイック開始
+document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', ()=>{
+  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim();
+  s.end=Date.now()+mins*60*1000; s.finished=false; s.extendCount=0; // reset
+  save(); render(); closeModal();
+}));
+
+// 延長
+document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', ()=>{
+  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+  const base=s.end && s.end>Date.now()? s.end:Date.now();
+  s.end=base+mins*60*1000; s.finished=false;
+  s.extendCount=(s.extendCount||0)+1;                                 // count up
+  if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
+  save(); render(); closeModal();
+}));
+
+// クリア
+document.getElementById('clear').addEventListener('click', ()=>{
+  const s=seats.find(x=>x.id===currentId);
+  s.end=null; s.cast=''; s.boy=''; s.finished=false; s.extendCount=0; // reset
+  save(); render(); castI.value=''; boyI.value=''; manI.value=''; closeModal();
+});
+
 
   /* === CSV/名簿 === */
   function parseCSV(str){const rows=[];let cur=[],val='',inQ=false;for(let i=0;i<str.length;i++){const c=str[i];if(inQ){if(c=='"'){if(str[i+1]=='"'){val+='"';i++;}else inQ=false;}else val+=c;}else{if(c=='"'){inQ=true;}else if(c==','){cur.push(val);val='';}else if(c=='\n'){cur.push(val);rows.push(cur);cur=[];val='';}else if(c=='\r'){}else val+=c;}} if(val.length>0||cur.length>0){cur.push(val);rows.push(cur);} return rows;}
@@ -484,33 +578,43 @@
     const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean);
     if(!list.includes(name)){ list.push(name); castI.value=list.join(', '); }
   }
-  function renderRoster(){
-    const rosterBox=document.getElementById('roster'); if(!rosterBox) return;
-    rosterBox.innerHTML='';
-    if(!staff.length){
-      const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
-      small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
-      rosterBox.appendChild(small); return;
-    }
-    const addChip=(name,duty,busy)=>{
-      const d=document.createElement('button'); d.type='button';
-      d.className=`staffChip ${duty?(busy?'busy':'on'):'off'}`; d.textContent=name;
+// 既存 loadStaff() の後
+document.getElementById('reloadStaff')?.addEventListener('click', ()=> loadStaff());
+
+// renderRoster を本鯖式で（クリック時の挙動を切替）
+function renderRoster(){
+  const rosterBox=document.getElementById('roster'); if(!rosterBox) return;
+  rosterBox.innerHTML='';
+  if(!staff.length){
+    const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
+    small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
+    rosterBox.appendChild(small); return;
+  }
+  const editSwitch=document.getElementById('editDuty');
+  const addChip=(name,duty,busy)=>{
+    const d=document.createElement('button'); d.type='button';
+    d.className=`staffChip ${duty?(busy?'busy':'on'):'off'}`; d.textContent=name;
+    if(editSwitch && editSwitch.checked){
+      d.disabled=false; d.addEventListener('click',()=>toggleDuty(name));
+    }else{
       if(!duty) d.disabled=true;
       else d.addEventListener('click',()=>{
         if(wrap.getAttribute('aria-hidden')==='false'){
           if(document.activeElement===boyI){ boyI.value=name; boyI.focus(); }
-          else{ addCastName(name); castI.focus(); }
+          else{ const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean); if(!list.includes(name)) castI.value=[...list,name].join(', '); castI.focus(); }
         }
       });
-      rosterBox.appendChild(d);
-    };
-    staff.filter(s=>s.duty).forEach(s=>addChip(s.name,true,isNameBusy(s.name)));
-    const off=staff.filter(s=>!s.duty);
-    if(off.length){
-      const title=document.createElement('div'); title.style.flexBasis='100%'; title.style.marginTop='6px'; title.style.fontSize='12px'; title.style.color='#475569'; title.textContent='— 非出勤 —'; rosterBox.appendChild(title);
-      off.forEach(s=>addChip(s.name,false,false));
     }
+    rosterBox.appendChild(d);
+  };
+  staff.filter(s=>s.duty).forEach(s=>addChip(s.name,true,isNameBusy(s.name)));
+  const off=staff.filter(s=>!s.duty);
+  if(off.length){
+    const title=document.createElement('div'); title.className='staffSectionTitle'; title.textContent='— 非出勤 —'; rosterBox.appendChild(title);
+    off.forEach(s=>addChip(s.name,false,false));
   }
+}
+
   function fillDatalists(){
     const castDL=document.getElementById('castList');
     const boyDL=document.getElementById('boyList');
