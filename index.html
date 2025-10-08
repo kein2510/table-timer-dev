@@ -243,6 +243,79 @@
     </section>
   </main>
 
+  <!-- 卓編集モーダル -->
+<div class="modalWrap" id="modalWrap" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modalTitle">卓を編集</h3>
+
+    <div class="row">
+      <input id="cast" placeholder="キャスト（カンマ区切り）" list="castList" />
+      <input id="boy"  placeholder="担当ボーイ"            list="boyList" />
+      <datalist id="castList"></datalist>
+      <datalist id="boyList"></datalist>
+    </div>
+
+    <div class="row chips">
+      <span class="label" style="color:#374151;border:1px solid #d1d5db;background:#f9fafb;">時間</span>
+      <div class="btns">
+        <button class="quick" data-min="15" type="button">15分</button>
+        <button class="quick" data-min="30" type="button">30分</button>
+        <button class="quick" data-min="45" type="button">45分</button>
+        <button class="quick" data-min="60" type="button">60分</button>
+      </div>
+    </div>
+
+    <div class="row chips">
+      <span class="label label-extend">延長</span>
+      <div class="btns">
+        <button class="extend" data-min="5"  type="button">+5</button>
+        <button class="extend" data-min="10" type="button">+10</button>
+        <button class="extend" data-min="15" type="button">+15</button>
+      </div>
+    </div>
+
+    <div class="row" style="gap:12px">
+      <div class="suggBlock">
+        <div class="suggTitle">出勤キャスト（タップで追加）</div>
+        <div id="suggCast" class="suggList"></div>
+      </div>
+      <div class="suggBlock">
+        <div class="suggTitle">出勤ボーイ（タップで設定）</div>
+        <div id="suggBoy" class="suggList"></div>
+      </div>
+    </div>
+
+    <div class="row twoCols">
+      <input id="manual" inputmode="numeric" placeholder="分を入力 → 開始" />
+      <button id="start" type="button">開始</button>
+    </div>
+
+    <div class="row btns" style="justify-content:space-between">
+      <button id="saveMeta" class="secondary" type="button">キャスト/ボーイを保存</button>
+      <div>
+        <button id="clear" class="danger"    type="button">クリア（空席）</button>
+        <button id="close" class="secondary" type="button">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ボーイ/キャスト ピッカーモーダル -->
+<div class="pickerWrap" id="pickerWrap" aria-hidden="true">
+  <div class="pickerPanel" role="dialog" aria-modal="true">
+    <div class="pickerHead">
+      <h3 id="pickerTitle" style="margin:0;font-size:16px">選択</h3>
+      <div class="pickerBtns">
+        <button id="pickerClear" class="secondary" type="button">全クリア</button>
+        <button id="pickerOk"    type="button">決定</button>
+        <button id="pickerClose" class="secondary" type="button">キャンセル</button>
+      </div>
+    </div>
+    <div id="pickerList" class="suggList"></div>
+  </div>
+</div>
+
+
   <!-- ========= タイマー/控室/名簿 & ピッカー ========= -->
   <script>
   /* === 設定 === */
@@ -467,6 +540,7 @@
   const pickerClose  = document.getElementById('pickerClose');
 
   let salesBoy = ''; let salesCast = []; let pickerMode = null; let tmpBoy = ''; let tmpCast = [];
+
 
   function renderSalesFields(){
     boyField.classList.toggle('empty', !salesBoy);
