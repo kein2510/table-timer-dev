@@ -434,6 +434,32 @@ const seats = (()=>{
     }</span>${ext}</div>
     <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>`;
 }
+    function addVipSeat(s){
+  const d=document.createElement('div');
+  d.className='vipSeat';
+  d.dataset.id=s.id;
+  d.innerHTML=cardHTML(s);
+  d.addEventListener('click',()=>openModal(s.id));
+  vipWrap.appendChild(d);
+}
+function addSeatToFloor(s){
+  const pos=POS[s.id]; if(!pos) return;
+  const d=document.createElement('div');
+  d.className=`seat ${s.group}`;
+  d.dataset.id=s.id;
+  d.style.top=pos.top+'%';
+  d.style.left=pos.left+'%';
+  d.style.width=pos.width+'%';
+  d.innerHTML=cardHTML(s);
+  d.addEventListener('click',()=>openModal(s.id));
+  floor.appendChild(d);
+}
+function resizeFloor(){
+  const pad=12;
+  const needed=vipWrap.offsetTop+vipWrap.offsetHeight+pad;
+  floor.style.height=needed+'px';
+}
+
 
 function render(){
   floor.querySelectorAll('.seat').forEach(n=>n.remove());
@@ -529,6 +555,7 @@ document.getElementById('clear').addEventListener('click', ()=>{
   s.end=null; s.cast=''; s.boy=''; s.finished=false; s.extendCount=0; // reset
   save(); render(); castI.value=''; boyI.value=''; manI.value=''; closeModal();
 });
+document.getElementById('q').addEventListener('input', render);
 
 
   /* === CSV/名簿 === */
@@ -643,10 +670,18 @@ function renderRoster(){
   const pickerClear  = document.getElementById('pickerClear');
   const pickerClose  = document.getElementById('pickerClose');
 
-  let salesBoy = ''; let salesCast = []; let pickerMode = null; let tmpBoy = ''; let tmpCast = [];
+let salesBoy = '';
+let salesCast = [];
+window.salesBoy = salesBoy;
+window.salesCast = salesCast;
+ let pickerMode = null; let tmpBoy = ''; let tmpCast = [];
 
 
   function renderSalesFields(){
+  if (typeof window.salesBoy !== 'undefined') salesBoy = window.salesBoy;
+  if (Array.isArray(window.salesCast)) salesCast = [...window.salesCast];
+  // 以下はそのまま…
+
     boyField.classList.toggle('empty', !salesBoy);
     boyField.innerHTML = salesBoy ? `<span class="pill">${salesBoy}</span>` : 'タップして選択';
     castField.classList.toggle('empty', salesCast.length===0);
@@ -670,7 +705,15 @@ function renderRoster(){
   pickerWrap.addEventListener('click', e=>{ if(e.target===pickerWrap) closePicker(); });
   pickerClose.addEventListener('click', closePicker);
   pickerClear.addEventListener('click', ()=>{ if(pickerMode==='boy') tmpBoy=''; else tmpCast=[]; buildPickerList(); });
-  pickerOk.addEventListener('click', ()=>{ if(pickerMode==='boy') salesBoy = tmpBoy; else salesCast = [...tmpCast]; renderSalesFields(); closePicker(); });
+  pickerOk.addEventListener('click', ()=>{
+  if (pickerMode==='boy') salesBoy = tmpBoy;
+  else salesCast = [...tmpCast];
+  window.salesBoy = salesBoy;
+  window.salesCast = salesCast;
+  renderSalesFields();
+  closePicker();
+});
+
 
   function buildPickerList(){
     const onList=(window.staff||[]).filter(s=>s.duty).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
