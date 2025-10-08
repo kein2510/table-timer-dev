@@ -673,11 +673,67 @@ if(STAFF_CSV_URL) loadStaff(); setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); 
 </script>
   
 <section id="pageAdmin" class="page">
-<!-- Firebase 同期（DEV） -->
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
+/* ====== 先に ROOM_ID を定義 ====== */
+const ROOM_ID = "dev";
+
+/* 幹部パスコード設定 —— ここだけ編集すればOK */
+const ADMIN_PASS_PLAIN = (ROOM_ID==='dev') ? 'dev用パス' : '本番用パス';  // ← 好きな文字列に
+const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
+
+/* 共通ユーティリティ */
+const $ = s => document.querySelector(s);
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
+
+/* 以降は触らなくてOK：ここで自動的にSHA-256を作って照合します */
+const KEY = LS_PREFIX + "admin.unlocked";
+const $locked   = $('#adminLocked');
+const $unlocked = $('#adminUnlocked');
+const $wrong    = $('#adminWrong');
+const $code     = $('#adminCode');
+const $panelStaff = document.getElementById('panelStaff');
+const $panelProd  = document.getElementById('panelProd');
+
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function applyState(isOpen){
+  $locked.style.display   = isOpen ? 'none' : 'block';
+  $unlocked.style.display = isOpen ? 'block' : 'none';
+  $wrong.style.display    = 'none';
+  $panelStaff.style.display = isOpen ? 'block' : 'none';
+  $panelProd.style.display  = isOpen ? 'block' : 'none';
+}
+
+/* 起動時にロック状態を復元 */
+applyState(sessionStorage.getItem(KEY) === '1');
+
+/* 入室ボタン */
+document.getElementById('adminEnter').addEventListener('click', async ()=>{
+  const input = ($code.value||'').trim();
+  if(!input) return;
+  const passHash = await sha256Hex(ADMIN_PASS_PLAIN);
+  const inputHash= await sha256Hex(input);
+  if (inputHash === passHash){
+    sessionStorage.setItem(KEY,'1');
+    applyState(true);
+    $code.value='';
+  }else{
+    $wrong.style.display='block';
+  }
+});
+
+/* ロックボタン */
+document.getElementById('adminLock').addEventListener('click', ()=>{
+  sessionStorage.removeItem(KEY);
+  applyState(false);
+});
+
+/* ===== Firebase 初期化 ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
   authDomain: "alexandria-8d142.firebaseapp.com",
