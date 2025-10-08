@@ -214,21 +214,24 @@
   </section>
 
     <!-- ページ③：幹部（管理） -->
-<section id="pageAdmin" class="page">
+
   <div class="sales-card" style="margin-top:12px">
     <h2 style="margin:0 0 8px">ログイン</h2>
-    <div id="adminLoggedOut">
-      <input id="adminEmail" type="email" placeholder="管理用メール" style="margin-right:6px">
-      <input id="adminPass"  type="password" placeholder="パスワード" style="margin-right:6px">
-      <button id="adminLogin" class="sales-pill">ログイン</button>
-      <div style="font-size:12px;color:#64748b;margin-top:6px">* FirebaseのEmail/Password。roles/{uid}.manager=true のユーザーのみ管理UI表示</div>
+    <div id="adminLocked">
+      <input id="adminCode" type="password" placeholder="幹部用パスコード" style="margin-right:6px">
+      <button id="adminEnter" class="sales-pill">入室</button>
+      <div style="font-size:12px;color:#64748b;margin-top:6px">
+        * 店舗で共有する1つのパスコードだけで入室します
+      </div>
     </div>
-    <div id="adminNoPerm" style="display:none;color:#b91c1c;margin-top:6px">権限がありません（manager=false）</div>
-    <div id="adminLoggedIn" style="display:none">
-      <span style="font-size:12px;color:#64748b">ログイン中</span>
-      <button id="adminLogout" class="sales-pill" style="margin-left:8px">ログアウト</button>
+    <div id="adminUnlocked" style="display:none">
+      <span style="font-size:12px;color:#64748b">幹部モード</span>
+      <button id="adminLock" class="sales-pill" style="margin-left:8px">ロック</button>
     </div>
+    <div id="adminWrong" style="display:none;color:#b91c1c;margin-top:6px">パスコードが違います</div>
   </div>
+
+
 
   <!-- メンバー管理 -->
   <div id="panelStaff" class="sales-card" style="display:none">
@@ -668,12 +671,12 @@ function buildPickerList(){
 render(); setInterval(tick,1000); window.addEventListener('resize', resizeFloor);
 if(STAFF_CSV_URL) loadStaff(); setInterval(()=>{ if(STAFF_CSV_URL) loadStaff(); },60000);
 </script>
-
+  
+<section id="pageAdmin" class="page">
 <!-- Firebase 同期（DEV） -->
 <script type="module">
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
@@ -684,156 +687,109 @@ const firebaseConfig = {
   appId: "1:78904719003:web:234e7d8b0703bad614f83e",
   measurementId: "G-6TJNLEHJXQ"
 };
-const app  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 const ROOM_ID = "dev";
 
-// ---- UI refs
 const $ = s => document.querySelector(s);
-const outBox = $('#adminLoggedOut');
-const inBox  = $('#adminLoggedIn');
-const noPerm = $('#adminNoPerm');
-const pStaff = $('#panelStaff');
-const pProd  = $('#panelProd');
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
 
-$('#adminLogin').onclick = async ()=>{
-  const email = ($('#adminEmail').value||'').trim();
-  const pass  = ($('#adminPass').value||'').trim();
-  if(!email || !pass) return alert('メール/パスワードを入力');
-  try{ await signInWithEmailAndPassword(auth,email,pass); }catch(e){ alert('ログイン失敗: '+e.message); }
+/* ===== スタッフ ===== */
+const stCol = collection(db,'rooms',ROOM_ID,'staff');
+$('#stAdd').onclick = async ()=>{
+  const name = ($('#stName').value||'').trim();
+  const role = $('#stRole').value;
+  const duty = $('#stDuty').value === 'true';
+  const active = $('#stActive').value === 'true';
+  if(!name) return alert('名前を入力');
+  const id = name.replace(/\//g,'／');
+  await setDoc(doc(stCol,id), {name,role,duty,active,updatedAt:serverTimestamp()}, {merge:true});
+  $('#stName').value='';
 };
-$('#adminLogout').onclick = ()=> signOut(auth);
-
-onAuthStateChanged(auth, async (u)=>{
-  outBox.style.display = u ? 'none':'block';
-  inBox.style.display  = u ? 'block':'none';
-  noPerm.style.display = 'none';
-  pStaff.style.display = 'none';
-  pProd.style.display  = 'none';
-  if(!u) return;
-
-  // roles/{uid}.manager == true ?
-  try{
-    const snap = await getDoc(doc(db,'roles',u.uid));
-    const ok = !!(snap.exists() && snap.data()?.manager);
-    if(!ok){ noPerm.style.display='block'; return; }
-  }catch{ noPerm.style.display='block'; return; }
-
-  // ==== スタッフ ====
-  const stCol = collection(db,'rooms',ROOM_ID,'staff');
-  pStaff.style.display='block';
-
-  $('#stAdd').onclick = async ()=>{
-    const name   = ($('#stName').value||'').trim();
-    const role   = $('#stRole').value;
-    const duty   = $('#stDuty').value === 'true';
-    const active = $('#stActive').value === 'true';
-    if(!name) return alert('名前を入力');
-    const id = name.replace(/\//g,'／');
-    await setDoc(doc(stCol,id), {name,role,duty,active,updatedAt:serverTimestamp()}, {merge:true});
-    $('#stName').value='';
-  };
-
-  onSnapshot(stCol,(qs)=>{
-    const rows=[];
-    qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
-    rows.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''),'ja'));
-    $('#stList').innerHTML = rows.map(s=>`
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-        <input class="nm"  value="${esc(s.name||'')}" placeholder="名前">
-        <select class="rl">
-          <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
-          <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
-        </select>
-        <div>
-          <select class="dt"><option value="false" ${!s.duty?'selected':''}>duty:false</option><option value="true" ${s.duty?'selected':''}>duty:true</option></select>
-          <select class="ac"><option value="true" ${s.active!==false?'selected':''}>active:true</option><option value="false" ${s.active===false?'selected':''}>false</option></select>
-        </div>
-        <div style="text-align:right">
-          <button class="sv sales-pill">保存</button>
-          <button class="dl sales-pill">削除</button>
-        </div>
+onSnapshot(stCol,(qs)=>{
+  const rows=[]; qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
+  rows.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''),'ja'));
+  $('#stList').innerHTML = rows.map(s=>`
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
+      <input class="nm"  value="${esc(s.name||'')}" placeholder="名前">
+      <select class="rl"><option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option><option value="boy" ${s.role==='boy'?'selected':''}>ボーイ</option></select>
+      <div>
+        <select class="dt"><option value="false" ${!s.duty?'selected':''}>duty:false</option><option value="true" ${s.duty?'selected':''}>duty:true</option></select>
+        <select class="ac"><option value="true" ${s.active!==false?'selected':''}>active:true</option><option value="false" ${s.active===false?'selected':''}>false</option></select>
       </div>
-    `).join('');
-
-    // wire
-    [...document.querySelectorAll('#stList > div')].forEach((row,i)=>{
-      const rec = rows[i];
-      row.querySelector('.sv').onclick = async ()=>{
-        const name   = row.querySelector('.nm').value.trim();
-        const role   = row.querySelector('.rl').value;
-        const duty   = row.querySelector('.dt').value === 'true';
-        const active = row.querySelector('.ac').value === 'true';
-        if(!name) return alert('名前は必須');
-        const newId = name.replace(/\//g,'／');
-        if(newId!==rec.id){
-          await setDoc(doc(stCol,newId),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
-          await deleteDoc(doc(stCol,rec.id));
-        }else{
-          await setDoc(doc(stCol,rec.id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
-        }
-      };
-      row.querySelector('.dl').onclick = async ()=>{
-        if(confirm('削除しますか？')) await deleteDoc(doc(stCol,rec.id));
-      };
-    });
-  });
-
-  // ==== 商品 ====
-  const pdCol = collection(db,'rooms',ROOM_ID,'products');
-  pProd.style.display='block';
-
-  $('#pdAdd').onclick = async ()=>{
-    const name   = ($('#pdName').value||'').trim();
-    const price  = Number($('#pdPrice').value||0);
-    const active = $('#pdActive').value === 'true';
-    if(!name) return alert('商品名を入力');
-    const id = name.replace(/\//g,'／');
-    await setDoc(doc(pdCol,id), {name,price,active,updatedAt:serverTimestamp()},{merge:true});
-    $('#pdName').value=''; $('#pdPrice').value='';
-  };
-
-  onSnapshot(pdCol,(qs)=>{
-    const rows=[];
-    qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
-    rows.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''),'ja'));
-    $('#pdList').innerHTML = rows.map(p=>`
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-        <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
-        <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
-        <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
-        <div style="text-align:right">
-          <button class="sv sales-pill">保存</button>
-          <button class="dl sales-pill">削除</button>
-        </div>
+      <div style="text-align:right">
+        <button class="sv sales-pill">保存</button>
+        <button class="dl sales-pill">削除</button>
       </div>
-    `).join('');
-
-    [...document.querySelectorAll('#pdList > div')].forEach((row,i)=>{
-      const rec = rows[i];
-      row.querySelector('.sv').onclick = async ()=>{
-        const name   = row.querySelector('.nm').value.trim();
-        const price  = Number(row.querySelector('.pr').value||0);
-        const active = row.querySelector('.ac').value === 'true';
-        if(!name) return alert('商品名は必須');
-        const newId = name.replace(/\//g,'／');
-        if(newId!==rec.id){
-          await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-          await deleteDoc(doc(pdCol,rec.id));
-        }else{
-          await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-        }
-      };
-      row.querySelector('.dl').onclick = async ()=>{
-        if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));
-      };
-    });
+    </div>`).join('');
+  [...document.querySelectorAll('#stList > div')].forEach((row,i)=>{
+    const rec = rows[i];
+    row.querySelector('.sv').onclick = async ()=>{
+      const name = row.querySelector('.nm').value.trim();
+      const role = row.querySelector('.rl').value;
+      const duty = row.querySelector('.dt').value === 'true';
+      const active = row.querySelector('.ac').value === 'true';
+      if(!name) return alert('名前は必須');
+      const newId = name.replace(/\//g,'／');
+      if(newId!==rec.id){
+        await setDoc(doc(stCol,newId),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+        await deleteDoc(doc(stCol,rec.id));
+      }else{
+        await setDoc(doc(stCol,rec.id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+      }
+    };
+    row.querySelector('.dl').onclick = async ()=>{
+      if(confirm('削除しますか？')) await deleteDoc(doc(stCol,rec.id));
+    };
   });
 });
 
-function esc(s){return String(s).replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
+/* ===== 商品 ===== */
+const pdCol = collection(db,'rooms',ROOM_ID,'products');
+$('#pdAdd').onclick = async ()=>{
+  const name = ($('#pdName').value||'').trim();
+  const price = Number($('#pdPrice').value||0);
+  const active = $('#pdActive').value === 'true';
+  if(!name) return alert('商品名を入力');
+  const id = name.replace(/\//g,'／');
+  await setDoc(doc(pdCol,id), {name,price,active,updatedAt:serverTimestamp()},{merge:true});
+  $('#pdName').value=''; $('#pdPrice').value='';
+};
+onSnapshot(pdCol,(qs)=>{
+  const rows=[]; qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
+  rows.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''),'ja'));
+  $('#pdList').innerHTML = rows.map(p=>`
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
+      <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
+      <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
+      <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
+      <div style="text-align:right">
+        <button class="sv sales-pill">保存</button>
+        <button class="dl sales-pill">削除</button>
+      </div>
+    </div>`).join('');
+  [...document.querySelectorAll('#pdList > div')].forEach((row,i)=>{
+    const rec = rows[i];
+    row.querySelector('.sv').onclick = async ()=>{
+      const name = row.querySelector('.nm').value.trim();
+      const price = Number(row.querySelector('.pr').value||0);
+      const active = row.querySelector('.ac').value === 'true';
+      if(!name) return alert('商品名は必須');
+      const newId = name.replace(/\//g,'／');
+      if(newId!==rec.id){
+        await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+        await deleteDoc(doc(pdCol,rec.id));
+      }else{
+        await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+      }
+    };
+    row.querySelector('.dl').onclick = async ()=>{
+      if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));
+    };
+  });
+});
 </script>
+</section>
 
 
 <!-- 売上入力（商品CSV/送信） -->
