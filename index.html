@@ -681,7 +681,7 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTim
 const ROOM_ID = "dev";
 
 /* 幹部パスコード設定 —— ここだけ編集すればOK */
-const ADMIN_PASS_PLAIN = (ROOM_ID==='dev') ? 'dev用パス' : '本番用パス';  // ← 好きな文字列に
+const ADMIN_PASS_PLAIN = (ROOM_ID==='dev') ? 'test' : '本番用パス';  // ← 好きな文字列に
 const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
 
 /* 共通ユーティリティ */
