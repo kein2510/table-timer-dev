@@ -342,6 +342,13 @@ button.danger{background:#dc2626}
   const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
   async function sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 
+
+  const KEY = LS_PREFIX + "admin.unlocked";
+  const $locked = $('#adminLocked');
+  const $unlocked = $('#adminUnlocked');
+  const $wrong = $('#adminWrong');
+  const $code = $('#adminCode');
+
   // ...（この下に、あなたの admin ログイン処理、stCol/pdCol の CRUD などを続ける）
 
 
@@ -376,16 +383,7 @@ button.danger{background:#dc2626}
     });
 
     // Firebase init
-    const app=getApps().length?getApps()[0]:initializeApp({
-      apiKey:"AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
-      authDomain:"alexandria-8d142.firebaseapp.com",
-      projectId:"alexandria-8d142",
-      storageBucket:"alexandria-8d142.firebasestorage.app",
-      messagingSenderId:"78904719003",
-      appId:"1:78904719003:web:234e7d8b0703bad614f83e",
-      measurementId:"G-6TJNLEHJXQ"
-    });
-    const db=getFirestore(app);
+
 
     /* ====== staff CRUD（一覧に描画） ====== */
     const stCol=collection(db,'rooms',ROOM_ID,'staff');
