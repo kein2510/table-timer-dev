@@ -418,35 +418,50 @@ button.danger{background:#dc2626}
       });
     };
 
-    // ===== staff: 追加 =====
+// ===== staff: 追加 =====
+document.getElementById('stAdd')?.addEventListener('click', async ()=>{
+  const nameEl = document.getElementById('stName');
+  const roleEl = document.getElementById('stRole');
 
+  const name = (nameEl?.value || '').trim();
+  const role = roleEl?.value || 'boy';
+  const duty = false;   // 既定
+  const active = true;  // 既定
 
-    document.getElementById('stAdd')?.addEventListener('click', async ()=>{
-      const nameEl = document.getElementById('stName');
-      const roleEl = document.getElementById('stRole');
+  if(!name){
+    alert('名前を入力してください');
+    nameEl?.focus();
+    return;
+  }
 
-      const name = (nameEl?.value || '').trim();
-      const role = roleEl?.value || 'boy';
-      const duty = false;   // 既定
-      const active = true;  // 既定
+  try{
+    // Firestore ID に / を入れない
+    const id = name.replace(/\//g,'／');
+    await setDoc(doc(stCol, id), {
+      name, role, duty, active, updatedAt: serverTimestamp()
+    }, { merge: true });
 
-      if(!name) return alert('名前を入力してください');
+    // 入力をリセットして一覧へ
+    if(nameEl) nameEl.value = '';
+    alert('追加しました');
+    location.hash = '#admin-staff-list';   // ← 一覧に遷移
+  }catch(e){
+    console.error('staff add failed:', e);
+    // 失敗理由をユーザーに見せる
+    alert('追加に失敗しました: ' + (e?.message || e));
+  }
+});
 
-      const id = name.replace(/\//g,'／'); // Firestore ID に / を入れない
-      await setDoc(doc(stCol,id), { name, role, duty, active, updatedAt: serverTimestamp() }, { merge: true });
-
-      if(nameEl) nameEl.value = '';
-      alert('追加しました');
-      location.hash = '#admin-staff-list';
-    });
 
 
 
     onSnapshot(stCol,(qs)=>{
-      const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+      const rows=[];
+      qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
       rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
-      renderStaffRows(rows);
+      renderStaffRows(rows);   // ← 一覧DOMを描画
     });
+
 
     /* ====== products CRUD（一覧に描画） ====== */
     const pdCol=collection(db,'rooms',ROOM_ID,'products');
