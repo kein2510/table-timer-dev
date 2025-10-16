@@ -351,6 +351,48 @@ button.danger{background:#dc2626}
 
   // ...（この下に、あなたの admin ログイン処理、stCol/pdCol の CRUD などを続ける）
 
+// --- 管理サブページ表示スイッチ ---
+function showAdminSub(hash) {
+  const h = hash || '#admin';
+
+  // いったん全部消す
+  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // どれを出すか決める
+  let target = 'adminHome';
+  if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
+  else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
+  else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
+  else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
+
+  const el = document.getElementById(target);
+  if (el) el.style.display = 'block';
+}
+
+  
+  // --- 管理サブページ表示スイッチ ---
+function showAdminSub(hash) {
+  const h = hash || '#admin';
+
+  // いったん全部消す
+  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // どれを出すか決める
+  let target = 'adminHome';
+  if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
+  else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
+  else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
+  else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
+
+  const el = document.getElementById(target);
+  if (el) el.style.display = 'block';
+}
 
 
 
