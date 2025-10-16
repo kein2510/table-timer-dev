@@ -355,11 +355,7 @@ button.danger{background:#dc2626}
 function showAdminSub(hash) {
   const h = hash || '#admin';
 
-  // いったん全部消す
-  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+
 
   // どれを出すか決める
   let target = 'adminHome';
