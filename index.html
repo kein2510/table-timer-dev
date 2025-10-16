@@ -302,41 +302,48 @@ button.danger{background:#dc2626}
 
 
   <!-- 幹部ロジック（Firestore は既存のまま） -->
-  <script type="module">
-    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import { getFirestore, /* ... */ } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-    const auth = getAuth(app);
-    // 失敗してもコンソールに出すだけ（再読み込みで復帰可）
-    signInAnonymously(auth).then(()=>console.log('[auth] anonymous signed in'))
-                           .catch(e=>console.error('[auth] signInAnonymously failed', e));
+  // ==== Firebase init（まず app を作る）====
+  const app = getApps().length ? getApps()[0] : initializeApp({
+    apiKey:"AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
+    authDomain:"alexandria-8d142.firebaseapp.com",
+    projectId:"alexandria-8d142",
+    storageBucket:"alexandria-8d142.firebasestorage.app",
+    messagingSenderId:"78904719003",
+    appId:"1:78904719003:web:234e7d8b0703bad614f83e",
+    measurementId:"G-6TJNLEHJXQ"
+  });
 
-    const ROOM_ID = "dev";
-    const ADMIN_PASS_PLAIN = "test";
-    const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
-    const $ = s => document.querySelector(s);
-    const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-    async function sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+  // ==== 認証（app ができてから auth を作る）====
+  const auth = getAuth(app);
+  try {
+    await signInAnonymously(auth);
+    console.log('[auth] anonymous signed in');
+  } catch (e) {
+    console.error('[auth] signInAnonymously failed', e);
+  }
 
-    const KEY=LS_PREFIX+"admin.unlocked";
-    const $locked=$('#adminLocked'),$unlocked=$('#adminUnlocked'),$wrong=$('#adminWrong'),$code=$('#adminCode');
+  // ==== Firestore ====
+  const db = getFirestore(app);
 
-    function showAdminSub(hash){
-      const ids = ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'];
-      ids.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display='none'; });
-      const map = {
-        '#admin':'adminHome',
-        '#admin-staff-list':'adminStaffList',
-        '#admin-staff-add':'adminStaffAdd',
-        '#admin-prod-list':'adminProdList',
-        '#admin-prod-add':'adminProdAdd'
-      };
-      const target = map[hash] || 'adminHome';
-      const el = document.getElementById(target);
-      if(el) el.style.display='block';
-    }
+  // ↓↓↓ ここから先はあなたの既存コード（ROOM_ID/パスコード、applyState/showAdminSub、
+  //      staff/products の CRUD/onSnapshot、イベントハンドラなど）を
+  //      そのまま続けて置いてください。db は上で定義済みです。
+  const ROOM_ID = "dev";
+  const ADMIN_PASS_PLAIN = "test";
+  const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  async function sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+
+  // ...（この下に、あなたの admin ログイン処理、stCol/pdCol の CRUD などを続ける）
+
 
 
 
