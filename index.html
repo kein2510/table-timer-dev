@@ -235,8 +235,7 @@ button.danger{background:#dc2626}
     </div>
   </div>
 
-
-  <!-- ===== 従業員：一覧 ===== -->
+<!-- ===== 従業員：一覧 ===== -->
 <div id="adminStaffList" class="sales-card" style="display:none">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
@@ -245,6 +244,35 @@ button.danger{background:#dc2626}
   </div>
   <div id="stList" style="margin-top:8px"></div>
 </div>
+
+<!-- ===== 従業員：追加 ===== -->
+<div id="adminStaffAdd" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">← 一覧へ</button>
+    <h2 style="margin:0">従業員追加のページ</h2>
+  </div>
+
+  <!-- ここが「四枚目の画像」のUI -->
+  <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end;max-width:720px">
+    <label>名前
+      <input id="stName" placeholder="ここに名前を入力">
+    </label>
+    <label>役職
+      <select id="stRole">
+        <option value="boy">ボーイ</option>
+        <option value="cast">キャスト</option>
+        <option value="staff">スタッフ</option>
+      </select>
+    </label>
+    <button id="stAdd" class="sales-pill" type="button">追加</button>
+  </div>
+
+  <div style="font-size:12px;color:#64748b;margin-top:6px">
+    * 追加時は「出勤: false / 有効: true」で登録（必要なら一覧で編集できます）
+  </div>
+</div>
+
+
 
 
     <!-- 右側：追加フォーム -->
@@ -280,31 +308,7 @@ button.danger{background:#dc2626}
   <div id="stList" style="margin-top:8px"></div>
 </div>
 
-  <!-- ===== 従業員：追加 ===== -->
-<div id="adminStaffAdd" class="sales-card" style="display:none">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-    <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">← 一覧へ</button>
-    <h2 style="margin:0">従業員追加のページ</h2>
-  </div>
 
-  <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end;max-width:720px">
-    <label>名前
-      <input id="stName" placeholder="ここに名前を入力">
-    </label>
-    <label>役職
-      <select id="stRole">
-        <option value="boy">ボーイ</option>
-        <option value="cast">キャスト</option>
-        <option value="staff">スタッフ</option>
-      </select>
-    </label>
-    <button id="stAdd" class="sales-pill" type="button">追加</button>
-  </div>
-
-  <div style="font-size:12px;color:#64748b;margin-top:6px">
-    * 追加時は「出勤: false / 有効: true」で登録されます（必要なら一覧から編集できます）
-  </div>
-</div>
 
 
 
@@ -368,6 +372,7 @@ button.danger{background:#dc2626}
 
 
 
+
     function applyState(open){
       $locked.style.display=open?'none':'block';
       $unlocked.style.display=open?'flex':'none';
@@ -415,7 +420,12 @@ button.danger{background:#dc2626}
       root.innerHTML = rows.map(s=>`
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
           <input class="nm" value="${esc(s.name||'')}" placeholder="名前">
-          <select class="rl"><option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option><option value="boy" ${s.role==='boy'?'selected':''}>ボーイ</option></select>
+          <select class="rl">
+            <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
+            <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
+            <option value="staff"${s.role==='staff'?'selected':''}>スタッフ</option>
+          </select>
+
           <div>
             <select class="dt"><option value="false" ${!s.duty?'selected':''}>duty:false</option><option value="true" ${s.duty?'selected':''}>duty:true</option></select>
             <select class="ac"><option value="true" ${s.active!==false?'selected':''}>active:true</option><option value="false" ${s.active===false?'selected':''}>false</option></select>
@@ -447,25 +457,28 @@ button.danger{background:#dc2626}
       });
     };
 
+    // ===== staff: 追加 =====
+    const stCol = collection(db,'rooms',ROOM_ID,'staff'); // 既存の定義を流用
+
     document.getElementById('stAdd')?.addEventListener('click', async ()=>{
-      const name = (document.getElementById('stName').value || '').trim();
-      const role = document.getElementById('stRole').value;
-      // 追加時のデフォルト
-      const duty = false;      // 出勤フラグはデフォルト false
-      const active = true;     // 有効はデフォルト true
+      const nameEl = document.getElementById('stName');
+      const roleEl = document.getElementById('stRole');
+
+      const name = (nameEl?.value || '').trim();
+      const role = roleEl?.value || 'boy';
+      const duty = false;   // 既定
+      const active = true;  // 既定
 
       if(!name) return alert('名前を入力してください');
-      const id = name.replace(/\//g,'／'); // FirestoreドキュメントIDに / が入らないよう置換
 
-      await setDoc(doc(stCol, id), {
-        name, role, duty, active, updatedAt: serverTimestamp()
-      }, { merge: true });
+      const id = name.replace(/\//g,'／'); // Firestore ID に / を入れない
+      await setDoc(doc(stCol,id), { name, role, duty, active, updatedAt: serverTimestamp() }, { merge: true });
 
-      document.getElementById('stName').value = '';
+      if(nameEl) nameEl.value = '';
       alert('追加しました');
-      // 追加後は一覧へ戻す（任意）
       location.hash = '#admin-staff-list';
     });
+
 
 
     onSnapshot(stCol,(qs)=>{
