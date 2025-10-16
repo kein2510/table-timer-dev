@@ -226,48 +226,59 @@ button.danger{background:#dc2626}
     <div id="adminWrong" style="display:none;color:#b91c1c;margin-top:6px">パスコードが違います</div>
   </div>
 
-  <!-- 幹部ホーム（ログイン後に表示） -->
   <div id="adminHome" class="sales-card" style="display:none">
     <h2 style="margin:0 0 8px">幹部メニュー</h2>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
       <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">従業員管理（一覧）</button>
-      <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-add'">従業員管理（追加）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-list'">商品管理（一覧）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-add'">商品管理（追加）</button>
     </div>
   </div>
 
+
   <!-- ===== 従業員：一覧 ===== -->
-  <div id="adminStaffList" class="sales-card" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<div id="adminStaffList" class="sales-card" style="display:none">
+  <!-- ヘッダー：戻る + タイトル + 追加フォーム -->
+  <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px">
       <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
       <h2 style="margin:0">従業員リスト</h2>
-      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-staff-add'">＋ 追加ページへ</button>
     </div>
-    <div id="stList" style="margin-top:8px"></div>
+
+    <!-- 右側：追加フォーム -->
+    <div style="margin-left:auto;min-width:520px;max-width:100%">
+      <div class="sales-grid">
+        <label>名前<input id="stName" placeholder="例: あやか"></label>
+        <label>役職
+          <select id="stRole">
+            <option value="cast">キャスト</option>
+            <option value="boy">ボーイ</option>
+          </select>
+        </label>
+        <label>出勤
+          <select id="stDuty">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+        </label>
+        <label>有効
+          <select id="stActive">
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        </label>
+      </div>
+      <div style="text-align:right;margin-top:6px">
+        <button id="stAdd" class="sales-pill">＋ 追加</button>
+      </div>
+    </div>
   </div>
 
-  <!-- ===== 従業員：追加 ===== -->
-  <div id="adminStaffAdd" class="sales-card" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
-      <h2 style="margin:0">従業員の追加</h2>
-      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-staff-list'">一覧へ</button>
-    </div>
-    <div class="sales-grid">
-      <label>名前<input id="stName" placeholder="例: あやか"></label>
-      <label>役職
-        <select id="stRole"><option value="cast">キャスト</option><option value="boy">ボーイ</option></select>
-      </label>
-      <label>出勤
-        <select id="stDuty"><option value="false">false</option><option value="true">true</option></select>
-      </label>
-      <label>有効
-        <select id="stActive"><option value="true">true</option><option value="false">false</option></select>
-      </label>
-    </div>
-    <button id="stAdd" class="sales-pill">＋ 追加</button>
-  </div>
+  <!-- 一覧（編集・削除は既存と同じUI） -->
+  <div id="stList" style="margin-top:8px"></div>
+</div>
+
+
 
   <!-- ===== 商品：一覧 ===== -->
   <div id="adminProdList" class="sales-card" style="display:none">
@@ -312,18 +323,19 @@ button.danger{background:#dc2626}
     const $locked=$('#adminLocked'),$unlocked=$('#adminUnlocked'),$wrong=$('#adminWrong'),$code=$('#adminCode');
 
     function showAdminSub(hash){
-      const ids=['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'];
-      ids.forEach(id=>{ const el=$('#'+id); if(el) el.style.display='none'; });
-      const map={
+      const ids = ['adminHome','adminStaffList','adminProdList','adminProdAdd']; // ← staffAdd を除外
+      ids.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display='none'; });
+      const map = {
         '#admin':'adminHome',
         '#admin-staff-list':'adminStaffList',
-        '#admin-staff-add':'adminStaffAdd',
         '#admin-prod-list':'adminProdList',
         '#admin-prod-add':'adminProdAdd'
       };
       const target = map[hash] || 'adminHome';
-      const el = $('#'+target); if(el) el.style.display='block';
+      const el = document.getElementById(target);
+      if(el) el.style.display='block';
     }
+
 
     function applyState(open){
       $locked.style.display=open?'none':'block';
