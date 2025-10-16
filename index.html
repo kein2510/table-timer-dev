@@ -304,7 +304,14 @@ button.danger{background:#dc2626}
   <!-- 幹部ロジック（Firestore は既存のまま） -->
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, /* ... */ } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    const auth = getAuth(app);
+    // 失敗してもコンソールに出すだけ（再読み込みで復帰可）
+    signInAnonymously(auth).then(()=>console.log('[auth] anonymous signed in'))
+                           .catch(e=>console.error('[auth] signInAnonymously failed', e));
 
     const ROOM_ID = "dev";
     const ADMIN_PASS_PLAIN = "test";
