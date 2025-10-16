@@ -209,113 +209,282 @@ button.danger{background:#dc2626}
     </section>
 
     <!-- 幹部 -->
-    <section id="pageAdmin" class="page">
-      <div class="sales-card" style="margin-top:12px">
-        <h2 style="margin:0 0 8px">ログイン</h2>
-        <div id="adminLocked">
-          <input id="adminCode" type="password" placeholder="幹部用パスコード" style="margin-right:6px">
-          <button id="adminEnter" class="sales-pill">入室</button>
-          <div style="font-size:12px;color:#64748b;margin-top:6px">* 店舗で共有する1つのパスコードだけで入室します</div>
-        </div>
-        <div id="adminUnlocked" style="display:none">
-          <span style="font-size:12px;color:#64748b">幹部モード</span>
-          <button id="adminLock" class="sales-pill" style="margin-left:8px">ロック</button>
-        </div>
-        <div id="adminWrong" style="display:none;color:#b91c1c;margin-top:6px">パスコードが違います</div>
-      </div>
+<section id="pageAdmin" class="page">
 
-      <div id="panelStaff" class="sales-card" style="display:none">
-        <h2 style="margin:0 0 8px">メンバー管理</h2>
-        <div class="sales-grid">
-          <label>名前<input id="stName" placeholder="例: あやか"></label>
-          <label>役職
-            <select id="stRole"><option value="cast">キャスト</option><option value="boy">ボーイ</option></select>
-          </label>
-          <label>出勤
-            <select id="stDuty"><option value="false">false</option><option value="true">true</option></select>
-          </label>
-          <label>有効
-            <select id="stActive"><option value="true">true</option><option value="false">false</option></select>
-          </label>
-        </div>
-        <button id="stAdd" class="sales-pill">＋ 追加</button>
-        <div id="stList" style="margin-top:8px"></div>
-      </div>
+  <!-- ログインカード -->
+  <div class="sales-card" style="margin-top:12px">
+    <h2 style="margin:0 0 8px">ログイン</h2>
+    <div id="adminLocked">
+      <input id="adminCode" type="password" placeholder="幹部用パスコード" style="margin-right:6px">
+      <button id="adminEnter" class="sales-pill">入室</button>
+      <div style="font-size:12px;color:#64748b;margin-top:6px">* 店舗で共有する1つのパスコードだけで入室します</div>
+    </div>
+    <div id="adminUnlocked" style="display:none;display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:#64748b">幹部モード</span>
+      <button id="adminLock" class="sales-pill">ロック</button>
+    </div>
+    <div id="adminWrong" style="display:none;color:#b91c1c;margin-top:6px">パスコードが違います</div>
+  </div>
 
-      <div id="panelProd" class="sales-card" style="display:none">
-        <h2 style="margin:0 0 8px">商品管理</h2>
-        <div class="sales-grid">
-          <label>商品名<input id="pdName" placeholder="例: 生ビール"></label>
-          <label>価格（円）<input id="pdPrice" type="number" min="0" step="1" placeholder="例: 700"></label>
-          <label>有効
-            <select id="pdActive"><option value="true">true</option><option value="false">false</option></select>
-          </label>
-        </div>
-        <button id="pdAdd" class="sales-pill">＋ 追加</button>
-        <div id="pdList" style="margin-top:8px"></div>
-      </div>
+  <!-- 幹部ホーム（ログイン後に表示） -->
+  <div id="adminHome" class="sales-card" style="display:none">
+    <h2 style="margin:0 0 8px">幹部メニュー</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">従業員管理（一覧）</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-add'">従業員管理（追加）</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-list'">商品管理（一覧）</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-add'">商品管理（追加）</button>
+    </div>
+  </div>
 
-      <!-- 幹部ロジック（module, 1本だけ） -->
-      <script type="module">
-        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-        const ROOM_ID = "dev";
-        const ADMIN_PASS_PLAIN = "test";
-        const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
-        const $ = s => document.querySelector(s);
-        const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-        async function sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
-        const KEY=LS_PREFIX+"admin.unlocked";
-        const $locked=$('#adminLocked'),$unlocked=$('#adminUnlocked'),$wrong=$('#adminWrong'),$code=$('#adminCode');
-        function applyState(open){$locked.style.display=open?'none':'block';$unlocked.style.display=open?'block':'none';$wrong.style.display='none';$('#panelStaff').style.display=open?'block':'none';$('#panelProd').style.display=open?'block':'none';}
-        applyState(sessionStorage.getItem(KEY)==='1');
-        document.getElementById('adminEnter').addEventListener('click',async()=>{const input=($code.value||'').trim();if(!input)return;const ok=(await sha256Hex(input))===(await sha256Hex(ADMIN_PASS_PLAIN)); if(ok){sessionStorage.setItem(KEY,'1');applyState(true);$code.value='';}else{$wrong.style.display='block';}});
-        document.getElementById('adminLock').addEventListener('click',()=>{sessionStorage.removeItem(KEY);applyState(false);});
-        const app=getApps().length?getApps()[0]:initializeApp({apiKey:"AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",authDomain:"alexandria-8d142.firebaseapp.com",projectId:"alexandria-8d142",storageBucket:"alexandria-8d142.firebasestorage.app",messagingSenderId:"78904719003",appId:"1:78904719003:web:234e7d8b0703bad614f83e",measurementId:"G-6TJNLEHJXQ"});
-        const db=getFirestore(app);
+  <!-- ===== 従業員：一覧 ===== -->
+  <div id="adminStaffList" class="sales-card" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+      <h2 style="margin:0">従業員リスト</h2>
+      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-staff-add'">＋ 追加ページへ</button>
+    </div>
+    <div id="stList" style="margin-top:8px"></div>
+  </div>
 
-        // staff CRUD
-        const stCol=collection(db,'rooms',ROOM_ID,'staff');
-        $('#stAdd').onclick=async()=>{const name=($('#stName').value||'').trim();const role=$('#stRole').value;const duty=$('#stDuty').value==='true';const active=$('#stActive').value==='true';if(!name)return alert('名前を入力');const id=name.replace(/\//g,'／');await setDoc(doc(stCol,id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});$('#stName').value='';};
-        onSnapshot(stCol,(qs)=>{const rows=[];qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));$('#stList').innerHTML=rows.map(s=>`
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-            <input class="nm" value="${esc(s.name||'')}" placeholder="名前">
-            <select class="rl"><option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option><option value="boy" ${s.role==='boy'?'selected':''}>ボーイ</option></select>
-            <div>
-              <select class="dt"><option value="false" ${!s.duty?'selected':''}>duty:false</option><option value="true" ${s.duty?'selected':''}>duty:true</option></select>
-              <select class="ac"><option value="true" ${s.active!==false?'selected':''}>active:true</option><option value="false" ${s.active===false?'selected':''}>false</option></select>
-            </div>
-            <div style="text-align:right">
-              <button class="sv sales-pill">保存</button>
-              <button class="dl sales-pill">削除</button>
-            </div>
-          </div>`).join('');
-          [...document.querySelectorAll('#stList > div')].forEach((row,i)=>{const rec=rows[i];
-            row.querySelector('.sv').onclick=async()=>{const name=row.querySelector('.nm').value.trim();const role=row.querySelector('.rl').value;const duty=row.querySelector('.dt').value==='true';const active=row.querySelector('.ac').value==='true';if(!name)return alert('名前は必須');const newId=name.replace(/\//g,'／');if(newId!==rec.id){await setDoc(doc(stCol,newId),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});await deleteDoc(doc(stCol,rec.id));}else{await setDoc(doc(stCol,rec.id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});}};
-            row.querySelector('.dl').onclick=async()=>{if(confirm('削除しますか？')) await deleteDoc(doc(stCol,rec.id));};
-          });
+  <!-- ===== 従業員：追加 ===== -->
+  <div id="adminStaffAdd" class="sales-card" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+      <h2 style="margin:0">従業員の追加</h2>
+      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-staff-list'">一覧へ</button>
+    </div>
+    <div class="sales-grid">
+      <label>名前<input id="stName" placeholder="例: あやか"></label>
+      <label>役職
+        <select id="stRole"><option value="cast">キャスト</option><option value="boy">ボーイ</option></select>
+      </label>
+      <label>出勤
+        <select id="stDuty"><option value="false">false</option><option value="true">true</option></select>
+      </label>
+      <label>有効
+        <select id="stActive"><option value="true">true</option><option value="false">false</option></select>
+      </label>
+    </div>
+    <button id="stAdd" class="sales-pill">＋ 追加</button>
+  </div>
+
+  <!-- ===== 商品：一覧 ===== -->
+  <div id="adminProdList" class="sales-card" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+      <h2 style="margin:0">商品リスト</h2>
+      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-prod-add'">＋ 追加ページへ</button>
+    </div>
+    <div id="pdList" style="margin-top:8px"></div>
+  </div>
+
+  <!-- ===== 商品：追加 ===== -->
+  <div id="adminProdAdd" class="sales-card" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+      <h2 style="margin:0">商品の追加</h2>
+      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-prod-list'">一覧へ</button>
+    </div>
+    <div class="sales-grid">
+      <label>商品名<input id="pdName" placeholder="例: 生ビール"></label>
+      <label>価格（円）<input id="pdPrice" type="number" min="0" step="1" placeholder="例: 700"></label>
+      <label>有効
+        <select id="pdActive"><option value="true">true</option><option value="false">false</option></select>
+      </label>
+    </div>
+    <button id="pdAdd" class="sales-pill">＋ 追加</button>
+  </div>
+
+  <!-- 幹部ロジック（Firestore は既存のまま） -->
+  <script type="module">
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    const ROOM_ID = "dev";
+    const ADMIN_PASS_PLAIN = "test";
+    const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+    async function sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+
+    const KEY=LS_PREFIX+"admin.unlocked";
+    const $locked=$('#adminLocked'),$unlocked=$('#adminUnlocked'),$wrong=$('#adminWrong'),$code=$('#adminCode');
+
+    function showAdminSub(hash){
+      const ids=['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'];
+      ids.forEach(id=>{ const el=$('#'+id); if(el) el.style.display='none'; });
+      const map={
+        '#admin':'adminHome',
+        '#admin-staff-list':'adminStaffList',
+        '#admin-staff-add':'adminStaffAdd',
+        '#admin-prod-list':'adminProdList',
+        '#admin-prod-add':'adminProdAdd'
+      };
+      const target = map[hash] || 'adminHome';
+      const el = $('#'+target); if(el) el.style.display='block';
+    }
+
+    function applyState(open){
+      $locked.style.display=open?'none':'block';
+      $unlocked.style.display=open?'flex':'none';
+      $wrong.style.display='none';
+      // ログイン後はホームへ
+      if(open){ showAdminSub(location.hash); }
+      else{
+        // ログアウト時は全部しまっておく
+        ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
+          const el=document.getElementById(id); if(el) el.style.display='none';
         });
+      }
+    }
 
-        // products CRUD
-        const pdCol=collection(db,'rooms',ROOM_ID,'products');
-        $('#pdAdd').onclick=async()=>{const name=($('#pdName').value||'').trim();const price=Number($('#pdPrice').value||0);const active=$('#pdActive').value==='true';if(!name)return alert('商品名を入力');const id=name.replace(/\//g,'／');await setDoc(doc(pdCol,id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});$('#pdName').value='';$('#pdPrice').value='';};
-        onSnapshot(pdCol,(qs)=>{const rows=[];qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));$('#pdList').innerHTML=rows.map(p=>`
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-            <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
-            <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
-            <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
-            <div style="text-align:right">
-              <button class="sv sales-pill">保存</button>
-              <button class="dl sales-pill">削除</button>
-            </div>
-          </div>`).join('');
-          [...document.querySelectorAll('#pdList > div')].forEach((row,i)=>{const rec=rows[i];
-            row.querySelector('.sv').onclick=async()=>{const name=row.querySelector('.nm').value.trim();const price=Number(row.querySelector('.pr').value||0);const active=row.querySelector('.ac').value==='true';if(!name)return alert('商品名は必須');const newId=name.replace(/\//g,'／');if(newId!==rec.id){await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});await deleteDoc(doc(pdCol,rec.id));}else{await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});}};
-            row.querySelector('.dl').onclick=async()=>{if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));};
-          });
-        });
-      </script>
-    </section>
+    applyState(sessionStorage.getItem(KEY)==='1');
+
+    document.getElementById('adminEnter').addEventListener('click',async()=>{
+      const input=($code.value||'').trim(); if(!input) return;
+      const ok=(await sha256Hex(input))===(await sha256Hex(ADMIN_PASS_PLAIN));
+      if(ok){ sessionStorage.setItem(KEY,'1'); applyState(true); $code.value=''; if(!location.hash.startsWith('#admin')) location.hash='#admin'; }
+      else { $wrong.style.display='block'; }
+    });
+
+    document.getElementById('adminLock').addEventListener('click',()=>{
+      sessionStorage.removeItem(KEY); applyState(false);
+    });
+
+    // Firebase init
+    const app=getApps().length?getApps()[0]:initializeApp({
+      apiKey:"AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
+      authDomain:"alexandria-8d142.firebaseapp.com",
+      projectId:"alexandria-8d142",
+      storageBucket:"alexandria-8d142.firebasestorage.app",
+      messagingSenderId:"78904719003",
+      appId:"1:78904719003:web:234e7d8b0703bad614f83e",
+      measurementId:"G-6TJNLEHJXQ"
+    });
+    const db=getFirestore(app);
+
+    /* ====== staff CRUD（一覧に描画） ====== */
+    const stCol=collection(db,'rooms',ROOM_ID,'staff');
+    const renderStaffRows = (rows)=>{
+      const root = document.getElementById('stList');
+      if(!root) return;
+      root.innerHTML = rows.map(s=>`
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
+          <input class="nm" value="${esc(s.name||'')}" placeholder="名前">
+          <select class="rl"><option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option><option value="boy" ${s.role==='boy'?'selected':''}>ボーイ</option></select>
+          <div>
+            <select class="dt"><option value="false" ${!s.duty?'selected':''}>duty:false</option><option value="true" ${s.duty?'selected':''}>duty:true</option></select>
+            <select class="ac"><option value="true" ${s.active!==false?'selected':''}>active:true</option><option value="false" ${s.active===false?'selected':''}>false</option></select>
+          </div>
+          <div style="text-align:right">
+            <button class="sv sales-pill">保存</button>
+            <button class="dl sales-pill">削除</button>
+          </div>
+        </div>`).join('');
+      [...root.querySelectorAll(':scope > div')].forEach((row,i)=>{
+        const rec=rows[i];
+        row.querySelector('.sv').onclick=async()=>{
+          const name=row.querySelector('.nm').value.trim();
+          const role=row.querySelector('.rl').value;
+          const duty=row.querySelector('.dt').value==='true';
+          const active=row.querySelector('.ac').value==='true';
+          if(!name) return alert('名前は必須');
+          const newId=name.replace(/\//g,'／');
+          if(newId!==rec.id){
+            await setDoc(doc(stCol,newId),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+            await deleteDoc(doc(stCol,rec.id));
+          }else{
+            await setDoc(doc(stCol,rec.id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+          }
+        };
+        row.querySelector('.dl').onclick=async()=>{
+          if(confirm('削除しますか？')) await deleteDoc(doc(stCol,rec.id));
+        };
+      });
+    };
+
+    document.getElementById('stAdd').onclick=async()=>{
+      const name=(document.getElementById('stName').value||'').trim();
+      const role=document.getElementById('stRole').value;
+      const duty=document.getElementById('stDuty').value==='true';
+      const active=document.getElementById('stActive').value==='true';
+      if(!name) return alert('名前を入力');
+      const id=name.replace(/\//g,'／');
+      await setDoc(doc(stCol,id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+      document.getElementById('stName').value='';
+      alert('追加しました');
+    };
+
+    onSnapshot(stCol,(qs)=>{
+      const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+      rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+      renderStaffRows(rows);
+    });
+
+    /* ====== products CRUD（一覧に描画） ====== */
+    const pdCol=collection(db,'rooms',ROOM_ID,'products');
+    const renderProdRows = (rows)=>{
+      const root = document.getElementById('pdList');
+      if(!root) return;
+      root.innerHTML = rows.map(p=>`
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
+          <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
+          <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
+          <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
+          <div style="text-align:right">
+            <button class="sv sales-pill">保存</button>
+            <button class="dl sales-pill">削除</button>
+          </div>
+        </div>`).join('');
+      [...root.querySelectorAll(':scope > div')].forEach((row,i)=>{
+        const rec=rows[i];
+        row.querySelector('.sv').onclick=async()=>{
+          const name=row.querySelector('.nm').value.trim();
+          const price=Number(row.querySelector('.pr').value||0);
+          const active=row.querySelector('.ac').value==='true';
+          if(!name) return alert('商品名は必須');
+          const newId=name.replace(/\//g,'／');
+          if(newId!==rec.id){
+            await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+            await deleteDoc(doc(pdCol,rec.id));
+          }else{
+            await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+          }
+        };
+        row.querySelector('.dl').onclick=async()=>{
+          if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));
+        };
+      });
+    };
+
+    document.getElementById('pdAdd').onclick=async()=>{
+      const name=(document.getElementById('pdName').value||'').trim();
+      const price=Number(document.getElementById('pdPrice').value||0);
+      const active=document.getElementById('pdActive').value==='true';
+      if(!name) return alert('商品名を入力');
+      const id=name.replace(/\//g,'／');
+      await setDoc(doc(pdCol,id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+      document.getElementById('pdName').value='';
+      document.getElementById('pdPrice').value='';
+      alert('追加しました');
+    };
+
+    onSnapshot(pdCol,(qs)=>{
+      const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+      rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+      renderProdRows(rows);
+    });
+
+    // hash でサブページを切替（ログイン済みのときのみ）
+    window.addEventListener('hashchange', ()=>{
+      if(sessionStorage.getItem(KEY)==='1' && location.hash.startsWith('#admin')) showAdminSub(location.hash);
+    });
+    // 初回
+    if(sessionStorage.getItem(KEY)==='1' && location.hash.startsWith('#admin')) showAdminSub(location.hash);
+  </script>
+</section>
+
   </main>
 
   <!-- 卓編集モーダル -->
@@ -834,20 +1003,29 @@ window.salesCast = salesCast;
   </script>
 
   <!-- ========= ルーター（最後に1本だけ） ========= -->
-  <script>
-    function route(){
-      const page=(location.hash||'#timer').replace('#','');
-      const isTimer=page==='timer', isSales=page==='sales', isAdmin=page==='admin';
-      const show=(id,on)=>{const el=document.getElementById(id); if(el) el.style.display=on?'block':'none';};
-      const active=(id,on)=>{const el=document.getElementById(id); if(el) el.classList.toggle('active',!!on);};
-      show('pageTimer',isTimer); show('pageSales',isSales); show('pageAdmin',isAdmin);
-      active('navTimer',isTimer); active('navSales',isSales); active('navAdmin',isAdmin);
-      window.scrollTo(0,0);
-    }
-   
+<script>
+  function route(){
+    const hash = location.hash || '#timer';
+    // トップレベルの表示判定
+    const isAdmin = hash.startsWith('#admin');
+    const isTimer = !isAdmin && hash === '#timer';
+    const isSales = !isAdmin && hash === '#sales';
+    const show=(id,on)=>{const el=document.getElementById(id); if(el) el.style.display=on?'block':'none';};
+    const active=(id,on)=>{const el=document.getElementById(id); if(el) el.classList.toggle('active',!!on);};
 
-    window.addEventListener('hashchange',route);
-    route();
-  </script>
+    show('pageTimer',isTimer);
+    show('pageSales',isSales);
+    show('pageAdmin',isAdmin);
+
+    active('navTimer',isTimer);
+    active('navSales',isSales);
+    active('navAdmin',isAdmin);
+
+    window.scrollTo(0,0);
+  }
+  window.addEventListener('hashchange',route);
+  route();
+</script>
+
 </body>
 </html>
