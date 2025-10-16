@@ -238,12 +238,14 @@ button.danger{background:#dc2626}
 
   <!-- ===== 従業員：一覧 ===== -->
 <div id="adminStaffList" class="sales-card" style="display:none">
-  <!-- ヘッダー：戻る + タイトル + 追加フォーム -->
-  <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px">
-    <div style="display:flex;align-items:center;gap:8px">
-      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
-      <h2 style="margin:0">従業員リスト</h2>
-    </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+    <h2 style="margin:0">従業員リスト</h2>
+    <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-staff-add'">＋ 追加ページへ</button>
+  </div>
+  <div id="stList" style="margin-top:8px"></div>
+</div>
+
 
     <!-- 右側：追加フォーム -->
     <div style="margin-left:auto;min-width:520px;max-width:100%">
@@ -277,6 +279,33 @@ button.danger{background:#dc2626}
   <!-- 一覧（編集・削除は既存と同じUI） -->
   <div id="stList" style="margin-top:8px"></div>
 </div>
+
+  <!-- ===== 従業員：追加 ===== -->
+<div id="adminStaffAdd" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">← 一覧へ</button>
+    <h2 style="margin:0">従業員追加のページ</h2>
+  </div>
+
+  <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end;max-width:720px">
+    <label>名前
+      <input id="stName" placeholder="ここに名前を入力">
+    </label>
+    <label>役職
+      <select id="stRole">
+        <option value="boy">ボーイ</option>
+        <option value="cast">キャスト</option>
+        <option value="staff">スタッフ</option>
+      </select>
+    </label>
+    <button id="stAdd" class="sales-pill" type="button">追加</button>
+  </div>
+
+  <div style="font-size:12px;color:#64748b;margin-top:6px">
+    * 追加時は「出勤: false / 有効: true」で登録されます（必要なら一覧から編集できます）
+  </div>
+</div>
+
 
 
 
@@ -323,11 +352,12 @@ button.danger{background:#dc2626}
     const $locked=$('#adminLocked'),$unlocked=$('#adminUnlocked'),$wrong=$('#adminWrong'),$code=$('#adminCode');
 
     function showAdminSub(hash){
-      const ids = ['adminHome','adminStaffList','adminProdList','adminProdAdd']; // ← staffAdd を除外
+      const ids = ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'];
       ids.forEach(id=>{ const el = document.getElementById(id); if(el) el.style.display='none'; });
       const map = {
         '#admin':'adminHome',
         '#admin-staff-list':'adminStaffList',
+        '#admin-staff-add':'adminStaffAdd',
         '#admin-prod-list':'adminProdList',
         '#admin-prod-add':'adminProdAdd'
       };
@@ -335,6 +365,7 @@ button.danger{background:#dc2626}
       const el = document.getElementById(target);
       if(el) el.style.display='block';
     }
+
 
 
     function applyState(open){
@@ -416,17 +447,26 @@ button.danger{background:#dc2626}
       });
     };
 
-    document.getElementById('stAdd').onclick=async()=>{
-      const name=(document.getElementById('stName').value||'').trim();
-      const role=document.getElementById('stRole').value;
-      const duty=document.getElementById('stDuty').value==='true';
-      const active=document.getElementById('stActive').value==='true';
-      if(!name) return alert('名前を入力');
-      const id=name.replace(/\//g,'／');
-      await setDoc(doc(stCol,id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
-      document.getElementById('stName').value='';
+    document.getElementById('stAdd')?.addEventListener('click', async ()=>{
+      const name = (document.getElementById('stName').value || '').trim();
+      const role = document.getElementById('stRole').value;
+      // 追加時のデフォルト
+      const duty = false;      // 出勤フラグはデフォルト false
+      const active = true;     // 有効はデフォルト true
+
+      if(!name) return alert('名前を入力してください');
+      const id = name.replace(/\//g,'／'); // FirestoreドキュメントIDに / が入らないよう置換
+
+      await setDoc(doc(stCol, id), {
+        name, role, duty, active, updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      document.getElementById('stName').value = '';
       alert('追加しました');
-    };
+      // 追加後は一覧へ戻す（任意）
+      location.hash = '#admin-staff-list';
+    });
+
 
     onSnapshot(stCol,(qs)=>{
       const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
