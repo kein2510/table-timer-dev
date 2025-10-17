@@ -350,31 +350,32 @@ button.danger{background:#dc2626}
   const $wrong = $('#adminWrong');
   const $code = $('#adminCode');
 
-  // ...（この下に、あなたの admin ログイン処理、stCol/pdCol の CRUD などを続ける）
+// ===== 幹部UI：ログイン/表示コントロール（唯一の定義） =====
 
-// --- 管理サブページ表示スイッチ（これ1つだけにする！）---
+// ここは type="module" の先頭で定義済み：ROOM_ID / ADMIN_PASS_PLAIN / LS_PREFIX / sha256Hex など
+// LS_PREFIX は "tt-dev-" が入るので、それを使って KEY を一度だけ定義
+const KEY = LS_PREFIX + 'admin.unlocked';
+
+// サブページの表示切替（これ1本だけ）
 function showAdminSub(hash) {
   const h = hash || '#admin';
-
   // いったん全部隠す
   ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-
-  // 表示ターゲットを決定
+  // どれを出すか
   let target = 'adminHome';
   if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
   else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
   else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
   else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
 
-  // 該当だけ表示
   const el = document.getElementById(target);
   if (el) el.style.display = 'block';
 }
 
-// --- ログイン状態を反映 ---
+// ログイン状態の反映（これ1本だけ）
 function applyState(open){
   const $locked   = document.getElementById('adminLocked');
   const $unlocked = document.getElementById('adminUnlocked');
@@ -385,7 +386,7 @@ function applyState(open){
   if ($wrong)    $wrong.style.display    = 'none';
 
   if (open) {
-    // ログイン後は現在のハッシュに応じてサブページ表示
+    // 今のハッシュでサブページ表示
     showAdminSub(location.hash);
   } else {
     // ログアウト時は全部閉じる
@@ -396,76 +397,44 @@ function applyState(open){
   }
 }
 
-// --- 初期反映 ---
-const KEY = (window.LS_PREFIX || 'tt-dev-') + 'admin.unlocked';
+// 初期反映（セッションの継続対応）
 applyState(sessionStorage.getItem(KEY) === '1');
 
-// --- 入室ボタン ---
+// 入室
 document.getElementById('adminEnter')?.addEventListener('click', async ()=>{
-  const input = (document.getElementById('adminCode')?.value || '').trim();
+  const inputEl = document.getElementById('adminCode');
+  const input   = (inputEl?.value || '').trim();
   if (!input) return;
+
   const ok = (await sha256Hex(input)) === (await sha256Hex(ADMIN_PASS_PLAIN));
   if (ok) {
     sessionStorage.setItem(KEY, '1');
-    // #admin でなければ移動
     if (!location.hash.startsWith('#admin')) location.hash = '#admin';
     applyState(true);
-    const $code = document.getElementById('adminCode'); if ($code) $code.value = '';
+    if (inputEl) inputEl.value = '';
   } else {
-    const $wrong = document.getElementById('adminWrong'); if ($wrong) $wrong.style.display = 'block';
+    const $wrong = document.getElementById('adminWrong');
+    if ($wrong) $wrong.style.display = 'block';
   }
 });
 
-// --- ロック（ログアウト） ---
+// ロック（ログアウト）
 document.getElementById('adminLock')?.addEventListener('click', ()=>{
   sessionStorage.removeItem(KEY);
   applyState(false);
 });
 
-// --- ハッシュ変化でサブページ切替（ログイン時のみ）---
+// ハッシュ変化でサブページ切替（ログイン時のみ）
 window.addEventListener('hashchange', ()=>{
   if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
     showAdminSub(location.hash);
   }
 });
 
-// --- 初回（URL直打ちで #admin-* の場合）---
+// URL直打ちで #admin-* のとき
 if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
   showAdminSub(location.hash);
 }
-
-
-
-
-
-    function applyState(open){
-      $locked.style.display=open?'none':'block';
-      $unlocked.style.display=open?'flex':'none';
-      $wrong.style.display='none';
-      // ログイン後はホームへ
-      if(open){ showAdminSub(location.hash); }
-      else{
-        // ログアウト時は全部しまっておく
-        ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
-          const el=document.getElementById(id); if(el) el.style.display='none';
-        });
-      }
-    }
-
-    applyState(sessionStorage.getItem(KEY)==='1');
-
-    document.getElementById('adminEnter').addEventListener('click',async()=>{
-      const input=($code.value||'').trim(); if(!input) return;
-      const ok=(await sha256Hex(input))===(await sha256Hex(ADMIN_PASS_PLAIN));
-      if(ok){ sessionStorage.setItem(KEY,'1'); applyState(true); $code.value=''; if(!location.hash.startsWith('#admin')) location.hash='#admin'; }
-      else { $wrong.style.display='block'; }
-    });
-
-    document.getElementById('adminLock').addEventListener('click',()=>{
-      sessionStorage.removeItem(KEY); applyState(false);
-    });
-
-    // Firebase init
 
 
     /* ====== staff CRUD（一覧に描画） ====== */
