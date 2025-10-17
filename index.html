@@ -581,12 +581,7 @@ document.getElementById('stAdd')?.addEventListener('click', async ()=>{
       renderProdRows(rows);
     });
 
-    // hash でサブページを切替（ログイン済みのときのみ）
-    window.addEventListener('hashchange', ()=>{
-      if(sessionStorage.getItem(KEY)==='1' && location.hash.startsWith('#admin')) showAdminSub(location.hash);
-    });
-    // 初回
-    if(sessionStorage.getItem(KEY)==='1' && location.hash.startsWith('#admin')) showAdminSub(location.hash);
+
   </script>
 </section>
 
