@@ -354,7 +354,7 @@ button.danger{background:#dc2626}
 
 // ここは type="module" の先頭で定義済み：ROOM_ID / ADMIN_PASS_PLAIN / LS_PREFIX / sha256Hex など
 // LS_PREFIX は "tt-dev-" が入るので、それを使って KEY を一度だけ定義
-const KEY = LS_PREFIX + 'admin.unlocked';
+
 
 // サブページの表示切替（これ1本だけ）
 function showAdminSub(hash) {
@@ -840,16 +840,9 @@ document.getElementById('clear')?.addEventListener('click', ()=>{
   s.boy = '';
   s.finished = false;
   s.extendCount = 0; // reset
-  save(); render();
-  // 入力欄も初期化して閉じる
-  const castI = document.getElementById('cast');
-  const boyI  = document.getElementById('boy');
-  const manI  = document.getElementById('manual');
-  if (castI) castI.value = '';
-  if (boyI)  boyI.value = '';
-  if (manI)  manI.value = '';
-  const wrap = document.getElementById('modalWrap');
-  if (wrap) { wrap.setAttribute('aria-hidden','true'); wrap.style.display='none'; }
+  save();
+  render();
+  closeModal();  // ← inert を外すのはこの関数で一括対応
 });
 
 document.getElementById('q').addEventListener('input', render);
