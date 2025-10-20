@@ -323,7 +323,7 @@ button.danger{background:#dc2626}
 </section>
 
 
-  <!-- 幹部ロジック（Firestore は既存のまま） -->
+<!-- 幹部ロジック（Firestore は既存のまま） -->
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
@@ -364,282 +364,258 @@ button.danger{background:#dc2626}
   const esc = s => String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
   async function sha256Hex(text){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 
-
   const KEY = LS_PREFIX + "admin.unlocked";
-  const $locked = $('#adminLocked');
-  const $unlocked = $('#adminUnlocked');
-  const $wrong = $('#adminWrong');
-  const $code = $('#adminCode');
 
-// ===== 幹部UI：ログイン/表示コントロール（唯一の定義） =====
+  // ===== 幹部UI：ログイン/表示コントロール（唯一の定義） =====
 
-// ここは type="module" の先頭で定義済み：ROOM_ID / ADMIN_PASS_PLAIN / LS_PREFIX / sha256Hex など
-// LS_PREFIX は "tt-dev-" が入るので、それを使って KEY を一度だけ定義
-
-
-// サブページの表示切替（これ1本だけ）
-function showAdminSub(hash) {
-  const h = hash || '#admin';
-  // いったん全部隠す
-  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-  // どれを出すか
-  let target = 'adminHome';
-  if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
-  else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
-  else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
-  else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
-
-  const el = document.getElementById(target);
-  if (el) el.style.display = 'block';
-}
-
-// ログイン状態の反映（これ1本だけ）
-function applyState(open){
-  const $locked   = document.getElementById('adminLocked');
-  const $unlocked = document.getElementById('adminUnlocked');
-  const $wrong    = document.getElementById('adminWrong');
-
-  if ($locked)   $locked.style.display   = open ? 'none'  : 'block';
-  if ($unlocked) $unlocked.style.display = open ? 'flex'  : 'none';
-  if ($wrong)    $wrong.style.display    = 'none';
-
-  if (open) {
-    // 今のハッシュでサブページ表示
-    showAdminSub(location.hash);
-  } else {
-    // ログアウト時は全部閉じる
+  function showAdminSub(hash) {
+    const h = hash || '#admin';
+    // いったん全部隠す
     ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
+    // どれを出すか
+    let target = 'adminHome';
+    if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
+    else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
+    else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
+    else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
+
+    const el = document.getElementById(target);
+    if (el) el.style.display = 'block';
   }
-}
 
-// 初期反映（セッションの継続対応）
-applyState(sessionStorage.getItem(KEY) === '1');
+  function applyState(open){
+    const $locked   = document.getElementById('adminLocked');
+    const $unlocked = document.getElementById('adminUnlocked');
+    const $wrong    = document.getElementById('adminWrong');
 
-// 入室
-document.getElementById('adminEnter')?.addEventListener('click', async ()=>{
-  const inputEl = document.getElementById('adminCode');
-  const input   = (inputEl?.value || '').trim();
-  if (!input) return;
+    if ($locked)   $locked.style.display   = open ? 'none'  : 'block';
+    if ($unlocked) $unlocked.style.display = open ? 'flex'  : 'none';
+    if ($wrong)    $wrong.style.display    = 'none';
 
-  const ok = (await sha256Hex(input)) === (await sha256Hex(ADMIN_PASS_PLAIN));
-  if (ok) {
-    sessionStorage.setItem(KEY, '1');
-    if (!location.hash.startsWith('#admin')) location.hash = '#admin';
-    applyState(true);
-    if (inputEl) inputEl.value = '';
-  } else {
-    const $wrong = document.getElementById('adminWrong');
-    if ($wrong) $wrong.style.display = 'block';
+    if (open) {
+      showAdminSub(location.hash);
+    } else {
+      ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }
   }
-});
 
-// ロック（ログアウト）
-document.getElementById('adminLock')?.addEventListener('click', ()=>{
-  sessionStorage.removeItem(KEY);
-  applyState(false);
-});
+  // 初期反映（セッションの継続対応）
+  applyState(sessionStorage.getItem(KEY) === '1');
 
-// ハッシュ変化でサブページ切替（ログイン時のみ）
-window.addEventListener('hashchange', ()=>{
+  // 入室
+  document.getElementById('adminEnter')?.addEventListener('click', async ()=>{
+    const inputEl = document.getElementById('adminCode');
+    const input   = (inputEl?.value || '').trim();
+    if (!input) return;
+
+    const ok = (await sha256Hex(input)) === (await sha256Hex(ADMIN_PASS_PLAIN));
+    if (ok) {
+      sessionStorage.setItem(KEY, '1');
+      if (!location.hash.startsWith('#admin')) location.hash = '#admin';
+      applyState(true);
+      if (inputEl) inputEl.value = '';
+    } else {
+      const $wrong = document.getElementById('adminWrong');
+      if ($wrong) $wrong.style.display = 'block';
+    }
+  });
+
+  // ロック（ログアウト）
+  document.getElementById('adminLock')?.addEventListener('click', ()=>{
+    sessionStorage.removeItem(KEY);
+    applyState(false);
+  });
+
+  // ハッシュ変化でサブページ切替（ログイン時のみ）
+  window.addEventListener('hashchange', ()=>{
+    if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
+      showAdminSub(location.hash);
+    }
+  });
+
+  // URL直打ちで #admin-* のとき
   if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
     showAdminSub(location.hash);
   }
-});
 
-// URL直打ちで #admin-* のとき
-if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
-  showAdminSub(location.hash);
-}
+  /* ====== staff CRUD（一覧に描画） ====== */
+  const stCol = collection(db,'rooms',ROOM_ID,'staff');
 
+  const renderStaffRows = (rows)=>{
+    const root = document.getElementById('stList');
+    if(!root) return;
 
-/* ====== staff CRUD（一覧に描画） ====== */
-const stCol = collection(db,'rooms',ROOM_ID,'staff');
+    root.classList.add('admin-st-list'); // スタイル適用
+    root.innerHTML = rows.map(s=>`
+      <div class="stRow" data-id="${esc(s.id)}">
+        <input class="nm" value="${esc(s.name||'')}" placeholder="名前　例: あやか" disabled>
+        <select class="rl" disabled>
+          <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
+          <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
+          <option value="staff"${s.role==='staff'?'selected':''}>スタッフ</option>
+        </select>
+        <button class="edit stBtn sales-pill" type="button">編集</button>
+        <button class="dl   stBtn sales-pill" type="button">削除</button>
+      </div>
+    `).join('');
 
-const renderStaffRows = (rows)=>{
-  const root = document.getElementById('stList');
-  if(!root) return;
+    // 行ごとのイベント
+    [...root.querySelectorAll('.stRow')].forEach((row,i)=>{
+      const rec = rows[i];
+      const $nm = row.querySelector('.nm');
+      const $rl = row.querySelector('.rl');
+      const $edit = row.querySelector('.edit');
+      const $del  = row.querySelector('.dl');
 
-  root.classList.add('admin-st-list'); // スタイル適用
-  root.innerHTML = rows.map(s=>`
-    <div class="stRow" data-id="${esc(s.id)}">
-      <input class="nm" value="${esc(s.name||'')}" placeholder="名前　例: あやか" disabled>
-      <select class="rl" disabled>
-        <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
-        <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
-        <option value="staff"${s.role==='staff'?'selected':''}>スタッフ</option>
-      </select>
-      <button class="edit stBtn sales-pill" type="button">編集</button>
-      <button class="dl   stBtn sales-pill" type="button">削除</button>
-    </div>
-  `).join('');
+      // 編集トグル：閲覧→編集→保存
+      $edit.addEventListener('click', async ()=>{
+        const isView = $nm.disabled;
+        if (isView){
+          // 編集モードへ
+          $nm.disabled = false;
+          $rl.disabled = false;
+          $nm.focus();
+          $edit.textContent = '保存';
+          row.dataset.editing = '1';
+        }else{
+          // 保存して閲覧モードへ
+          const name  = ($nm.value||'').trim();
+          const role  = $rl.value || 'cast';
+          const duty  = !!rec.duty;           // 既存値を温存
+          const active= rec.active!==false;   // 既存値を温存
 
-  // 行ごとのイベント
-  [...root.querySelectorAll('.stRow')].forEach((row,i)=>{
-    const rec = rows[i];
-    const $nm = row.querySelector('.nm');
-    const $rl = row.querySelector('.rl');
-    const $edit = row.querySelector('.edit');
-    const $del  = row.querySelector('.dl');
+          if(!name){ alert('名前は必須です'); $nm.focus(); return; }
 
-    // 編集トグル：閲覧→編集→保存
-    $edit.addEventListener('click', async ()=>{
-      const isView = $nm.disabled;          // 今は閲覧モード？
-      if (isView){
-        // 編集モードへ
-        $nm.disabled = false;
-        $rl.disabled = false;
-        $nm.focus();
-        $edit.textContent = '保存';
-        row.dataset.editing = '1';
-      }else{
-        // 保存して閲覧モードへ
-        const name  = ($nm.value||'').trim();
-        const role  = $rl.value || 'cast';
-        const duty  = !!rec.duty;           // 既存値を温存
-        const active= rec.active!==false;   // 既存値を温存
+          const newId = name.replace(/\//g,'／');
 
-        if(!name){ alert('名前は必須です'); $nm.focus(); return; }
-
-        const newId = name.replace(/\//g,'／');
-
-        try{
-          if(newId !== rec.id){
-            // ドキュメント名変更（コピー→元削除）
-            await setDoc(doc(stCol,newId), {name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
-            await deleteDoc(doc(stCol,rec.id));
-          }else{
-            await setDoc(doc(stCol,rec.id), {name,role,updatedAt:serverTimestamp()},{merge:true});
+          try{
+            if(newId !== rec.id){
+              // ドキュメント名変更（コピー→元削除）
+              await setDoc(doc(stCol,newId), {name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+              await deleteDoc(doc(stCol,rec.id));
+            }else{
+              await setDoc(doc(stCol,rec.id), {name,role,updatedAt:serverTimestamp()},{merge:true});
+            }
+            // ローカルUIを閲覧状態に戻す
+            $nm.disabled = true;
+            $rl.disabled = true;
+            $edit.textContent = '編集';
+            row.dataset.editing = '';
+          }catch(e){
+            console.error(e);
+            alert('保存に失敗しました: ' + (e?.message || e));
           }
-          // ローカルUIを閲覧状態に戻す
-          $nm.disabled = true;
-          $rl.disabled = true;
-          $edit.textContent = '編集';
-          row.dataset.editing = '';
-        }catch(e){
-          console.error(e);
-          alert('保存に失敗しました: ' + (e?.message || e));
         }
-      }
+      });
 
-      // ===== staff: 追加（従業員追加ページの［追加］ボタン）=====
-document.getElementById('stAdd')?.addEventListener('click', async () => {
-  const nameEl = document.getElementById('stName');
-  const roleEl = document.getElementById('stRole');
-
-  const name = (nameEl?.value || '').trim();
-  const role = roleEl?.value || 'boy';
-  const duty = false;    // 既定
-  const active = true;   // 既定
-
-  if (!name) {
-    alert('名前を入力してください');
-    nameEl?.focus();
-    return;
-  }
-
-  try {
-    // Firestore ドキュメントIDに / は使えないので置換
-    const id = name.replace(/\//g, '／');
-    await setDoc(doc(stCol, id), {
-      name, role, duty, active, updatedAt: serverTimestamp()
-    }, { merge: true });
-
-    if (nameEl) nameEl.value = '';
-    alert('追加しました');
-    // 追加後は一覧へ戻る
-    location.hash = '#admin-staff-list';
-  } catch (e) {
-    console.error('staff add failed:', e);
-    alert('追加に失敗しました: ' + (e?.message || e));
-  }
-});
-
-
-
-    // 削除
-    $del.addEventListener('click', async ()=>{
-      if(confirm('削除しますか？')) await deleteDoc(doc(stCol, rec.id));
+      // 削除
+      $del.addEventListener('click', async ()=>{
+        if(confirm('削除しますか？')) await deleteDoc(doc(stCol, rec.id));
+      });
     });
+  };
+
+  // ===== staff: 追加（従業員追加ページの［追加］ボタン）===== ＊外に1回だけ定義
+  document.getElementById('stAdd')?.addEventListener('click', async () => {
+    const nameEl = document.getElementById('stName');
+    const roleEl = document.getElementById('stRole');
+
+    const name = (nameEl?.value || '').trim();
+    const role = roleEl?.value || 'boy';
+    const duty = false;    // 既定
+    const active = true;   // 既定
+
+    if (!name) {
+      alert('名前を入力してください');
+      nameEl?.focus();
+      return;
+    }
+
+    try {
+      const id = name.replace(/\//g, '／'); // Firestore ドキュメントID対策
+      await setDoc(doc(stCol, id), {
+        name, role, duty, active, updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      if (nameEl) nameEl.value = '';
+      alert('追加しました');
+      location.hash = '#admin-staff-list';
+    } catch (e) {
+      console.error('staff add failed:', e);
+      alert('追加に失敗しました: ' + (e?.message || e));
+    }
   });
 
+  // staff リアルタイム購読（1つだけ）
+  onSnapshot(stCol,(qs)=>{
+    const rows=[];
+    qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
+    rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+    renderStaffRows(rows);
+  });
 
-onSnapshot(stCol,(qs)=>{
-  const rows=[];
-  qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
-  rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
-  renderStaffRows(rows);   // ← 一覧DOMを描画
-});
-
-
-
-
-
-
-
-
-    /* ====== products CRUD（一覧に描画） ====== */
-    const pdCol=collection(db,'rooms',ROOM_ID,'products');
-    const renderProdRows = (rows)=>{
-      const root = document.getElementById('pdList');
-      if(!root) return;
-      root.innerHTML = rows.map(p=>`
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-          <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
-          <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
-          <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
-          <div style="text-align:right">
-            <button class="sv sales-pill">保存</button>
-            <button class="dl sales-pill">削除</button>
-          </div>
-        </div>`).join('');
-      [...root.querySelectorAll(':scope > div')].forEach((row,i)=>{
-        const rec=rows[i];
-        row.querySelector('.sv').onclick=async()=>{
-          const name=row.querySelector('.nm').value.trim();
-          const price=Number(row.querySelector('.pr').value||0);
-          const active=row.querySelector('.ac').value==='true';
-          if(!name) return alert('商品名は必須');
-          const newId=name.replace(/\//g,'／');
-          if(newId!==rec.id){
-            await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-            await deleteDoc(doc(pdCol,rec.id));
-          }else{
-            await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-          }
-        };
-        row.querySelector('.dl').onclick=async()=>{
-          if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));
-        };
-      });
-    };
-
-    document.getElementById('pdAdd').onclick=async()=>{
-      const name=(document.getElementById('pdName').value||'').trim();
-      const price=Number(document.getElementById('pdPrice').value||0);
-      const active=document.getElementById('pdActive').value==='true';
-      if(!name) return alert('商品名を入力');
-      const id=name.replace(/\//g,'／');
-      await setDoc(doc(pdCol,id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-      document.getElementById('pdName').value='';
-      document.getElementById('pdPrice').value='';
-      alert('追加しました');
-    };
-
-    onSnapshot(pdCol,(qs)=>{
-      const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
-      rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
-      renderProdRows(rows);
+  /* ====== products CRUD（一覧に描画） ====== */
+  const pdCol=collection(db,'rooms',ROOM_ID,'products');
+  const renderProdRows = (rows)=>{
+    const root = document.getElementById('pdList');
+    if(!root) return;
+    root.innerHTML = rows.map(p=>`
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
+        <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
+        <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
+        <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
+        <div style="text-align:right">
+          <button class="sv sales-pill">保存</button>
+          <button class="dl sales-pill">削除</button>
+        </div>
+      </div>`).join('');
+    [...root.querySelectorAll(':scope > div')].forEach((row,i)=>{
+      const rec=rows[i];
+      row.querySelector('.sv').onclick=async()=>{
+        const name=row.querySelector('.nm').value.trim();
+        const price=Number(row.querySelector('.pr').value||0);
+        const active=row.querySelector('.ac').value==='true';
+        if(!name) return alert('商品名は必須');
+        const newId=name.replace(/\//g,'／');
+        if(newId!==rec.id){
+          await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+          await deleteDoc(doc(pdCol,rec.id));
+        }else{
+          await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+        }
+      };
+      row.querySelector('.dl').onclick=async()=>{
+        if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));
+      };
     });
+  };
 
+  document.getElementById('pdAdd').onclick=async()=>{
+    const name=(document.getElementById('pdName').value||'').trim();
+    const price=Number(document.getElementById('pdPrice').value||0);
+    const active=document.getElementById('pdActive').value==='true';
+    if(!name) return alert('商品名を入力');
+    const id=name.replace(/\//g,'／');
+    await setDoc(doc(pdCol,id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+    document.getElementById('pdName').value='';
+    document.getElementById('pdPrice').value='';
+    alert('追加しました');
+  };
 
- 
+  onSnapshot(pdCol,(qs)=>{
+    const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+    rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+    renderProdRows(rows);
+  });
+
 </script>
+
 
   </main>
 
@@ -716,39 +692,38 @@ onSnapshot(stCol,(qs)=>{
 </div>
 
 
-  <!-- ========= タイマー/控室/名簿 & ピッカー ========= -->
-  <script>
-  /* === 設定 === */
+<!-- ========= タイマー/控室/名簿 & ピッカー ========= -->
+<script>
+  /* === 設定 ほか（ここは従来どおり）=== */
   const STAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRdLnWcNEqCfi4VVuG6k4id4JjbBkg4r9eVnRS1mEqN1XY3jz11bQkCXs9MBOkE0y4SPeMgUhHaH8_e/pub?gid=1348648909&single=true&output=csv';
   const LS_PREFIX = 'tt-dev-';
   window.LS_PREFIX = LS_PREFIX;
 
   /* === 席データ === */
-const seats = (()=>{ 
-  const saved=localStorage.getItem(LS_PREFIX+'seats.v2');
-  if(saved){
-    const arr=JSON.parse(saved);
-    arr.forEach(s=>{
-      if(s.finished===undefined) s.finished=false;
-      if(s.extendCount===undefined) s.extendCount=0;   // ← 追加
-    });
-    return arr;
-  }
-  const a=[];
-  for(let i=1;i<=8;i++) a.push({id:`R${i}`,group:'red',label:`VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
-  for(let i=1;i<=7;i++) a.push({id:`B${i}`,group:'blue',label:`ノーマル ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
-  for(let i=1;i<=3;i++) a.push({id:`V${i}`,group:'vip',label:`超VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
-  return a;
-})();
+  const seats = (()=>{ 
+    const saved=localStorage.getItem(LS_PREFIX+'seats.v2');
+    if(saved){
+      const arr=JSON.parse(saved);
+      arr.forEach(s=>{
+        if(s.finished===undefined) s.finished=false;
+        if(s.extendCount===undefined) s.extendCount=0;
+      });
+      return arr;
+    }
+    const a=[];
+    for(let i=1;i<=8;i++) a.push({id:`R${i}`,group:'red',label:`VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+    for(let i=1;i<=7;i++) a.push({id:`B${i}`,group:'blue',label:`ノーマル ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+    for(let i=1;i<=3;i++) a.push({id:`V${i}`,group:'vip',label:`超VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+    return a;
+  })();
 
   const save = () => localStorage.setItem(LS_PREFIX+'seats.v2', JSON.stringify(seats));
 
-  /* === 座標 === */
+  /* === 座標 / 要素参照 / UI生成群（元コードそのまま）=== */
   const POS={R8:{top:15,left:25,width:13},R7:{top:15,left:39,width:13},R6:{top:15,left:53,width:13},R5:{top:15,left:67,width:13},
     R1:{top:30,left:67,width:13},R2:{top:45,left:67,width:13},R3:{top:30,left:18,width:13},R4:{top:45,left:18,width:13},
     B1:{top:22,left:87,width:10},B2:{top:36,left:87,width:10},B3:{top:50,left:87,width:10},B4:{top:7,left:2,width:10},B5:{top:7,left:12,width:10},B6:{top:65,left:7,width:11},B7:{top:65,left:84,width:11}};
 
-  /* === 要素 === */
   const $=s=>document.querySelector(s);
   const floor=$('#floor'), vipWrap=$('#vip'), nowEl=$('#now');
   const wrap=$('#modalWrap'), title=$('#modalTitle');
@@ -757,83 +732,81 @@ const seats = (()=>{
   let currentId=null, lastFocus=null;
   const pageRoots=document.querySelectorAll('header, main');
 
-  /* === UI生成 === */
   function cardHTML(s){
-  const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'};
-  const num=(s.id.match(/\d+/)||[''])[0];
-  const label=`${nameByGroup[s.group]||s.label} ${num}`;
-  const endAt=s.end?`～ ${formatClock(s.end)}`:'';
-  const ext = (s.extendCount||0)>0 ? `<span class="extBadge">延×${s.extendCount}</span>` : '';
-  return `
-    <div class="line1">
-      <span>${label}</span>
-      <span class="endAt">${endAt}</span>
-    </div>
-    <div class="timer"><span class="remain">${
-      s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')
-    }</span>${ext}</div>
-    <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>`;
-}
-    function addVipSeat(s){
-  const d=document.createElement('div');
-  d.className='vipSeat';
-  d.dataset.id=s.id;
-  d.innerHTML=cardHTML(s);
-  d.addEventListener('click',()=>openModal(s.id));
-  vipWrap.appendChild(d);
-}
-function addSeatToFloor(s){
-  const pos=POS[s.id]; if(!pos) return;
-  const d=document.createElement('div');
-  d.className=`seat ${s.group}`;
-  d.dataset.id=s.id;
-  d.style.top=pos.top+'%';
-  d.style.left=pos.left+'%';
-  d.style.width=pos.width+'%';
-  d.innerHTML=cardHTML(s);
-  d.addEventListener('click',()=>openModal(s.id));
-  floor.appendChild(d);
-}
-function resizeFloor(){
-  const pad=12;
-  const needed=vipWrap.offsetTop+vipWrap.offsetHeight+pad;
-  floor.style.height=needed+'px';
-}
+    const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'};
+    const num=(s.id.match(/\d+/)||[''])[0];
+    const label=`${nameByGroup[s.group]||s.label} ${num}`;
+    const endAt=s.end?`～ ${formatClock(s.end)}`:'';
+    const ext = (s.extendCount||0)>0 ? `<span class="extBadge">延×${s.extendCount}</span>` : '';
+    return `
+      <div class="line1">
+        <span>${label}</span>
+        <span class="endAt">${endAt}</span>
+      </div>
+      <div class="timer"><span class="remain">${
+        s.end ? formatRemain(s.end-Date.now()) : (s.finished ? '終了' : '空')
+      }</span>${ext}</div>
+      <div class="meta">${(s.cast||'')}${s.boy?' ｜ '+s.boy:''}</div>`;
+  }
+  function addVipSeat(s){
+    const d=document.createElement('div');
+    d.className='vipSeat';
+    d.dataset.id=s.id;
+    d.innerHTML=cardHTML(s);
+    d.addEventListener('click',()=>openModal(s.id));
+    vipWrap.appendChild(d);
+  }
+  function addSeatToFloor(s){
+    const pos=POS[s.id]; if(!pos) return;
+    const d=document.createElement('div');
+    d.className=`seat ${s.group}`;
+    d.dataset.id=s.id;
+    d.style.top=pos.top+'%';
+    d.style.left=pos.left+'%';
+    d.style.width=pos.width+'%';
+    d.innerHTML=cardHTML(s);
+    d.addEventListener('click',()=>openModal(s.id));
+    floor.appendChild(d);
+  }
+  function resizeFloor(){
+    const pad=12;
+    const needed=vipWrap.offsetTop+vipWrap.offsetHeight+pad;
+    floor.style.height=needed+'px';
+  }
 
+  function render(){
+    floor.querySelectorAll('.seat').forEach(n=>n.remove());
+    vipWrap.innerHTML='';
+    const q=$('#q').value.trim();
 
-function render(){
-  floor.querySelectorAll('.seat').forEach(n=>n.remove());
-  vipWrap.innerHTML='';
-  const q=$('#q').value.trim();
+    seats.forEach(s=>{ if(s.group==='vip') addVipSeat(s); else addSeatToFloor(s); });
 
-  seats.forEach(s=>{ if(s.group==='vip') addVipSeat(s); else addSeatToFloor(s); });
+    floor.querySelectorAll('[data-id]').forEach(el=>{
+      const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
+      el.classList.remove('active','warn','danger','highlight');
+      if(s.end){
+        const r=s.end-Date.now();
+        if(r>0){ t.textContent=formatRemain(r); el.classList.add('active'); if(r<=3*60*1000)el.classList.add('danger'); else if(r<=10*60*1000)el.classList.add('warn'); }
+        else { s.end=null; s.finished=true; save(); t.textContent='終了'; }
+      }else{ t.textContent=s.finished?'終了':'空'; }
+      if(q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
+    });
+    resizeFloor(); renderRoster();
+  }
 
-  floor.querySelectorAll('[data-id]').forEach(el=>{
-    const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
-    el.classList.remove('active','warn','danger','highlight');
-    if(s.end){
-      const r=s.end-Date.now();
-      if(r>0){ t.textContent=formatRemain(r); el.classList.add('active'); if(r<=3*60*1000)el.classList.add('danger'); else if(r<=10*60*1000)el.classList.add('warn'); }
-      else { s.end=null; s.finished=true; save(); t.textContent='終了'; }
-    }else{ t.textContent=s.finished?'終了':'空'; }
-    if(q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
-  });
-  resizeFloor(); renderRoster();
-}
-
-function tick(){
-  nowEl.textContent=new Date().toLocaleString('ja-JP',{hour12:false});
-  floor.querySelectorAll('[data-id]').forEach(el=>{
-    const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
-    el.classList.remove('active','warn','danger');
-    const endAtEl=el.querySelector('.endAt'); if(endAtEl) endAtEl.textContent=s.end?`～ ${formatClock(s.end)}`:'';
-    if(!s.end){ t.textContent=s.finished?'終了':'空'; return; }
-    const r=s.end-Date.now(); if(r<=0){ s.end=null; s.finished=true; save(); t.textContent='終了'; return; }
-    t.textContent=formatRemain(r); el.classList.add('active');
-    if(r<=3*60*1000) el.classList.add('danger'); else if(r<=10*60*1000) el.classList.add('warn');
-  });
-  if(staff.length) renderRoster();
-}
+  function tick(){
+    nowEl.textContent=new Date().toLocaleString('ja-JP',{hour12:false});
+    floor.querySelectorAll('[data-id]').forEach(el=>{
+      const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
+      el.classList.remove('active','warn','danger');
+      const endAtEl=el.querySelector('.endAt'); if(endAtEl) endAtEl.textContent=s.end?`～ ${formatClock(s.end)}`:'';
+      if(!s.end){ t.textContent=s.finished?'終了':'空'; return; }
+      const r=s.end-Date.now(); if(r<=0){ s.end=null; s.finished=true; save(); t.textContent='終了'; return; }
+      t.textContent=formatRemain(r); el.classList.add('active');
+      if(r<=3*60*1000) el.classList.add('danger'); else if(r<=10*60*1000) el.classList.add('warn');
+    });
+    if(staff.length) renderRoster();
+  }
 
   function formatRemain(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
   function formatClock(ts){let ms=null;if(ts==null)return'';if(typeof ts==='number')ms=ts;else if(typeof ts==='string'&&/^\d+$/.test(ts))ms=Number(ts);else if(typeof ts==='object'&&typeof ts.toMillis==='function')ms=ts.toMillis();else if(typeof ts==='object'&&typeof ts.seconds==='number')ms=ts.seconds*1000+Math.floor((ts.nanoseconds||0)/1e6);const d=new Date(ms);if(Number.isNaN(d.getTime()))return'';return d.toLocaleTimeString('ja-JP',{hour12:false,hour:'2-digit',minute:'2-digit'});}
@@ -860,49 +833,47 @@ function tick(){
     const s=seats.find(x=>x.id===currentId); s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); render(); closeModal();
   });
 
-// 開始（手入力）
-document.getElementById('start').addEventListener('click', ()=>{
-  const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
-  const s=seats.find(x=>x.id===currentId);
-  s.cast=castI.value.trim(); s.boy=boyI.value.trim();
-  s.end=Date.now()+v*60*1000; s.finished=false; s.extendCount=0;   // reset
-  save(); render(); closeModal();
-});
+  // 開始（手入力）
+  document.getElementById('start').addEventListener('click', ()=>{
+    const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
+    const s=seats.find(x=>x.id===currentId);
+    s.cast=castI.value.trim(); s.boy=boyI.value.trim();
+    s.end=Date.now()+v*60*1000; s.finished=false; s.extendCount=0;
+    save(); render(); closeModal();
+  });
 
-// クイック開始
-document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', ()=>{
-  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
-  s.cast=castI.value.trim(); s.boy=boyI.value.trim();
-  s.end=Date.now()+mins*60*1000; s.finished=false; s.extendCount=0; // reset
-  save(); render(); closeModal();
-}));
+  // クイック開始
+  document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', ()=>{
+    const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+    s.cast=castI.value.trim(); s.boy=boyI.value.trim();
+    s.end=Date.now()+mins*60*1000; s.finished=false; s.extendCount=0;
+    save(); render(); closeModal();
+  }));
 
-// 延長
-document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', ()=>{
-  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
-  const base=s.end && s.end>Date.now()? s.end:Date.now();
-  s.end=base+mins*60*1000; s.finished=false;
-  s.extendCount=(s.extendCount||0)+1;                                 // count up
-  if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
-  save(); render(); closeModal();
-}));
+  // 延長
+  document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', ()=>{
+    const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+    const base=s.end && s.end>Date.now()? s.end:Date.now();
+    s.end=base+mins*60*1000; s.finished=false;
+    s.extendCount=(s.extendCount||0)+1;
+    if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
+    save(); render(); closeModal();
+  }));
 
-// クリア
-// クリア（この定義を1つだけ残す）
-document.getElementById('clear')?.addEventListener('click', ()=>{
-  const s = seats.find(x=>x.id===currentId);
-  s.end = null;
-  s.cast = '';
-  s.boy = '';
-  s.finished = false;
-  s.extendCount = 0; // reset
-  save();
-  render();
-  closeModal();  // ← inert を外すのはこの関数で一括対応
-});
+  // クリア（この定義を1つだけ残す）
+  document.getElementById('clear')?.addEventListener('click', ()=>{
+    const s = seats.find(x=>x.id===currentId);
+    s.end = null;
+    s.cast = '';
+    s.boy = '';
+    s.finished = false;
+    s.extendCount = 0;
+    save();
+    render();
+    closeModal();
+  });
 
-document.getElementById('q').addEventListener('input', render);
-
+  document.getElementById('q').addEventListener('input', render);
 
   /* === CSV/名簿 === */
   function parseCSV(str){const rows=[];let cur=[],val='',inQ=false;for(let i=0;i<str.length;i++){const c=str[i];if(inQ){if(c=='"'){if(str[i+1]=='"'){val+='"';i++;}else inQ=false;}else val+=c;}else{if(c=='"'){inQ=true;}else if(c==','){cur.push(val);val='';}else if(c=='\n'){cur.push(val);rows.push(cur);cur=[];val='';}else if(c=='\r'){}else val+=c;}} if(val.length>0||cur.length>0){cur.push(val);rows.push(cur);} return rows;}
@@ -951,42 +922,41 @@ document.getElementById('q').addEventListener('input', render);
     const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean);
     if(!list.includes(name)){ list.push(name); castI.value=list.join(', '); }
   }
-// 既存 loadStaff() の後
-document.getElementById('reloadStaff')?.addEventListener('click', ()=> loadStaff());
+  document.getElementById('reloadStaff')?.addEventListener('click', ()=> loadStaff());
 
-// renderRoster を本鯖式で（クリック時の挙動を切替）
-function renderRoster(){
-  const rosterBox=document.getElementById('roster'); if(!rosterBox) return;
-  rosterBox.innerHTML='';
-  if(!staff.length){
-    const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
-    small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
-    rosterBox.appendChild(small); return;
-  }
-  const editSwitch=document.getElementById('editDuty');
-  const addChip=(name,duty,busy)=>{
-    const d=document.createElement('button'); d.type='button';
-    d.className=`staffChip ${duty?(busy?'busy':'on'):'off'}`; d.textContent=name;
-    if(editSwitch && editSwitch.checked){
-      d.disabled=false; d.addEventListener('click',()=>toggleDuty(name));
-    }else{
-      if(!duty) d.disabled=true;
-      else d.addEventListener('click',()=>{
-        if(wrap.getAttribute('aria-hidden')==='false'){
-          if(document.activeElement===boyI){ boyI.value=name; boyI.focus(); }
-          else{ const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean); if(!list.includes(name)) castI.value=[...list,name].join(', '); castI.focus(); }
-        }
-      });
+  // Roster（本鯖式）
+  function renderRoster(){
+    const rosterBox=document.getElementById('roster'); if(!rosterBox) return;
+    rosterBox.innerHTML='';
+    if(!staff.length){
+      const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
+      small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
+      rosterBox.appendChild(small); return;
     }
-    rosterBox.appendChild(d);
-  };
-  staff.filter(s=>s.duty).forEach(s=>addChip(s.name,true,isNameBusy(s.name)));
-  const off=staff.filter(s=>!s.duty);
-  if(off.length){
-    const title=document.createElement('div'); title.className='staffSectionTitle'; title.textContent='— 非出勤 —'; rosterBox.appendChild(title);
-    off.forEach(s=>addChip(s.name,false,false));
+    const editSwitch=document.getElementById('editDuty');
+    const addChip=(name,duty,busy)=>{
+      const d=document.createElement('button'); d.type='button';
+      d.className=`staffChip ${duty?(busy?'busy':'on'):'off'}`; d.textContent=name;
+      if(editSwitch && editSwitch.checked){
+        d.disabled=false; d.addEventListener('click',()=>toggleDuty(name));
+      }else{
+        if(!duty) d.disabled=true;
+        else d.addEventListener('click',()=>{
+          if(wrap.getAttribute('aria-hidden')==='false'){
+            if(document.activeElement===boyI){ boyI.value=name; boyI.focus(); }
+            else{ const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean); if(!list.includes(name)) castI.value=[...list,name].join(', '); castI.focus(); }
+          }
+        });
+      }
+      rosterBox.appendChild(d);
+    };
+    staff.filter(s=>s.duty).forEach(s=>addChip(s.name,true,isNameBusy(s.name)));
+    const off=staff.filter(s=>!s.duty);
+    if(off.length){
+      const title=document.createElement('div'); title.className='staffSectionTitle'; title.textContent='— 非出勤 —'; rosterBox.appendChild(title);
+      off.forEach(s=>addChip(s.name,false,false));
+    }
   }
-}
 
   function fillDatalists(){
     const castDL=document.getElementById('castList');
@@ -1006,7 +976,7 @@ function renderRoster(){
     suggBoy.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ boyI.value=b.dataset.name; boyI.focus(); }));
   }
 
-  /* === ピッカー（売上側） === */
+  /* === 売上ピッカー（UI側の選択だけ） === */
   const boyField  = document.getElementById('boyField');
   const castField = document.getElementById('castField');
   const pickerWrap   = document.getElementById('pickerWrap');
@@ -1016,17 +986,15 @@ function renderRoster(){
   const pickerClear  = document.getElementById('pickerClear');
   const pickerClose  = document.getElementById('pickerClose');
 
-let salesBoy = '';
-let salesCast = [];
-window.salesBoy = salesBoy;
-window.salesCast = salesCast;
- let pickerMode = null; let tmpBoy = ''; let tmpCast = [];
-
+  let salesBoy = '';
+  let salesCast = [];
+  window.salesBoy = salesBoy;
+  window.salesCast = salesCast;
+  let pickerMode = null; let tmpBoy = ''; let tmpCast = [];
 
   function renderSalesFields(){
-  if (typeof window.salesBoy !== 'undefined') salesBoy = window.salesBoy;
-  if (Array.isArray(window.salesCast)) salesCast = [...window.salesCast];
-  // 以下はそのまま…
+    if (typeof window.salesBoy !== 'undefined') salesBoy = window.salesBoy;
+    if (Array.isArray(window.salesCast)) salesCast = [...window.salesCast];
 
     boyField.classList.toggle('empty', !salesBoy);
     boyField.innerHTML = salesBoy ? `<span class="pill">${salesBoy}</span>` : 'タップして選択';
@@ -1052,14 +1020,13 @@ window.salesCast = salesCast;
   pickerClose.addEventListener('click', closePicker);
   pickerClear.addEventListener('click', ()=>{ if(pickerMode==='boy') tmpBoy=''; else tmpCast=[]; buildPickerList(); });
   pickerOk.addEventListener('click', ()=>{
-  if (pickerMode==='boy') salesBoy = tmpBoy;
-  else salesCast = [...tmpCast];
-  window.salesBoy = salesBoy;
-  window.salesCast = salesCast;
-  renderSalesFields();
-  closePicker();
-});
-
+    if (pickerMode==='boy') salesBoy = tmpBoy;
+    else salesCast = [...tmpCast];
+    window.salesBoy = salesBoy;
+    window.salesCast = salesCast;
+    renderSalesFields();
+    closePicker();
+  });
 
   function buildPickerList(){
     const onList=(window.staff||[]).filter(s=>s.duty).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
@@ -1080,10 +1047,10 @@ window.salesCast = salesCast;
   /* === 初期化 === */
   render(); setInterval(tick,1000); window.addEventListener('resize', resizeFloor);
   loadStaff(); setInterval(loadStaff, 60000);
-  
+</script>
 
-  <!-- ========= 売上（商品CSV/送信） ========= -->
-  <script>
+<!-- ========= 売上（商品CSV/送信） ========= -->
+<script>
   const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRdLnWcNEqCfi4VVuG6k4id4JjbBkg4r9eVnRS1mEqN1XY3jz11bQkCXs9MBOkE0y4SPeMgUhHaH8_e/pub?gid=1348648909&single=true&output=csv';
   const SALES_GAS_URL    = 'https://script.google.com/macros/s/AKfycbwP_n70AlN5TrYvpVRR_tdaOJ8umm61B7bW_s-RQZ1cCeGBkIai3RlgLrbWK7ztPn5Z/exec';
 
@@ -1162,7 +1129,8 @@ window.salesCast = salesCast;
   });
 
   loadProducts(); window.renderSalesFields?.(); buildLine();
-  </script>
+</script>
+
 
   <!-- ========= ルーター（最後に1本だけ） ========= -->
 <script>
