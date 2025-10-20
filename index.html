@@ -526,7 +526,41 @@ const renderStaffRows = (rows)=>{
           alert('保存に失敗しました: ' + (e?.message || e));
         }
       }
-    });
+
+      // ===== staff: 追加（従業員追加ページの［追加］ボタン）=====
+document.getElementById('stAdd')?.addEventListener('click', async () => {
+  const nameEl = document.getElementById('stName');
+  const roleEl = document.getElementById('stRole');
+
+  const name = (nameEl?.value || '').trim();
+  const role = roleEl?.value || 'boy';
+  const duty = false;    // 既定
+  const active = true;   // 既定
+
+  if (!name) {
+    alert('名前を入力してください');
+    nameEl?.focus();
+    return;
+  }
+
+  try {
+    // Firestore ドキュメントIDに / は使えないので置換
+    const id = name.replace(/\//g, '／');
+    await setDoc(doc(stCol, id), {
+      name, role, duty, active, updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    if (nameEl) nameEl.value = '';
+    alert('追加しました');
+    // 追加後は一覧へ戻る
+    location.hash = '#admin-staff-list';
+  } catch (e) {
+    console.error('staff add failed:', e);
+    alert('追加に失敗しました: ' + (e?.message || e));
+  }
+});
+
+
 
     // 削除
     $del.addEventListener('click', async ()=>{
