@@ -129,6 +129,27 @@ button.danger{background:#dc2626}
       background:#f8fafc !important;
     }
 
+    
+
+/* ←既存の<style>のどこでもOK */
+
+/* 従業員リスト（幹部） */
+.admin-st-list{ display:grid; gap:12px; }
+.stRow{
+  display:grid;
+  grid-template-columns: 2fr 1fr auto auto;
+  gap:16px; align-items:center;
+  padding:8px 0; border-top:1px dashed #e5e7eb;
+}
+.stRow input, .stRow select{
+  padding:12px; border:1px solid #cbd5e1; border-radius:12px;
+  background:#fff; font-size:14px; width:100%;
+}
+.stRow input[disabled], .stRow select[disabled]{
+  background:#f8fafc; color:#475569; opacity:.9;
+}
+.stBtn{ white-space:nowrap; }
+
 
 
     @media(max-width:900px){
@@ -437,84 +458,90 @@ if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
 }
 
 
-    /* ====== staff CRUD（一覧に描画） ====== */
-    const stCol=collection(db,'rooms',ROOM_ID,'staff');
-    const renderStaffRows = (rows)=>{
-      const root = document.getElementById('stList');
-      if(!root) return;
-      root.innerHTML = rows.map(s=>`
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-          <input class="nm" value="${esc(s.name||'')}" placeholder="名前">
-          <select class="rl">
-            <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
-            <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
-            <option value="staff"${s.role==='staff'?'selected':''}>スタッフ</option>
-          </select>
+/* ====== staff CRUD（一覧に描画） ====== */
+const stCol = collection(db,'rooms',ROOM_ID,'staff');
 
-          <div>
-            <select class="dt"><option value="false" ${!s.duty?'selected':''}>duty:false</option><option value="true" ${s.duty?'selected':''}>duty:true</option></select>
-            <select class="ac"><option value="true" ${s.active!==false?'selected':''}>active:true</option><option value="false" ${s.active===false?'selected':''}>false</option></select>
-          </div>
-          <div style="text-align:right">
-            <button class="sv sales-pill">保存</button>
-            <button class="dl sales-pill">削除</button>
-          </div>
-        </div>`).join('');
-      [...root.querySelectorAll(':scope > div')].forEach((row,i)=>{
-        const rec=rows[i];
-        row.querySelector('.sv').onclick=async()=>{
-          const name=row.querySelector('.nm').value.trim();
-          const role=row.querySelector('.rl').value;
-          const duty=row.querySelector('.dt').value==='true';
-          const active=row.querySelector('.ac').value==='true';
-          if(!name) return alert('名前は必須');
-          const newId=name.replace(/\//g,'／');
-          if(newId!==rec.id){
-            await setDoc(doc(stCol,newId),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+const renderStaffRows = (rows)=>{
+  const root = document.getElementById('stList');
+  if(!root) return;
+
+  root.classList.add('admin-st-list'); // スタイル適用
+  root.innerHTML = rows.map(s=>`
+    <div class="stRow" data-id="${esc(s.id)}">
+      <input class="nm" value="${esc(s.name||'')}" placeholder="名前　例: あやか" disabled>
+      <select class="rl" disabled>
+        <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
+        <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
+        <option value="staff"${s.role==='staff'?'selected':''}>スタッフ</option>
+      </select>
+      <button class="edit stBtn sales-pill" type="button">編集</button>
+      <button class="dl   stBtn sales-pill" type="button">削除</button>
+    </div>
+  `).join('');
+
+  // 行ごとのイベント
+  [...root.querySelectorAll('.stRow')].forEach((row,i)=>{
+    const rec = rows[i];
+    const $nm = row.querySelector('.nm');
+    const $rl = row.querySelector('.rl');
+    const $edit = row.querySelector('.edit');
+    const $del  = row.querySelector('.dl');
+
+    // 編集トグル：閲覧→編集→保存
+    $edit.addEventListener('click', async ()=>{
+      const isView = $nm.disabled;          // 今は閲覧モード？
+      if (isView){
+        // 編集モードへ
+        $nm.disabled = false;
+        $rl.disabled = false;
+        $nm.focus();
+        $edit.textContent = '保存';
+        row.dataset.editing = '1';
+      }else{
+        // 保存して閲覧モードへ
+        const name  = ($nm.value||'').trim();
+        const role  = $rl.value || 'cast';
+        const duty  = !!rec.duty;           // 既存値を温存
+        const active= rec.active!==false;   // 既存値を温存
+
+        if(!name){ alert('名前は必須です'); $nm.focus(); return; }
+
+        const newId = name.replace(/\//g,'／');
+
+        try{
+          if(newId !== rec.id){
+            // ドキュメント名変更（コピー→元削除）
+            await setDoc(doc(stCol,newId), {name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
             await deleteDoc(doc(stCol,rec.id));
           }else{
-            await setDoc(doc(stCol,rec.id),{name,role,duty,active,updatedAt:serverTimestamp()},{merge:true});
+            await setDoc(doc(stCol,rec.id), {name,role,updatedAt:serverTimestamp()},{merge:true});
           }
-        };
-        row.querySelector('.dl').onclick=async()=>{
-          if(confirm('削除しますか？')) await deleteDoc(doc(stCol,rec.id));
-        };
-      });
-    };
+          // ローカルUIを閲覧状態に戻す
+          $nm.disabled = true;
+          $rl.disabled = true;
+          $edit.textContent = '編集';
+          row.dataset.editing = '';
+        }catch(e){
+          console.error(e);
+          alert('保存に失敗しました: ' + (e?.message || e));
+        }
+      }
+    });
 
-// ===== staff: 追加 =====
-document.getElementById('stAdd')?.addEventListener('click', async ()=>{
-  const nameEl = document.getElementById('stName');
-  const roleEl = document.getElementById('stRole');
+    // 削除
+    $del.addEventListener('click', async ()=>{
+      if(confirm('削除しますか？')) await deleteDoc(doc(stCol, rec.id));
+    });
+  });
+};
 
-  const name = (nameEl?.value || '').trim();
-  const role = roleEl?.value || 'boy';
-  const duty = false;   // 既定
-  const active = true;  // 既定
-
-  if(!name){
-    alert('名前を入力してください');
-    nameEl?.focus();
-    return;
-  }
-
-  try{
-    // Firestore ID に / を入れない
-    const id = name.replace(/\//g,'／');
-    await setDoc(doc(stCol, id), {
-      name, role, duty, active, updatedAt: serverTimestamp()
-    }, { merge: true });
-
-    // 入力をリセットして一覧へ
-    if(nameEl) nameEl.value = '';
-    alert('追加しました');
-    location.hash = '#admin-staff-list';   // ← 一覧に遷移
-  }catch(e){
-    console.error('staff add failed:', e);
-    // 失敗理由をユーザーに見せる
-    alert('追加に失敗しました: ' + (e?.message || e));
-  }
+onSnapshot(stCol,(qs)=>{
+  const rows=[];
+  qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
+  rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+  renderStaffRows(rows);   // ← 一覧DOMを描画
 });
+
 
 
 
