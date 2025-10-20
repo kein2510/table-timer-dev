@@ -580,12 +580,7 @@ onSnapshot(stCol,(qs)=>{
 
 
 
-    onSnapshot(stCol,(qs)=>{
-      const rows=[];
-      qs.forEach(d=>rows.push({id:d.id, ...(d.data()||{})}));
-      rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
-      renderStaffRows(rows);   // ← 一覧DOMを描画
-    });
+
 
 
     /* ====== products CRUD（一覧に描画） ====== */
@@ -644,7 +639,7 @@ onSnapshot(stCol,(qs)=>{
 
 
  
-</section>
+</script>
 
   </main>
 
