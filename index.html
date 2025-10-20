@@ -567,7 +567,7 @@ document.getElementById('stAdd')?.addEventListener('click', async () => {
       if(confirm('削除しますか？')) await deleteDoc(doc(stCol, rec.id));
     });
   });
-};
+
 
 onSnapshot(stCol,(qs)=>{
   const rows=[];
