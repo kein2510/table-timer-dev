@@ -354,6 +354,11 @@ button.danger{background:#dc2626}
   // ==== Firestore ====
   const db = getFirestore(app);
 
+  // === seats / duty コレクション参照（dbの直後に追加） ===
+  const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
+  const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+
+
   // ↓↓↓ ここから先はあなたの既存コード（ROOM_ID/パスコード、applyState/showAdminSub、
   //      staff/products の CRUD/onSnapshot、イベントハンドラなど）を
   //      そのまま続けて置いてください。db は上で定義済みです。
@@ -404,6 +409,30 @@ button.danger{background:#dc2626}
       });
     }
   }
+
+  // === Firestoreへ席状態を書き込む（1卓分） ===
+async function pushSeatToFS(s){
+  try{
+    await setDoc(
+      doc(seatsCol, s.id),
+      {
+        id: s.id,
+        group: s.group,
+        label: s.label || '',
+        cast: s.cast || '',
+        boy:  s.boy  || '',
+        end:  s.end ?? null,            // number|null
+        finished: !!s.finished,
+        extendCount: Number(s.extendCount||0),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }catch(e){
+    console.error('[seats] write failed', e);
+  }
+}
+
 
   // 初期反映（セッションの継続対応）
   applyState(sessionStorage.getItem(KEY) === '1');
@@ -774,6 +803,25 @@ button.danger{background:#dc2626}
     floor.style.height=needed+'px';
   }
 
+  // === Firestoreから座席状態を購読して seats[] に反映 ===
+onSnapshot(seatsCol, (qs)=>{
+  const byId = new Map(seats.map(x => [x.id, x]));  // 既存配列をベースに上書き
+  qs.forEach(docSnap=>{
+    const d = docSnap.data() || {};
+    const target = byId.get(docSnap.id);
+    if (target){
+      target.cast = d.cast || '';
+      target.boy  = d.boy  || '';
+      target.end  = (typeof d.end === 'number' || d.end === null) ? d.end : null;
+      target.finished    = !!d.finished;
+      target.extendCount = Number(d.extendCount||0);
+    }
+  });
+  save();     // ローカル保持（復帰用）
+  render();   // UI更新
+});
+
+
   function render(){
     floor.querySelectorAll('.seat').forEach(n=>n.remove());
     vipWrap.innerHTML='';
@@ -839,7 +887,9 @@ button.danger{background:#dc2626}
     const s=seats.find(x=>x.id===currentId);
     s.cast=castI.value.trim(); s.boy=boyI.value.trim();
     s.end=Date.now()+v*60*1000; s.finished=false; s.extendCount=0;
-    save(); render(); closeModal();
+    save(); render(); 
+    await pushSeatToFS(s);
+    closeModal();
   });
 
   // クイック開始
@@ -847,7 +897,9 @@ button.danger{background:#dc2626}
     const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
     s.cast=castI.value.trim(); s.boy=boyI.value.trim();
     s.end=Date.now()+mins*60*1000; s.finished=false; s.extendCount=0;
-    save(); render(); closeModal();
+    save(); render(); 
+    await pushSeatToFS(s);
+    closeModal();
   }));
 
   // 延長
@@ -857,7 +909,9 @@ button.danger{background:#dc2626}
     s.end=base+mins*60*1000; s.finished=false;
     s.extendCount=(s.extendCount||0)+1;
     if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
-    save(); render(); closeModal();
+    save(); render(); 
+    await pushSeatToFS(s);
+    closeModal();
   }));
 
   // クリア（この定義を1つだけ残す）
@@ -870,6 +924,7 @@ button.danger{background:#dc2626}
     s.extendCount = 0;
     save();
     render();
+    await pushSeatToFS(s);
     closeModal();
   });
 
@@ -886,6 +941,21 @@ button.danger{background:#dc2626}
     const names=rows.slice(headerRowIdx+1).map(r=>(r[nameIdx]||'').trim()).filter(v=>v&&v!=='従業員'); return [...new Set(names)];
   }
   let staff=[]; let dutyMap=JSON.parse(localStorage.getItem(LS_PREFIX+'staff.duty.map')||'{}'); window.staff=staff; window.dutyMap=dutyMap;
+
+  // === Firestoreから出勤フラグ(duty)を購読 ===
+onSnapshot(dutyCol, (qs)=>{
+  const next = {};
+  qs.forEach(docSnap=>{
+    const d = docSnap.data() || {};
+    next[docSnap.id] = !!d.duty;
+  });
+  dutyMap = next;                      // メモリ更新
+  localStorage.setItem(LS_PREFIX+'staff.duty.map', JSON.stringify(dutyMap)); // 互換キャッシュ
+  // 既存の staff 配列の duty を上書き
+  staff.forEach(s => { s.duty = !!dutyMap[s.name]; });
+  fillDatalists(); renderRoster(); window.renderSalesFields?.();
+});
+
 
   async function loadStaff(){
     if(!STAFF_CSV_URL) return;
@@ -904,12 +974,25 @@ button.danger{background:#dc2626}
       fillDatalists(); renderRoster(); renderSalesFields();
     }
   }
-  function toggleDuty(name){
-    dutyMap[name]=!dutyMap[name];
-    localStorage.setItem(LS_PREFIX+'staff.duty.map',JSON.stringify(dutyMap));
-    staff.forEach(s=>{ if(s.name===name) s.duty=!!dutyMap[name]; });
-    fillDatalists(); renderRoster();
+async function toggleDuty(name){
+  const next = !dutyMap[name];
+  dutyMap[name] = next;
+  localStorage.setItem(LS_PREFIX+'staff.duty.map', JSON.stringify(dutyMap)); // 一応ローカルも更新
+  // 画面先行更新
+  staff.forEach(s=>{ if(s.name===name) s.duty=next; });
+  fillDatalists(); renderRoster();
+
+  try{
+    await setDoc(
+      doc(dutyCol, name.replace(/\//g,'／')),
+      { duty: next, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  }catch(e){
+    console.error('[duty] write failed', e);
   }
+}
+
   function isNameBusy(name){
     name=name.trim();
     return seats.some(s=>{
@@ -1103,6 +1186,18 @@ button.danger{background:#dc2626}
   function rebuildAllLines(){ const keep=[...linesBox.querySelectorAll('.sales-row')].length || 1; linesBox.innerHTML=''; for(let i=0;i<keep;i++) buildLine(); recalcTotal(); }
   function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
 
+// （任意）Firestoreが空なら現在の seats[] を一括初期登録するユーティリティ
+async function bootstrapSeatsIfEmpty(){
+  const snap = await (await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js")).getDocs(seatsCol);
+  if (snap.empty){
+    for (const s of seats){ await pushSeatToFS(s); }
+    console.log('[seats] bootstrapped local -> Firestore');
+  }
+}
+// 起動時のどこかで一度だけ呼ぶ（本番運用では不要）
+bootstrapSeatsIfEmpty();
+
+  
   function collectPayload(){
     const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); const product=sel.value||''; return {product,unitPrice:unit,qty,amount:unit*qty}; }).filter(r=>r.product && r.qty>0);
     const cast=[...window.salesCast||[]]; const boy=window.salesBoy||''; const total=rows.reduce((a,b)=>a+b.amount,0);
