@@ -352,17 +352,19 @@ button.danger{background:#dc2626}
   }
 
   // ==== Firestore ====
-  const db = getFirestore(app);
+  const db = getFirestore(getApps()[0]);
 
-  // === seats / duty コレクション参照（dbの直後に追加） ===
+  // ★★★ ここを最初に定義（順序重要！）★★★
+  const ROOM_ID = "dev";
+
+  // === seats / duty コレクション参照（ROOM_ID定義の後） ===
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
-
 
   // ↓↓↓ ここから先はあなたの既存コード（ROOM_ID/パスコード、applyState/showAdminSub、
   //      staff/products の CRUD/onSnapshot、イベントハンドラなど）を
   //      そのまま続けて置いてください。db は上で定義済みです。
-  const ROOM_ID = "dev";
+
   const ADMIN_PASS_PLAIN = "test";
   const LS_PREFIX = window.LS_PREFIX || "tt-dev-";
   const $ = s => document.querySelector(s);
@@ -410,7 +412,7 @@ button.danger{background:#dc2626}
     }
   }
 
-  // === Firestoreへ席状態を書き込む（1卓分） ===
+// Firestoreへ席状態を書き込む（1卓分）
 async function pushSeatToFS(s){
   try{
     await setDoc(
@@ -421,7 +423,7 @@ async function pushSeatToFS(s){
         label: s.label || '',
         cast: s.cast || '',
         boy:  s.boy  || '',
-        end:  s.end ?? null,            // number|null
+        end:  s.end ?? null,
         finished: !!s.finished,
         extendCount: Number(s.extendCount||0),
         updatedAt: serverTimestamp(),
@@ -432,6 +434,7 @@ async function pushSeatToFS(s){
     console.error('[seats] write failed', e);
   }
 }
+
 
 
   // 初期反映（セッションの継続対応）
@@ -881,52 +884,48 @@ onSnapshot(seatsCol, (qs)=>{
     const s=seats.find(x=>x.id===currentId); s.cast=castI.value.trim(); s.boy=boyI.value.trim(); save(); render(); closeModal();
   });
 
-  // 開始（手入力）
-  document.getElementById('start').addEventListener('click', ()=>{
-    const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
-    const s=seats.find(x=>x.id===currentId);
-    s.cast=castI.value.trim(); s.boy=boyI.value.trim();
-    s.end=Date.now()+v*60*1000; s.finished=false; s.extendCount=0;
-    save(); render(); 
-    await pushSeatToFS(s);
-    closeModal();
-  });
+// 開始（手入力）
+document.getElementById('start').addEventListener('click', async ()=>{
+  const v=Number(manI.value); if(!v||v<=0) return alert('分数を入力してください');
+  const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim();
+  s.end=Date.now()+v*60*1000; s.finished=false; s.extendCount=0;
+  save(); render();
+  await pushSeatToFS(s);   // ← await OK
+  closeModal();
+});
 
-  // クイック開始
-  document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', ()=>{
-    const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
-    s.cast=castI.value.trim(); s.boy=boyI.value.trim();
-    s.end=Date.now()+mins*60*1000; s.finished=false; s.extendCount=0;
-    save(); render(); 
-    await pushSeatToFS(s);
-    closeModal();
-  }));
+// クイック開始
+document.querySelectorAll('button.quick').forEach(b=>b.addEventListener('click', async ()=>{
+  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+  s.cast=castI.value.trim(); s.boy=boyI.value.trim();
+  s.end=Date.now()+mins*60*1000; s.finished=false; s.extendCount=0;
+  save(); render();
+  await pushSeatToFS(s);   // ← await OK
+  closeModal();
+}));
 
-  // 延長
-  document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', ()=>{
-    const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
-    const base=s.end && s.end>Date.now()? s.end:Date.now();
-    s.end=base+mins*60*1000; s.finished=false;
-    s.extendCount=(s.extendCount||0)+1;
-    if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
-    save(); render(); 
-    await pushSeatToFS(s);
-    closeModal();
-  }));
+// 延長
+document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click', async ()=>{
+  const mins=Number(b.dataset.min); const s=seats.find(x=>x.id===currentId);
+  const base=s.end && s.end>Date.now()? s.end:Date.now();
+  s.end=base+mins*60*1000; s.finished=false;
+  s.extendCount=(s.extendCount||0)+1;
+  if(!s.cast) s.cast=castI.value.trim(); if(!s.boy) s.boy=boyI.value.trim();
+  save(); render();
+  await pushSeatToFS(s);   // ← await OK
+  closeModal();
+}));
 
-  // クリア（この定義を1つだけ残す）
-  document.getElementById('clear')?.addEventListener('click', ()=>{
-    const s = seats.find(x=>x.id===currentId);
-    s.end = null;
-    s.cast = '';
-    s.boy = '';
-    s.finished = false;
-    s.extendCount = 0;
-    save();
-    render();
-    await pushSeatToFS(s);
-    closeModal();
-  });
+// クリア
+document.getElementById('clear')?.addEventListener('click', async ()=>{
+  const s = seats.find(x=>x.id===currentId);
+  s.end = null; s.cast = ''; s.boy = ''; s.finished = false; s.extendCount = 0;
+  save(); render();
+  await pushSeatToFS(s);   // ← await OK
+  closeModal();
+});
+
 
   document.getElementById('q').addEventListener('input', render);
 
@@ -1196,6 +1195,7 @@ async function bootstrapSeatsIfEmpty(){
 }
 // 起動時のどこかで一度だけ呼ぶ（本番運用では不要）
 bootstrapSeatsIfEmpty();
+
 
   
   function collectPayload(){
