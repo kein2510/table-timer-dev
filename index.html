@@ -325,23 +325,13 @@ button.danger{background:#dc2626}
 
 <!-- 幹部ロジック（Firestore は既存のまま） -->
 <script type="module">
-  // Firebase imports for this block
-  import { getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
   import {
-    getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp
+    getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-  // 既に初期化済みの App から DB を取得
-  const db = getFirestore(getApps()[0]);
-
-  // このブロック専用の参照を先に用意（順序重要）
-  const ROOM_ID = "dev";
-  const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
-  const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
-
-  /* === 設定 ほか（ここは従来どおり）=== */
-
-  // ==== Firebase init（まず app を作る）====
+  // 先に initializeApp → それから getFirestore
   const app = getApps().length ? getApps()[0] : initializeApp({
     apiKey:"AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
     authDomain:"alexandria-8d142.firebaseapp.com",
@@ -351,6 +341,13 @@ button.danger{background:#dc2626}
     appId:"1:78904719003:web:234e7d8b0703bad614f83e",
     measurementId:"G-6TJNLEHJXQ"
   });
+  const db = getFirestore(app);
+
+  // 共通定義
+  const ROOM_ID = "dev";
+  const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
+  const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+
 
   // ==== 認証（app ができてから auth を作る）====
   const auth = getAuth(app);
@@ -731,7 +728,38 @@ async function pushSeatToFS(s){
 
 
 <!-- ========= タイマー/控室/名簿 & ピッカー ========= -->
-<script>
+<script type="module">
+  import { getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import {
+    getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  // すでに初期化済みの app を取得
+  const app = getApps()[0];
+  const db  = getFirestore(app);
+  const ROOM_ID = "dev";
+  const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
+  const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+
+  // このブロックでも pushSeatToFS が必要（別スコープなので再定義）
+  async function pushSeatToFS(s){
+    try{
+      await setDoc(
+        doc(seatsCol, s.id),
+        {
+          id:s.id, group:s.group, label:s.label||'',
+          cast:s.cast||'', boy:s.boy||'',
+          end: s.end ?? null, finished: !!s.finished,
+          extendCount: Number(s.extendCount||0),
+          updatedAt: serverTimestamp(),
+        },
+        { merge:true }
+      );
+    }catch(e){ console.error('[seats] write failed', e); }
+  }
+
+  /* ←以下、あなたの既存コード（座席・UI 等）をそのまま続ける */
+
   /* === 設定 ほか（ここは従来どおり）=== */
   const STAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRdLnWcNEqCfi4VVuG6k4id4JjbBkg4r9eVnRS1mEqN1XY3jz11bQkCXs9MBOkE0y4SPeMgUhHaH8_e/pub?gid=1348648909&single=true&output=csv';
   const LS_PREFIX = 'tt-dev-';
@@ -948,6 +976,7 @@ document.getElementById('clear')?.addEventListener('click', async ()=>{
   let staff=[]; let dutyMap=JSON.parse(localStorage.getItem(LS_PREFIX+'staff.duty.map')||'{}'); window.staff=staff; window.dutyMap=dutyMap;
 
   // === Firestoreから出勤フラグ(duty)を購読 ===
+  let salesUIReady = false;
 onSnapshot(dutyCol, (qs)=>{
   const next = {};
   qs.forEach(docSnap=>{
@@ -958,7 +987,10 @@ onSnapshot(dutyCol, (qs)=>{
   localStorage.setItem(LS_PREFIX+'staff.duty.map', JSON.stringify(dutyMap)); // 互換キャッシュ
   // 既存の staff 配列の duty を上書き
   staff.forEach(s => { s.duty = !!dutyMap[s.name]; });
-  fillDatalists(); renderRoster(); window.renderSalesFields?.();
+    fillDatalists(); renderRoster();
+  if (salesUIReady && typeof window.renderSalesFields === 'function') {
+    window.renderSalesFields();
+  }
 });
 
 
@@ -1090,6 +1122,7 @@ async function toggleDuty(name){
     castField.innerHTML = salesCast.length ? salesCast.map(n=>`<span class="pill">${n}</span>`).join('') : 'タップして選択';
   }
   window.renderSalesFields = renderSalesFields;
+  salesUIReady = true;
 
   boyField.addEventListener('click', ()=>openPicker('boy'));
   castField.addEventListener('click', ()=>openPicker('cast'));
@@ -1191,14 +1224,7 @@ async function toggleDuty(name){
   function rebuildAllLines(){ const keep=[...linesBox.querySelectorAll('.sales-row')].length || 1; linesBox.innerHTML=''; for(let i=0;i<keep;i++) buildLine(); recalcTotal(); }
   function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
 
-// （任意）Firestoreが空なら現在の seats[] を一括初期登録するユーティリティ
-async function bootstrapSeatsIfEmpty(){
-  const snap = await (await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js")).getDocs(seatsCol);
-  if (snap.empty){
-    for (const s of seats){ await pushSeatToFS(s); }
-    console.log('[seats] bootstrapped local -> Firestore');
-  }
-}
+
 // 起動時のどこかで一度だけ呼ぶ（本番運用では不要）
 bootstrapSeatsIfEmpty();
 
