@@ -325,11 +325,21 @@ button.danger{background:#dc2626}
 
 <!-- 幹部ロジック（Firestore は既存のまま） -->
 <script type="module">
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+  // Firebase imports for this block
+  import { getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import {
-    getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp
+    getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  // 既に初期化済みの App から DB を取得
+  const db = getFirestore(getApps()[0]);
+
+  // このブロック専用の参照を先に用意（順序重要）
+  const ROOM_ID = "dev";
+  const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
+  const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+
+  /* === 設定 ほか（ここは従来どおり）=== */
 
   // ==== Firebase init（まず app を作る）====
   const app = getApps().length ? getApps()[0] : initializeApp({
@@ -352,14 +362,9 @@ button.danger{background:#dc2626}
   }
 
   // ==== Firestore ====
-  const db = getFirestore(getApps()[0]);
 
-  // ★★★ ここを最初に定義（順序重要！）★★★
-  const ROOM_ID = "dev";
 
-  // === seats / duty コレクション参照（ROOM_ID定義の後） ===
-  const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
-  const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+
 
   // ↓↓↓ ここから先はあなたの既存コード（ROOM_ID/パスコード、applyState/showAdminSub、
   //      staff/products の CRUD/onSnapshot、イベントハンドラなど）を
@@ -434,6 +439,7 @@ async function pushSeatToFS(s){
     console.error('[seats] write failed', e);
   }
 }
+
 
 
 
@@ -1195,6 +1201,7 @@ async function bootstrapSeatsIfEmpty(){
 }
 // 起動時のどこかで一度だけ呼ぶ（本番運用では不要）
 bootstrapSeatsIfEmpty();
+
 
 
   
