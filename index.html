@@ -1225,8 +1225,7 @@ async function toggleDuty(name){
   function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
 
 
-// 起動時のどこかで一度だけ呼ぶ（本番運用では不要）
-bootstrapSeatsIfEmpty();
+
 
 
 
