@@ -663,24 +663,7 @@ seedAddRows();
 
 
   // staff リアルタイム購読（1つだけ）
-onSnapshot(dutyCol, (qs)=>{
-  const next = {};
-  qs.forEach(docSnap=>{
-    const d = docSnap.data() || {};
-    // 後方互換：booleanのときは両方true扱い（変更したいならここで調整）
-    const dutyObj = (typeof d.duty === 'object' && d.duty) 
-      ? { cast: !!d.duty.cast, boy: !!d.duty.boy }
-      : (typeof d.duty === 'boolean' 
-         ? { cast: d.duty, boy: d.duty } 
-         : { cast:false, boy:false });
-    next[docSnap.id] = dutyObj;
-  });
-  dutyMap = next;                                      // 例: { "あやか": {cast:true,boy:false}, ... }
-  localStorage.setItem(LS_PREFIX+'staff.duty.map', JSON.stringify(dutyMap));
-  staff.forEach(s => { s.duty = dutyMap[s.name] || {cast:false,boy:false}; });
-  fillDatalists(); renderRoster();
-  if (salesUIReady && typeof window.renderSalesFields === 'function') window.renderSalesFields();
-});
+
 
 
   /* ====== products CRUD（一覧に描画） ====== */
@@ -1069,17 +1052,21 @@ onSnapshot(dutyCol, (qs)=>{
   const next = {};
   qs.forEach(docSnap=>{
     const d = docSnap.data() || {};
-    next[docSnap.id] = !!d.duty;
+    const dutyObj =
+      (typeof d.duty === 'object' && d.duty)
+        ? { cast: !!d.duty.cast, boy: !!d.duty.boy }
+        : (typeof d.duty === 'boolean'
+            ? { cast: d.duty, boy: d.duty }   // 後方互換：boolean は両方ON扱い（運用に合わせて調整OK）
+            : { cast:false, boy:false });
+    next[docSnap.id] = dutyObj;
   });
-  dutyMap = next;                      // メモリ更新
-  localStorage.setItem(LS_PREFIX+'staff.duty.map', JSON.stringify(dutyMap)); // 互換キャッシュ
-  // 既存の staff 配列の duty を上書き
-  staff.forEach(s => { s.duty = !!dutyMap[s.name]; });
-    fillDatalists(); renderRoster();
-  if (salesUIReady && typeof window.renderSalesFields === 'function') {
-    window.renderSalesFields();
-  }
+  dutyMap = next;
+  localStorage.setItem(LS_PREFIX+'staff.duty.map', JSON.stringify(dutyMap));
+  staff.forEach(s => { s.duty = dutyMap[s.name] || {cast:false,boy:false}; });
+  fillDatalists(); renderRoster();
+  if (salesUIReady && typeof window.renderSalesFields === 'function') window.renderSalesFields();
 });
+
 
 
   async function loadStaff(){
@@ -1256,27 +1243,27 @@ function fillSuggestionBlocks(){
     closePicker();
   });
 
-  function buildPickerList(){
-      let onList=[];
+function buildPickerList(){
+  let onList=[];
   if (pickerMode==='boy'){
     onList=(window.staff||[]).filter(s=>s.duty?.boy).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
   }else{
     onList=(window.staff||[]).filter(s=>s.duty?.cast).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
   }
-    const onList=(window.staff||[]).filter(s=>s.duty).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
-    pickerList.innerHTML = onList.map(x=>{
-      const selected = (pickerMode==='boy') ? (tmpBoy===x.name) : tmpCast.includes(x.name);
-      return `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${selected?'selected':''}" data-name="${x.name}">${x.name}</button>`;
-    }).join('');
-    pickerList.querySelectorAll('button').forEach(b=>{
-      b.addEventListener('click', ()=>{
-        const name=b.dataset.name;
-        if(pickerMode==='boy'){ tmpBoy = (tmpBoy===name) ? '' : name; }
-        else { if(tmpCast.includes(name)) tmpCast = tmpCast.filter(n=>n!==name); else tmpCast = [...tmpCast, name]; }
-        buildPickerList();
-      });
+  pickerList.innerHTML = onList.map(x=>{
+    const selected = (pickerMode==='boy') ? (tmpBoy===x.name) : tmpCast.includes(x.name);
+    return `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${selected?'selected':''}" data-name="${x.name}">${x.name}</button>`;
+  }).join('');
+  pickerList.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name=b.dataset.name;
+      if(pickerMode==='boy'){ tmpBoy = (tmpBoy===name) ? '' : name; }
+      else { if(tmpCast.includes(name)) tmpCast = tmpCast.filter(n=>n!==name); else tmpCast = [...tmpCast, name]; }
+      buildPickerList();
     });
-  }
+  });
+}
+
 
   /* === 初期化 === */
   render(); setInterval(tick,1000); window.addEventListener('resize', resizeFloor);
@@ -1343,16 +1330,26 @@ function fillSuggestionBlocks(){
 
 
   
-  function collectPayload(){
-    const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); const product=sel.value||''; return {product,unitPrice:unit,qty,amount:unit*qty}; }).filter(r=>r.product && r.qty>0);
-    const cast=[...window.salesCast||[]]; const boy=window.salesBoy||''; const total=rows.reduce((a,b)=>a+b.amount,0);
-      const split = { cast: 0.7, boy: 0.2, house: 0.1 };
+function collectPayload(){
+  const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{
+    const sel=row.querySelector('select');
+    const unit=Number(sel.selectedOptions[0]?.dataset.price||0);
+    const qty=Number(row.querySelector('input').value||0);
+    const product=sel.value||'';
+    return {product,unitPrice:unit,qty,amount:unit*qty};
+  }).filter(r=>r.product && r.qty>0);
 
-    // 同一人物が cast と boy 両方に入ったケースの扱い（どちら優先？）
-    // 例: 被りがあったら「ボーイ扱い優先」にするなら:
-    const uniqCast = cast.filter(n => n !== cast);
-    return { rows, cast, boy, total, timestamp: Date.now() };
-  }
+  const cast=[...window.salesCast||[]];
+  const boy=window.salesBoy||'';
+  const total=rows.reduce((a,b)=>a+b.amount,0);
+  const split = { cast: 0.7, boy: 0.2, house: 0.1 };
+
+  // 同一人物が cast と boy 両方に入った場合は「ボーイ優先」でキャストから外す例
+  const uniqCast = cast.filter(n => n !== boy);
+
+  return { rows, cast: uniqCast, boy, total, split, timestamp: Date.now() };
+}
+
 
   document.getElementById('addSalesLine').addEventListener('click',()=>buildLine());
   document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); window.renderSalesFields?.(); });
