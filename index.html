@@ -270,11 +270,29 @@ button.danger{background:#dc2626}
   </div>
 
   <!-- ===== 従業員：追加 ===== -->
-  <div id="adminStaffAdd" class="sales-card" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">← 一覧へ</button>
-      <h2 style="margin:0">従業員追加のページ</h2>
-    </div>
+<!-- ===== 従業員：追加（複数行入力） ===== -->
+<div id="adminStaffAdd" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-list'">← 一覧へ</button>
+    <h2 style="margin:0">従業員追加（まとめて）</h2>
+  </div>
+
+  <!-- ここに “従業員リスト風の行” を 5 行 初期表示 -->
+  <div id="stAddList" class="admin-st-list"></div>
+
+  <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+    <button id="stAddRow"   type="button" class="sales-pill">＋ 行を追加</button>
+    <button id="stAddClear" type="button" class="sales-pill secondary">行をクリア</button>
+    <div style="margin-left:auto;font-size:12px;color:#64748b">* 最大5行まで</div>
+    <button id="stAddBulk"  type="button" class="sales-pill">まとめて追加</button>
+  </div>
+
+  <div style="font-size:12px;color:#64748b;margin-top:6px">
+    * 名前を入力して役職を選び、「まとめて追加」を押します（空行は無視）<br>
+    * 追加時は「出勤:false / 有効:true」で登録（必要なら一覧で編集）
+  </div>
+</div>
+
     <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end;max-width:720px">
       <label>名前
         <input id="stName" placeholder="ここに名前を入力">
@@ -546,6 +564,113 @@ async function pushSeatToFS(s){
             console.error(e);
             alert('保存に失敗しました: ' + (e?.message || e));
           }
+          // ===== 追加ページ（複数行）UI =====
+const stAddList   = document.getElementById('stAddList');
+const btnAddRow   = document.getElementById('stAddRow');
+const btnAddClear = document.getElementById('stAddClear');
+const btnAddBulk  = document.getElementById('stAddBulk');
+
+const MAX_ADD_ROWS = 5;
+
+function makeAddRow(init){
+  const row = document.createElement('div');
+  row.className = 'stRow';
+  row.innerHTML = `
+    <input class="nm" placeholder="名前　例: あやか">
+    <select class="rl">
+      <option value="cast" ${init?.role==='cast'?'selected':''}>キャスト</option>
+      <option value="boy"  ${init?.role==='boy' ?'selected':''}>ボーイ</option>
+      <option value="staff"${init?.role==='staff'?'selected':''}>スタッフ</option>
+    </select>
+    <button type="button" class="rm stBtn sales-pill">削除</button>
+    <div></div>
+  `;
+  if (init?.name) row.querySelector('.nm').value = init.name;
+  row.querySelector('.rm').addEventListener('click', ()=>{
+    row.remove();
+    ensureRows();
+  });
+  return row;
+}
+
+function ensureRows(){
+  const cur = stAddList.querySelectorAll('.stRow').length;
+  // 最低1行、最大5行
+  if (cur === 0) stAddList.appendChild(makeAddRow());
+  const over = Math.max(0, cur - MAX_ADD_ROWS);
+  // over > 0 の場合は何もしない（ユーザが手動で削除可）
+  btnAddRow.disabled = stAddList.querySelectorAll('.stRow').length >= MAX_ADD_ROWS;
+}
+
+function seedAddRows(){
+  stAddList.innerHTML = '';
+  for(let i=0;i<MAX_ADD_ROWS;i++){
+    stAddList.appendChild(makeAddRow());
+  }
+  ensureRows();
+}
+
+btnAddRow?.addEventListener('click', ()=>{
+  if (stAddList.querySelectorAll('.stRow').length >= MAX_ADD_ROWS) return;
+  stAddList.appendChild(makeAddRow());
+  ensureRows();
+});
+
+btnAddClear?.addEventListener('click', seedAddRows);
+
+// まとめて追加
+btnAddBulk?.addEventListener('click', async ()=>{
+  // 入力収集
+  const rows = [...stAddList.querySelectorAll('.stRow')].map(r=>{
+    const name = (r.querySelector('.nm').value||'').trim();
+    const role = (r.querySelector('.rl').value)||'cast';
+    return { name, role };
+  }).filter(r=>r.name);
+
+  if (!rows.length){
+    alert('入力が空です'); 
+    stAddList.querySelector('.nm')?.focus();
+    return;
+  }
+
+  // 同一ページ内の重複名を除外（前側優先）
+  const seen = new Set();
+  const uniqueRows = rows.filter(r=>{
+    if (seen.has(r.name)) return false;
+    seen.add(r.name);
+    return true;
+  });
+
+  btnAddBulk.disabled = true;
+  btnAddBulk.textContent = '追加中…';
+
+  try{
+    // Firestore 書き込み（merge）
+    await Promise.all(uniqueRows.map(async ({name, role})=>{
+      const id = name.replace(/\//g, '／');
+      const duty = false;
+      const active = true;
+      await setDoc(doc(stCol, id), {
+        name, role, duty, active, updatedAt: serverTimestamp()
+      }, { merge: true });
+    }));
+
+    alert(`${uniqueRows.length}名を追加しました`);
+    // クリアして一覧へ
+    seedAddRows();
+    location.hash = '#admin-staff-list';
+  }catch(e){
+    console.error('bulk add failed:', e);
+    alert('追加に失敗しました: ' + (e?.message || e));
+  }finally{
+    btnAddBulk.disabled = false;
+    btnAddBulk.textContent = 'まとめて追加';
+  }
+});
+
+// 初期5行を用意
+seedAddRows();
+
         }
       });
 
@@ -557,35 +682,7 @@ async function pushSeatToFS(s){
   };
 
   // ===== staff: 追加（従業員追加ページの［追加］ボタン）===== ＊外に1回だけ定義
-  document.getElementById('stAdd')?.addEventListener('click', async () => {
-    const nameEl = document.getElementById('stName');
-    const roleEl = document.getElementById('stRole');
 
-    const name = (nameEl?.value || '').trim();
-    const role = roleEl?.value || 'boy';
-    const duty = false;    // 既定
-    const active = true;   // 既定
-
-    if (!name) {
-      alert('名前を入力してください');
-      nameEl?.focus();
-      return;
-    }
-
-    try {
-      const id = name.replace(/\//g, '／'); // Firestore ドキュメントID対策
-      await setDoc(doc(stCol, id), {
-        name, role, duty, active, updatedAt: serverTimestamp()
-      }, { merge: true });
-
-      if (nameEl) nameEl.value = '';
-      alert('追加しました');
-      location.hash = '#admin-staff-list';
-    } catch (e) {
-      console.error('staff add failed:', e);
-      alert('追加に失敗しました: ' + (e?.message || e));
-    }
-  });
 
   // staff リアルタイム購読（1つだけ）
   onSnapshot(stCol,(qs)=>{
