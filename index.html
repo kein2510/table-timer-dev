@@ -580,16 +580,13 @@ function makeAddRow(init){
       <option value="boy"  ${init?.role==='boy' ?'selected':''}>ボーイ</option>
       <option value="staff"${init?.role==='staff'?'selected':''}>スタッフ</option>
     </select>
-    <button type="button" class="rm stBtn sales-pill">削除</button>
+    <div></div>
     <div></div>
   `;
   if (init?.name) row.querySelector('.nm').value = init.name;
-  row.querySelector('.rm').addEventListener('click', ()=>{
-    row.remove();
-    ensureRows();
-  });
   return row;
 }
+
 
 function ensureRows(){
   const cur = stAddList.querySelectorAll('.stRow').length;
@@ -663,6 +660,14 @@ seedAddRows();
 
 
   // staff リアルタイム購読（1つだけ）
+onSnapshot(stCol, (qs)=>{
+  const rows = [];
+  qs.forEach(docSnap=>{
+    rows.push({ id: docSnap.id, ...(docSnap.data() || {}) });
+  });
+  rows.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'ja'));
+  renderStaffRows(rows);   // ← これで一覧に描画される
+});
 
 
 
