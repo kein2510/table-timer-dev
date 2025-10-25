@@ -1052,7 +1052,7 @@ document.getElementById('clear')?.addEventListener('click', async ()=>{
   let staff=[]; let dutyMap=JSON.parse(localStorage.getItem(LS_PREFIX+'staff.duty.map')||'{}'); window.staff=staff; window.dutyMap=dutyMap;
 
   // staff コレクション購読（控室の名簿はここから作る）
-import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
 
 const stColForRoster = collection(db, 'rooms', ROOM_ID, 'staff');
 
@@ -1176,7 +1176,7 @@ async function toggleDuty(name){
     rosterBox.innerHTML='';
     if(!staff.length){
       const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
-      small.textContent='（CSVのURLが未設定か、スプレッドシートを「ウェブに公開（CSV）」にしていない可能性があります）';
+      small.textContent='（従業員が未登録です。幹部→従業員管理から追加してください）';
       rosterBox.appendChild(small); return;
     }
     const editSwitch=document.getElementById('editDuty');
