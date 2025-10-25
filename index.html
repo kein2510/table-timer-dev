@@ -837,7 +837,7 @@ onSnapshot(stCol, (qs)=>{
   /* ←以下、あなたの既存コード（座席・UI 等）をそのまま続ける */
 
   /* === 設定 ほか（ここは従来どおり）=== */
-  const STAFF_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRdLnWcNEqCfi4VVuG6k4id4JjbBkg4r9eVnRS1mEqN1XY3jz11bQkCXs9MBOkE0y4SPeMgUhHaH8_e/pub?gid=1348648909&single=true&output=csv';
+
   const LS_PREFIX = 'tt-dev-';
   window.LS_PREFIX = LS_PREFIX;
 
@@ -1051,6 +1051,51 @@ document.getElementById('clear')?.addEventListener('click', async ()=>{
   }
   let staff=[]; let dutyMap=JSON.parse(localStorage.getItem(LS_PREFIX+'staff.duty.map')||'{}'); window.staff=staff; window.dutyMap=dutyMap;
 
+  // staff コレクション購読（控室の名簿はここから作る）
+import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+const stColForRoster = collection(db, 'rooms', ROOM_ID, 'staff');
+
+onSnapshot(stColForRoster, (qs)=>{
+  const next = [];
+
+  qs.forEach(docSnap=>{
+    const d = docSnap.data() || {};
+    // active=false は表示しない（既定は true 扱い）
+    if (d.active === false) return;
+
+    const name = (d.name || docSnap.id || '').trim();
+    if (!name) return;
+
+    const role = d.role || 'cast';
+    // staffドキュメントの duty は boolean想定（省略可）
+    // 役職ごとに {cast,boy} へマップ（cast: true/false, boy: true/false）
+    const dutyBool = !!d.duty;
+    const fallbackDuty =
+      role === 'boy'  ? { cast:false, boy:dutyBool }
+    : role === 'cast' ? { cast:dutyBool, boy:false }
+                      : { cast:false,   boy:false };
+
+    // dutyCol の最新があればそれを優先
+    const dutyObj = dutyMap[name] ?? fallbackDuty;
+
+    next.push({ name, role, duty: dutyObj });
+  });
+
+  // 表示用に名前順
+  next.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'ja'));
+
+  // staff[] を差し替え
+  staff.splice(0, staff.length, ...next);
+  window.staff = staff;
+
+  // 既存UIを更新
+  fillDatalists();
+  renderRoster();
+  if (typeof window.renderSalesFields === 'function') window.renderSalesFields();
+});
+
+
   // === Firestoreから出勤フラグ(duty)を購読 ===
   let salesUIReady = false;
 onSnapshot(dutyCol, (qs)=>{
@@ -1074,23 +1119,7 @@ onSnapshot(dutyCol, (qs)=>{
 
 
 
-  async function loadStaff(){
-    if(!STAFF_CSV_URL) return;
-    try{
-      const res=await fetch(STAFF_CSV_URL,{cache:'no-store'});
-      const csv=await res.text(); const names=parseStaffNamesFromCSV(csv);
-      const newStaff=names.map(n=>({name:n,duty:!!(window.dutyMap?.[n])}));
-      staff.splice(0,staff.length,...newStaff); window.staff=staff;
-      localStorage.setItem(LS_PREFIX+'staff.cache.names',JSON.stringify(names));
-      fillDatalists(); renderRoster(); renderSalesFields();
-      console.log(`[Roster] CSV読込: ${names.length}件`);
-    }catch(e){
-      console.error('スタッフ読み込み失敗',e);
-      const cache=JSON.parse(localStorage.getItem(LS_PREFIX+'staff.cache.names')||'[]');
-      staff=cache.map(n=>({name:n,duty:!!dutyMap[n]}));
-      fillDatalists(); renderRoster(); renderSalesFields();
-    }
-  }
+  
 async function toggleDuty(name){
   const next = !dutyMap[name];
   dutyMap[name] = next;
@@ -1139,7 +1168,7 @@ async function toggleDuty(name){
     const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean);
     if(!list.includes(name)){ list.push(name); castI.value=list.join(', '); }
   }
-  document.getElementById('reloadStaff')?.addEventListener('click', ()=> loadStaff());
+
 
   // Roster（本鯖式）
   function renderRoster(){
@@ -1272,7 +1301,7 @@ function buildPickerList(){
 
   /* === 初期化 === */
   render(); setInterval(tick,1000); window.addEventListener('resize', resizeFloor);
-  loadStaff(); setInterval(loadStaff, 60000);
+  
 </script>
 
 <!-- ========= 売上（商品CSV/送信） ========= -->
