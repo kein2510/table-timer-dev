@@ -150,6 +150,20 @@ button.danger{background:#dc2626}
 }
 .stBtn{ white-space:nowrap; }
 
+    /* 商品行（従業員と同じUI・列幅だけ違う） */
+.pdRow{
+  display:grid;
+  grid-template-columns: 2fr 1fr 1fr auto; /* 商品名 / 価格 / 有効 / ボタン */
+  gap:16px; align-items:center;
+  padding:8px 0; border-top:1px dashed #e5e7eb;
+}
+.pdRow input, .pdRow select{
+  padding:12px; border:1px solid #cbd5e1; border-radius:12px;
+  background:#fff; font-size:14px; width:100%;
+}
+.pdRow input[disabled], .pdRow select[disabled]{ background:#f8fafc; color:#475569; opacity:.9; }
+
+
 
 
     @media(max-width:900px){
@@ -342,31 +356,38 @@ button.danger{background:#dc2626}
   </div>
 
   <!-- ===== 商品：一覧 ===== -->
-  <div id="adminProdList" class="sales-card" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
-      <h2 style="margin:0">商品リスト</h2>
-      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-prod-add'">＋ 追加ページへ</button>
-    </div>
-    <div id="pdList" style="margin-top:8px"></div>
+<div id="adminProdList" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+    <h2 style="margin:0">商品リスト</h2>
+    <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-prod-add'">＋ 追加ページへ</button>
   </div>
+  <div id="pdList" style="margin-top:8px"></div>
+</div>
+
 
   <!-- ===== 商品：追加 ===== -->
-  <div id="adminProdAdd" class="sales-card" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
-      <h2 style="margin:0">商品の追加</h2>
-      <button type="button" class="sales-pill" style="margin-left:auto" onclick="location.hash='#admin-prod-list'">一覧へ</button>
-    </div>
-    <div class="sales-grid">
-      <label>商品名<input id="pdName" placeholder="例: 生ビール"></label>
-      <label>価格（円）<input id="pdPrice" type="number" min="0" step="1" placeholder="例: 700"></label>
-      <label>有効
-        <select id="pdActive"><option value="true">true</option><option value="false">false</option></select>
-      </label>
-    </div>
-    <button id="pdAdd" class="sales-pill">＋ 追加</button>
+<div id="adminProdAdd" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-list'">← 一覧へ</button>
+    <h2 style="margin:0">商品の追加</h2>
   </div>
+
+  <!-- 従業員追加と同じ “行ベース” UI（5行） -->
+  <div id="pdAddList" class="admin-st-list"></div>
+
+  <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+    <button id="pdAddClear" type="button" class="sales-pill secondary">行をクリア</button>
+    <div style="margin-left:auto;font-size:12px;color:#64748b">* 最大5行まで</div>
+    <button id="pdAddBulk"  type="button" class="sales-pill">まとめて追加</button>
+  </div>
+
+  <div style="font-size:12px;color:#64748b;margin-top:6px">
+    * 商品名と価格を入力し、「まとめて追加」を押します（空行は無視）<br>
+    * 追加時は「有効:true」で登録（必要なら一覧で編集）
+  </div>
+</div>
+
 
 </section>
 
@@ -717,58 +738,144 @@ onSnapshot(stCol, (qs)=>{
 
 
   /* ====== products CRUD（一覧に描画） ====== */
-  const pdCol=collection(db,'rooms',ROOM_ID,'products');
-  const renderProdRows = (rows)=>{
-    const root = document.getElementById('pdList');
-    if(!root) return;
-    root.innerHTML = rows.map(p=>`
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;border-top:1px dashed #e5e7eb;padding:6px 0">
-        <input class="nm" value="${esc(p.name||'')}" placeholder="商品名">
-        <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}">
-        <select class="ac"><option value="true" ${p.active!==false?'selected':''}>active:true</option><option value="false" ${p.active===false?'selected':''}>false</option></select>
-        <div style="text-align:right">
-          <button class="sv sales-pill">保存</button>
-          <button class="dl sales-pill">削除</button>
-        </div>
-      </div>`).join('');
-    [...root.querySelectorAll(':scope > div')].forEach((row,i)=>{
-      const rec=rows[i];
-      row.querySelector('.sv').onclick=async()=>{
-        const name=row.querySelector('.nm').value.trim();
-        const price=Number(row.querySelector('.pr').value||0);
-        const active=row.querySelector('.ac').value==='true';
-        if(!name) return alert('商品名は必須');
-        const newId=name.replace(/\//g,'／');
-        if(newId!==rec.id){
-          await setDoc(doc(pdCol,newId),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-          await deleteDoc(doc(pdCol,rec.id));
-        }else{
-          await setDoc(doc(pdCol,rec.id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
+/* ===== products CRUD（従業員と同じUI） ===== */
+const pdCol = collection(db,'rooms',ROOM_ID,'products');
+
+/** 一覧レンダリング（行ごと編集トグル） */
+const renderProdRows = (rows)=>{
+  const root = document.getElementById('pdList');
+  if(!root) return;
+
+  root.innerHTML = rows.map(p=>`
+    <div class="pdRow" data-id="${esc(p.id)}">
+      <input class="nm" value="${esc(p.name||'')}" placeholder="商品名" disabled>
+      <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}" disabled>
+      <select class="ac" disabled>
+        <option value="true"  ${p.active!==false?'selected':''}>有効:true</option>
+        <option value="false" ${p.active===false?'selected':''}>false</option>
+      </select>
+      <div style="text-align:right">
+        <button class="edit stBtn sales-pill" type="button">編集</button>
+        <button class="dl   stBtn sales-pill" type="button">削除</button>
+      </div>
+    </div>
+  `).join('');
+
+  [...root.querySelectorAll('.pdRow')].forEach((row,i)=>{
+    const rec = rows[i];
+    const $nm = row.querySelector('.nm');
+    const $pr = row.querySelector('.pr');
+    const $ac = row.querySelector('.ac');
+    const $edit = row.querySelector('.edit');
+    const $del  = row.querySelector('.dl');
+
+    // 編集→保存トグル
+    $edit.addEventListener('click', async ()=>{
+      const isView = $nm.disabled;
+      if (isView){
+        $nm.disabled=false; $pr.disabled=false; $ac.disabled=false;
+        $nm.focus(); $edit.textContent='保存'; row.dataset.editing='1';
+      }else{
+        const name=($nm.value||'').trim();
+        const price=Number($pr.value||0);
+        const active=$ac.value==='true';
+        if(!name){ alert('商品名は必須です'); $nm.focus(); return; }
+
+        const newId = name.replace(/\//g,'／');
+        try{
+          if(newId !== rec.id){
+            await setDoc(doc(pdCol,newId), {name,price,active,updatedAt:serverTimestamp()},{merge:true});
+            await deleteDoc(doc(pdCol,rec.id));
+          }else{
+            await setDoc(doc(pdCol,rec.id), {name,price,active,updatedAt:serverTimestamp()},{merge:true});
+          }
+          $nm.disabled=true; $pr.disabled=true; $ac.disabled=true;
+          $edit.textContent='編集'; row.dataset.editing='';
+        }catch(e){
+          console.error(e); alert('保存に失敗しました: ' + (e?.message || e));
         }
-      };
-      row.querySelector('.dl').onclick=async()=>{
-        if(confirm('削除しますか？')) await deleteDoc(doc(pdCol,rec.id));
-      };
+      }
     });
-  };
 
-  document.getElementById('pdAdd').onclick=async()=>{
-    const name=(document.getElementById('pdName').value||'').trim();
-    const price=Number(document.getElementById('pdPrice').value||0);
-    const active=document.getElementById('pdActive').value==='true';
-    if(!name) return alert('商品名を入力');
-    const id=name.replace(/\//g,'／');
-    await setDoc(doc(pdCol,id),{name,price,active,updatedAt:serverTimestamp()},{merge:true});
-    document.getElementById('pdName').value='';
-    document.getElementById('pdPrice').value='';
-    alert('追加しました');
-  };
-
-  onSnapshot(pdCol,(qs)=>{
-    const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
-    rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
-    renderProdRows(rows);
+    // 削除
+    $del.addEventListener('click', async ()=>{
+      if(confirm('削除しますか？')) await deleteDoc(doc(pdCol, rec.id));
+    });
   });
+};
+
+// リアルタイム購読
+onSnapshot(pdCol,(qs)=>{
+  const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+  rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ja'));
+  renderProdRows(rows);
+});
+
+
+/** ===== 追加ページ（複数行） ===== */
+const pdAddList   = document.getElementById('pdAddList');
+const btnPdAddClear = document.getElementById('pdAddClear');
+const btnPdAddBulk  = document.getElementById('pdAddBulk');
+
+const MAX_PD_ADD_ROWS = 5;
+
+function makePdAddRow(init){
+  const row = document.createElement('div');
+  row.className = 'pdRow';
+  row.innerHTML = `
+    <input class="nm" placeholder="商品名">
+    <input class="pr" type="number" min="0" step="1" placeholder="価格（円）">
+    <select class="ac">
+      <option value="true"  ${init?.active!==false?'selected':''}>有効:true</option>
+      <option value="false" ${init?.active===false?'selected':''}>false</option>
+    </select>
+    <div></div>
+  `;
+  if (init?.name)  row.querySelector('.nm').value = init.name;
+  if (init?.price) row.querySelector('.pr').value = Number(init.price||0);
+  return row;
+}
+
+function seedPdAddRows(){
+  pdAddList.innerHTML = '';
+  for(let i=0;i<MAX_PD_ADD_ROWS;i++) pdAddList.appendChild(makePdAddRow());
+}
+btnPdAddClear?.addEventListener('click', seedPdAddRows);
+seedPdAddRows();
+
+btnPdAddBulk?.addEventListener('click', async ()=>{
+  const rows = [...pdAddList.querySelectorAll('.pdRow')].map(r=>{
+    const name = (r.querySelector('.nm').value||'').trim();
+    const price= Number(r.querySelector('.pr').value||0);
+    const active= (r.querySelector('.ac').value==='true');
+    return { name, price, active };
+  }).filter(r=>r.name);
+
+  if (!rows.length){
+    alert('入力が空です'); pdAddList.querySelector('.nm')?.focus(); return;
+  }
+
+  // 同名をユニークに
+  const seen = new Set();
+  const uniqueRows = rows.filter(r=>{ if(seen.has(r.name)) return false; seen.add(r.name); return true; });
+
+  btnPdAddBulk.disabled = true; btnPdAddBulk.textContent = '追加中…';
+  try{
+    await Promise.all(uniqueRows.map(async ({name, price, active})=>{
+      const id = name.replace(/\//g, '／');
+      await setDoc(doc(pdCol, id), { name, price, active, updatedAt: serverTimestamp() }, { merge: true });
+    }));
+    alert(`${uniqueRows.length}件を追加しました`);
+    seedPdAddRows();
+    location.hash = '#admin-prod-list';
+  }catch(e){
+    console.error('product bulk add failed:', e);
+    alert('追加に失敗しました: ' + (e?.message || e));
+  }finally{
+    btnPdAddBulk.disabled = false; btnPdAddBulk.textContent = 'まとめて追加';
+  }
+});
+
 
 </script>
 
