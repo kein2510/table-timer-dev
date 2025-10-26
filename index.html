@@ -159,14 +159,18 @@ button.danger{background:#dc2626}
     }
 
     /* 控室を左右2カラムに分割 */
+.rosterHead{ justify-content:space-between; }
 .rosterGrid{
   display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;
 }
 .rosterCol{ display:flex; flex-direction:column; gap:6px; }
 .rosterHead{
-  font-size:13px; color:#475569; font-weight:700;
+  font-size:12px; color:#475569; font-weight:700;
   display:flex; align-items:center; gap:8px;
 }
+    .rosterSearch{
+  padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px; min-width:140px;
+  background:#fff; font-size:13px;
 .rosterCol .staffSectionTitle{ margin-top:4px; } /* 既存を流用 */
 @media(max-width:900px){
   .rosterGrid{ grid-template-columns:1fr; }
@@ -223,16 +227,30 @@ button.danger{background:#dc2626}
     </div>
 
     <!-- ▼ここを新しい2カラムUIに -->
-    <div class="rosterGrid">
-      <div class="rosterCol">
-        <div class="rosterHead">キャスト</div>
-        <div id="rosterCast" class="roster"></div>
-      </div>
-      <div class="rosterCol">
-        <div class="rosterHead">ボーイ・スタッフ</div>
-        <div id="rosterBoy" class="roster"></div>
+<div class="rosterGrid">
+  <div class="rosterCol">
+    <div class="rosterHead">
+      <span>キャスト</span>
+      <div class="rosterCtrl">
+        <label class="mini"><input type="checkbox" id="editDutyCast"> 出勤を編集</label>
+        <input id="searchCast" class="rosterSearch" placeholder="検索">
       </div>
     </div>
+    <div id="rosterCast" class="roster"></div>
+  </div>
+
+  <div class="rosterCol">
+    <div class="rosterHead">
+      <span>ボーイ・スタッフ</span>
+      <div class="rosterCtrl">
+        <label class="mini"><input type="checkbox" id="editDutyBoy"> 出勤を編集</label>
+        <input id="searchBoy" class="rosterSearch" placeholder="検索">
+      </div>
+    </div>
+    <div id="rosterBoy" class="roster"></div>
+  </div>
+</div>
+
 
   </section>
 </section>
@@ -1206,7 +1224,6 @@ function renderRoster(){
   boxCast.innerHTML = '';
   boxBoy.innerHTML  = '';
 
-  // 名簿が空のときのメッセージ
   if(!staff.length){
     const small = document.createElement('div');
     small.style.color = '#64748b';
@@ -1217,30 +1234,30 @@ function renderRoster(){
     return;
   }
 
-  const editSwitch = document.getElementById('editDuty')?.addEventListener('change', renderRoster);
+  const isEditCast = !!document.getElementById('editDutyCast')?.checked;
+  const isEditBoy  = !!document.getElementById('editDutyBoy')?.checked;
+  const qCast = (document.getElementById('searchCast')?.value || '').trim();
+  const qBoy  = (document.getElementById('searchBoy') ?.value || '').trim();
 
-  const isEdit = !!(editSwitch && editSwitch.checked);
-
-  const addChip = (root, name, {on, busy, role})=>{
+  const addChip = (root, name, {on, busy, role, isEdit})=>{
     const b = document.createElement('button');
     b.type = 'button';
     b.className = `staffChip ${on ? (busy ? 'busy' : 'on') : 'off'}`;
     b.textContent = name;
 
     if(isEdit){
-      // 出勤編集モード：クリックでそのロールの duty をトグル
+      // 出勤編集：列に応じた duty をトグル
       b.disabled = false;
       b.addEventListener('click', ()=>toggleDutyRole(name, role));
     }else{
-      // 通常モード：割り当て（モーダルが開いている時のみ反応）
+      // 通常：席モーダル割当（モーダルが開いてる時のみ）
       if(!on){ b.disabled = true; }
       else{
         b.addEventListener('click', ()=>{
-          const modalOpen = (document.getElementById('modalWrap')?.getAttribute('aria-hidden') === 'false');
-          if(!modalOpen) return;
-          if(role === 'boy'){
-            boyI.value = name; boyI.focus();
-          }else{
+          const open = (document.getElementById('modalWrap')?.getAttribute('aria-hidden') === 'false');
+          if(!open) return;
+          if(role === 'boy'){ boyI.value = name; boyI.focus(); }
+          else{
             const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
             if(!list.includes(name)) castI.value = [...list, name].join(', ');
             castI.focus();
@@ -1251,36 +1268,32 @@ function renderRoster(){
     root.appendChild(b);
   };
 
-  // duty.cast / duty.boy で分割（※roleの値に依らず、どの旗が立っているかだけで出す）
-  const onCast = staff.filter(s => s.duty?.cast === true);
-  const onBoy  = staff.filter(s => s.duty?.boy  === true);
+  // 検索関数
+  const byQuery = (q) => (s) => !q || s.name.includes(q);
 
-  // それぞれの「非出勤」集合（編集モードのときだけ表示）
-  const offCast = isEdit ? staff.filter(s => s.duty?.cast !== true) : [];
-  const offBoy  = isEdit ? staff.filter(s => s.duty?.boy  !== true) : [];
+  // 左カラム（キャスト）
+  const onCast  = staff.filter(s => s.duty?.cast === true).filter(byQuery(qCast));
+  const offCast = isEditCast ? staff.filter(s => s.duty?.cast !== true).filter(byQuery(qCast)) : [];
 
-  // 出勤（キャスト）
-  onCast.forEach(s => addChip(boxCast, s.name, {on:true, busy:isNameBusy(s.name), role:'cast'}));
-  // 非出勤（キャスト）
+  onCast.forEach(s => addChip(boxCast, s.name, {on:true, busy:isNameBusy(s.name), role:'cast', isEdit:isEditCast}));
   if(offCast.length){
-    const title = document.createElement('div');
-    title.className = 'staffSectionTitle';
-    title.textContent = '— 非出勤 —';
-    boxCast.appendChild(title);
-    offCast.forEach(s => addChip(boxCast, s.name, {on:false, busy:false, role:'cast'}));
+    const t = document.createElement('div'); t.className='staffSectionTitle'; t.textContent='— 非出勤 —';
+    boxCast.appendChild(t);
+    offCast.forEach(s => addChip(boxCast, s.name, {on:false, busy:false, role:'cast', isEdit:isEditCast}));
   }
 
-  // 出勤（ボーイ）
-  onBoy.forEach(s => addChip(boxBoy, s.name, {on:true, busy:isNameBusy(s.name), role:'boy'}));
-  // 非出勤（ボーイ）
+  // 右カラム（ボーイ/スタッフ）
+  const onBoy  = staff.filter(s => s.duty?.boy === true).filter(byQuery(qBoy));
+  const offBoy = isEditBoy ? staff.filter(s => s.duty?.boy !== true).filter(byQuery(qBoy)) : [];
+
+  onBoy.forEach(s => addChip(boxBoy, s.name, {on:true, busy:isNameBusy(s.name), role:'boy', isEdit:isEditBoy}));
   if(offBoy.length){
-    const title = document.createElement('div');
-    title.className = 'staffSectionTitle';
-    title.textContent = '— 非出勤 —';
-    boxBoy.appendChild(title);
-    offBoy.forEach(s => addChip(boxBoy, s.name, {on:false, busy:false, role:'boy'}));
+    const t = document.createElement('div'); t.className='staffSectionTitle'; t.textContent='— 非出勤 —';
+    boxBoy.appendChild(t);
+    offBoy.forEach(s => addChip(boxBoy, s.name, {on:false, busy:false, role:'boy', isEdit:isEditBoy}));
   }
 }
+
 
 
 function fillDatalists(){
