@@ -157,6 +157,21 @@ button.danger{background:#dc2626}
       .seat{min-width:72px;min-height:60px}
       .sales-grid{grid-template-columns:1fr}
     }
+
+    /* 控室を左右2カラムに分割 */
+.rosterGrid{
+  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;
+}
+.rosterCol{ display:flex; flex-direction:column; gap:6px; }
+.rosterHead{
+  font-size:13px; color:#475569; font-weight:700;
+  display:flex; align-items:center; gap:8px;
+}
+.rosterCol .staffSectionTitle{ margin-top:4px; } /* 既存を流用 */
+@media(max-width:900px){
+  .rosterGrid{ grid-template-columns:1fr; }
+}
+
   </style>
 </head>
 
@@ -206,7 +221,19 @@ button.danger{background:#dc2626}
         <button id="reloadStaff" class="secondary" type="button">更新</button>
       </div>
     </div>
-    <div id="roster" class="roster"></div>
+
+    <!-- ▼ここを新しい2カラムUIに -->
+    <div class="rosterGrid">
+      <div class="rosterCol">
+        <div class="rosterHead">キャスト</div>
+        <div id="rosterCast" class="roster"></div>
+      </div>
+      <div class="rosterCol">
+        <div class="rosterHead">ボーイ・スタッフ</div>
+        <div id="rosterBoy" class="roster"></div>
+      </div>
+    </div>
+
   </section>
 </section>
 
@@ -1171,38 +1198,90 @@ async function toggleDuty(name){
 
 
   // Roster（本鯖式）
-  function renderRoster(){
-    const rosterBox=document.getElementById('roster'); if(!rosterBox) return;
-    rosterBox.innerHTML='';
-    if(!staff.length){
-      const small=document.createElement('div'); small.style.color='#64748b'; small.style.fontSize='12px';
-      small.textContent='（従業員が未登録です。幹部→従業員管理から追加してください）';
-      rosterBox.appendChild(small); return;
-    }
-    const editSwitch=document.getElementById('editDuty');
-    const addChip=(name,duty,busy)=>{
-      const d=document.createElement('button'); d.type='button';
-      d.className=`staffChip ${duty?(busy?'busy':'on'):'off'}`; d.textContent=name;
-      if(editSwitch && editSwitch.checked){
-        d.disabled=false; d.addEventListener('click',()=>toggleDuty(name));
-      }else{
-        if(!duty) d.disabled=true;
-        else d.addEventListener('click',()=>{
-          if(wrap.getAttribute('aria-hidden')==='false'){
-            if(document.activeElement===boyI){ boyI.value=name; boyI.focus(); }
-            else{ const list=castI.value.split(',').map(v=>v.trim()).filter(Boolean); if(!list.includes(name)) castI.value=[...list,name].join(', '); castI.focus(); }
+function renderRoster(){
+  const boxCast = document.getElementById('rosterCast');
+  const boxBoy  = document.getElementById('rosterBoy');
+  if(!boxCast || !boxBoy) return;
+
+  boxCast.innerHTML = '';
+  boxBoy.innerHTML  = '';
+
+  // 名簿が空のときのメッセージ
+  if(!staff.length){
+    const small = document.createElement('div');
+    small.style.color = '#64748b';
+    small.style.fontSize = '12px';
+    small.textContent = '（従業員が未登録です。幹部→従業員管理から追加してください）';
+    boxCast.appendChild(small.cloneNode(true));
+    boxBoy.appendChild(small);
+    return;
+  }
+
+  const editSwitch = document.getElementById('editDuty')?.addEventListener('change', renderRoster);
+
+  const isEdit = !!(editSwitch && editSwitch.checked);
+
+  const addChip = (root, name, {on, busy, role})=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `staffChip ${on ? (busy ? 'busy' : 'on') : 'off'}`;
+    b.textContent = name;
+
+    if(isEdit){
+      // 出勤編集モード：クリックでそのロールの duty をトグル
+      b.disabled = false;
+      b.addEventListener('click', ()=>toggleDutyRole(name, role));
+    }else{
+      // 通常モード：割り当て（モーダルが開いている時のみ反応）
+      if(!on){ b.disabled = true; }
+      else{
+        b.addEventListener('click', ()=>{
+          const modalOpen = (document.getElementById('modalWrap')?.getAttribute('aria-hidden') === 'false');
+          if(!modalOpen) return;
+          if(role === 'boy'){
+            boyI.value = name; boyI.focus();
+          }else{
+            const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
+            if(!list.includes(name)) castI.value = [...list, name].join(', ');
+            castI.focus();
           }
         });
       }
-      rosterBox.appendChild(d);
-    };
-    staff.filter(s=>s.duty).forEach(s=>addChip(s.name,true,isNameBusy(s.name)));
-    const off=staff.filter(s=>!s.duty);
-    if(off.length){
-      const title=document.createElement('div'); title.className='staffSectionTitle'; title.textContent='— 非出勤 —'; rosterBox.appendChild(title);
-      off.forEach(s=>addChip(s.name,false,false));
     }
+    root.appendChild(b);
+  };
+
+  // duty.cast / duty.boy で分割（※roleの値に依らず、どの旗が立っているかだけで出す）
+  const onCast = staff.filter(s => s.duty?.cast === true);
+  const onBoy  = staff.filter(s => s.duty?.boy  === true);
+
+  // それぞれの「非出勤」集合（編集モードのときだけ表示）
+  const offCast = isEdit ? staff.filter(s => s.duty?.cast !== true) : [];
+  const offBoy  = isEdit ? staff.filter(s => s.duty?.boy  !== true) : [];
+
+  // 出勤（キャスト）
+  onCast.forEach(s => addChip(boxCast, s.name, {on:true, busy:isNameBusy(s.name), role:'cast'}));
+  // 非出勤（キャスト）
+  if(offCast.length){
+    const title = document.createElement('div');
+    title.className = 'staffSectionTitle';
+    title.textContent = '— 非出勤 —';
+    boxCast.appendChild(title);
+    offCast.forEach(s => addChip(boxCast, s.name, {on:false, busy:false, role:'cast'}));
   }
+
+  // 出勤（ボーイ）
+  onBoy.forEach(s => addChip(boxBoy, s.name, {on:true, busy:isNameBusy(s.name), role:'boy'}));
+  // 非出勤（ボーイ）
+  if(offBoy.length){
+    const title = document.createElement('div');
+    title.className = 'staffSectionTitle';
+    title.textContent = '— 非出勤 —';
+    boxBoy.appendChild(title);
+    offBoy.forEach(s => addChip(boxBoy, s.name, {on:false, busy:false, role:'boy'}));
+  }
+}
+
 
 function fillDatalists(){
   const castDL=document.getElementById('castList');
