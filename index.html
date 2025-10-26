@@ -151,17 +151,18 @@ button.danger{background:#dc2626}
 .stBtn{ white-space:nowrap; }
 
     /* 商品行（従業員と同じUI・列幅だけ違う） */
-.pdRow{
+/* 追加：商品追加フォーム専用のレイアウト */
+.pdRowAdd{
   display:grid;
-  grid-template-columns: 2fr 1fr 1fr auto; /* 商品名 / 価格 / 有効 / ボタン */
+  grid-template-columns: 2fr 1fr auto; /* 商品名 / 価格 / ボタン（空枠） */
   gap:16px; align-items:center;
   padding:8px 0; border-top:1px dashed #e5e7eb;
 }
-.pdRow input, .pdRow select{
+.pdRowAdd input{
   padding:12px; border:1px solid #cbd5e1; border-radius:12px;
   background:#fff; font-size:14px; width:100%;
 }
-.pdRow input[disabled], .pdRow select[disabled]{ background:#f8fafc; color:#475569; opacity:.9; }
+
 
 
 
@@ -821,14 +822,10 @@ const MAX_PD_ADD_ROWS = 5;
 
 function makePdAddRow(init){
   const row = document.createElement('div');
-  row.className = 'pdRow';
+  row.className = 'pdRowAdd';
   row.innerHTML = `
     <input class="nm" placeholder="商品名">
     <input class="pr" type="number" min="0" step="1" placeholder="価格（円）">
-    <select class="ac">
-      <option value="true"  ${init?.active!==false?'selected':''}>有効:true</option>
-      <option value="false" ${init?.active===false?'selected':''}>false</option>
-    </select>
     <div></div>
   `;
   if (init?.name)  row.querySelector('.nm').value = init.name;
@@ -836,34 +833,36 @@ function makePdAddRow(init){
   return row;
 }
 
+
 function seedPdAddRows(){
   pdAddList.innerHTML = '';
   for(let i=0;i<MAX_PD_ADD_ROWS;i++) pdAddList.appendChild(makePdAddRow());
 }
+
 btnPdAddClear?.addEventListener('click', seedPdAddRows);
 seedPdAddRows();
 
 btnPdAddBulk?.addEventListener('click', async ()=>{
-  const rows = [...pdAddList.querySelectorAll('.pdRow')].map(r=>{
-    const name = (r.querySelector('.nm').value||'').trim();
-    const price= Number(r.querySelector('.pr').value||0);
-    const active= (r.querySelector('.ac').value==='true');
-    return { name, price, active };
+  const rows = [...pdAddList.querySelectorAll('.pdRowAdd')].map(r=>{
+    const name  = (r.querySelector('.nm').value||'').trim();
+    const price = Number(r.querySelector('.pr').value||0);
+    return { name, price };
   }).filter(r=>r.name);
 
   if (!rows.length){
     alert('入力が空です'); pdAddList.querySelector('.nm')?.focus(); return;
   }
 
-  // 同名をユニークに
   const seen = new Set();
   const uniqueRows = rows.filter(r=>{ if(seen.has(r.name)) return false; seen.add(r.name); return true; });
 
   btnPdAddBulk.disabled = true; btnPdAddBulk.textContent = '追加中…';
   try{
-    await Promise.all(uniqueRows.map(async ({name, price, active})=>{
+    await Promise.all(uniqueRows.map(async ({name, price})=>{
       const id = name.replace(/\//g, '／');
-      await setDoc(doc(pdCol, id), { name, price, active, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(doc(pdCol, id), {
+        name, price, active: true, updatedAt: serverTimestamp()
+      }, { merge: true });
     }));
     alert(`${uniqueRows.length}件を追加しました`);
     seedPdAddRows();
@@ -875,6 +874,7 @@ btnPdAddBulk?.addEventListener('click', async ()=>{
     btnPdAddBulk.disabled = false; btnPdAddBulk.textContent = 'まとめて追加';
   }
 });
+
 
 
 </script>
