@@ -1307,13 +1307,38 @@ function fillDatalists(){
 function fillSuggestionBlocks(){
   const castOn=(staff||[]).filter(s=>s.duty?.cast).map(s=>s.name);
   const boyOn =(staff||[]).filter(s=>s.duty?.boy ).map(s=>s.name);
-  // キャスト
-  suggCast.innerHTML=castOn.map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`).join('');
-  // …クリックハンドラはそのまま
-  // ボーイ
-  suggBoy.innerHTML=boyOn.map(n=>`<button type="button" class="staffChip on" data-name="${n}">${n}</button>`).join('');
-  // …クリックハンドラはそのまま
+
+  // キャスト（チップ描画）
+  suggCast.innerHTML = castOn
+    .map(n => `<button type="button" class="staffChip on" data-name="${n}">${n}</button>`)
+    .join('');
+  // クリック → キャスト欄へ追加（重複は入れない）
+  suggCast.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const name = btn.dataset.name || '';
+      const list = castI.value.split(',').map(v=>v.trim()).filter(Boolean);
+      if (!list.includes(name)) {
+        list.push(name);
+        castI.value = list.join(', ');
+      }
+      castI.focus();
+    });
+  });
+
+  // ボーイ（チップ描画）
+  suggBoy.innerHTML = boyOn
+    .map(n => `<button type="button" class="staffChip on" data-name="${n}">${n}</button>`)
+    .join('');
+  // クリック → ボーイ欄へセット（1人だけ）
+  suggBoy.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const name = btn.dataset.name || '';
+      boyI.value = name;
+      boyI.focus();
+    });
+  });
 }
+
 
 
   /* === 売上ピッカー（UI側の選択だけ） === */
