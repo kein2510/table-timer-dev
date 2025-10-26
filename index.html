@@ -163,6 +163,19 @@ button.danger{background:#dc2626}
   background:#fff; font-size:14px; width:100%;
 }
 
+    /* 商品一覧（名前 / 価格 / ボタン） */
+.pdRowList{
+  display:grid;
+  grid-template-columns: 2fr 1fr auto;
+  gap:16px; align-items:center;
+  padding:8px 0; border-top:1px dashed #e5e7eb;
+}
+.pdRowList input{
+  padding:12px; border:1px solid #cbd5e1; border-radius:12px;
+  background:#fff; font-size:14px; width:100%;
+}
+
+
 
 
 
@@ -742,19 +755,15 @@ onSnapshot(stCol, (qs)=>{
 /* ===== products CRUD（従業員と同じUI） ===== */
 const pdCol = collection(db,'rooms',ROOM_ID,'products');
 
-/** 一覧レンダリング（行ごと編集トグル） */
+/** 一覧レンダリング（“有効”を廃止して名前・価格のみ） */
 const renderProdRows = (rows)=>{
   const root = document.getElementById('pdList');
   if(!root) return;
 
   root.innerHTML = rows.map(p=>`
-    <div class="pdRow" data-id="${esc(p.id)}">
+    <div class="pdRowList" data-id="${esc(p.id)}">
       <input class="nm" value="${esc(p.name||'')}" placeholder="商品名" disabled>
       <input class="pr" type="number" min="0" step="1" value="${Number(p.price||0)}" disabled>
-      <select class="ac" disabled>
-        <option value="true"  ${p.active!==false?'selected':''}>有効:true</option>
-        <option value="false" ${p.active===false?'selected':''}>false</option>
-      </select>
       <div style="text-align:right">
         <button class="edit stBtn sales-pill" type="button">編集</button>
         <button class="dl   stBtn sales-pill" type="button">削除</button>
@@ -762,11 +771,10 @@ const renderProdRows = (rows)=>{
     </div>
   `).join('');
 
-  [...root.querySelectorAll('.pdRow')].forEach((row,i)=>{
+  [...root.querySelectorAll('.pdRowList')].forEach((row,i)=>{
     const rec = rows[i];
     const $nm = row.querySelector('.nm');
     const $pr = row.querySelector('.pr');
-    const $ac = row.querySelector('.ac');
     const $edit = row.querySelector('.edit');
     const $del  = row.querySelector('.dl');
 
@@ -774,13 +782,15 @@ const renderProdRows = (rows)=>{
     $edit.addEventListener('click', async ()=>{
       const isView = $nm.disabled;
       if (isView){
-        $nm.disabled=false; $pr.disabled=false; $ac.disabled=false;
+        $nm.disabled=false; $pr.disabled=false;
         $nm.focus(); $edit.textContent='保存'; row.dataset.editing='1';
       }else{
-        const name=($nm.value||'').trim();
-        const price=Number($pr.value||0);
-        const active=$ac.value==='true';
+        const name = ($nm.value||'').trim();
+        const price= Number($pr.value||0);
         if(!name){ alert('商品名は必須です'); $nm.focus(); return; }
+
+        // “active”は表示しないので既存値を温存
+        const active = rec.active !== false;
 
         const newId = name.replace(/\//g,'／');
         try{
@@ -788,9 +798,9 @@ const renderProdRows = (rows)=>{
             await setDoc(doc(pdCol,newId), {name,price,active,updatedAt:serverTimestamp()},{merge:true});
             await deleteDoc(doc(pdCol,rec.id));
           }else{
-            await setDoc(doc(pdCol,rec.id), {name,price,active,updatedAt:serverTimestamp()},{merge:true});
+            await setDoc(doc(pdCol,rec.id), {name,price,updatedAt:serverTimestamp()},{merge:true});
           }
-          $nm.disabled=true; $pr.disabled=true; $ac.disabled=true;
+          $nm.disabled=true; $pr.disabled=true;
           $edit.textContent='編集'; row.dataset.editing='';
         }catch(e){
           console.error(e); alert('保存に失敗しました: ' + (e?.message || e));
@@ -804,6 +814,7 @@ const renderProdRows = (rows)=>{
     });
   });
 };
+
 
 // リアルタイム購読
 onSnapshot(pdCol,(qs)=>{
