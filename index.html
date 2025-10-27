@@ -359,6 +359,7 @@ button.danger{background:#dc2626}
       <button type="button" class="sales-pill" onclick="location.hash='#admin-staff-add'">従業員管理（追加）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-list'">商品管理（一覧）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-add'">商品管理（追加）</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-sales'">売上一覧</button>
     </div>
   </div>
 
@@ -433,6 +434,17 @@ button.danger{background:#dc2626}
 </div>
 
 
+  
+  <div id="adminSales" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+    <h2 style="margin:0">売上一覧</h2>
+  </div>
+  <div id="salesListBox" style="font-size:14px"></div>
+</div>
+
+
+
 </section>
 
 
@@ -443,6 +455,10 @@ button.danger{background:#dc2626}
   import {
     getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  import {
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, addDoc
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
 
   // 先に initializeApp → それから getFirestore
   const app = getApps().length ? getApps()[0] : initializeApp({
@@ -503,6 +519,8 @@ button.danger{background:#dc2626}
     else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
     else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
     else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
+    else if (h.startsWith('#admin-sales')) target = 'adminSales';
+
 
     const el = document.getElementById(target);
     if (el) el.style.display = 'block';
@@ -916,6 +934,51 @@ btnPdAddBulk?.addEventListener('click', async ()=>{
   }
 });
 
+  // ===== 売上一覧（幹部） =====
+const salesCol = collection(db,'rooms',ROOM_ID,'sales');
+
+function renderSalesRows(rows){
+  const root = document.getElementById('salesListBox');
+  if(!root) return;
+  if(!rows.length){
+    root.innerHTML = '<div style="color:#64748b">（データがありません）</div>';
+    return;
+  }
+  root.innerHTML = rows.map(r=>{
+    const when = r.createdAt
+      ? (r.createdAt.toDate?.() || new Date(r.createdAt.seconds*1000)).toLocaleString('ja-JP',{hour12:false})
+      : '';
+    const lines = (r.rows||[]).map(it=>`${esc(it.product)} × ${Number(it.qty||0)} （${Number(it.unitPrice||0).toLocaleString()}円）`).join('、 ');
+    return `
+      <div style="padding:8px 0; border-top:1px dashed #e5e7eb">
+        <div><b>${esc(r.seatLabel||r.seatId||'')}</b>｜合計 <b>¥${Number(r.total||0).toLocaleString()}</b>｜${when}</div>
+        <div style="color:#475569">キャスト：${esc((r.cast||[]).join(', ')||'なし')}　/　ボーイ：${esc(r.boy||'')}</div>
+        <div style="color:#111">${lines}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 新しい順で表示
+onSnapshot(salesCol, (qs)=>{
+  const rows=[];
+  qs.forEach(d=>{
+    const data = d.data() || {};
+    rows.push({
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt || null
+    });
+  });
+  rows.sort((a,b)=>{
+    const ta = a.createdAt?.seconds || 0;
+    const tb = b.createdAt?.seconds || 0;
+    return tb - ta;
+  });
+  renderSalesRows(rows);
+});
+
+
 
 
 </script>
@@ -925,35 +988,32 @@ btnPdAddBulk?.addEventListener('click', async ()=>{
 
   <!-- 卓編集モーダル -->
 
-  <!-- タブ切替（追加） -->
-<div class="salesTabHead">
-  <button id="tabTimer" class="salesTabBtn active" type="button">タイマー</button>
-  <button id="tabSales" class="salesTabBtn" type="button">売上</button>
-</div>
 
-  <!-- 席用 売上タブ（追加） -->
-<div id="seatSales" class="seatSales" aria-hidden="true">
-  <div class="row">
-    <input id="prodSearch" class="prodSearch" placeholder="商品を検索（例: 指名, ボトル, 同伴）">
-  </div>
-
-  <div id="prodGrid" class="prodGrid"></div>
-
-  <div class="salesList" id="seatSalesList"></div>
-
-  <div class="salesFoot">
-    <div class="salesTotalBig">合計：<span id="seatSalesTotal">¥0</span></div>
-    <div class="btns">
-      <button id="seatSalesSend" class="sales-pill" type="button">登録</button>
-      <button id="seatSalesBack" class="sales-pill secondary" type="button">← タイマーに戻る</button>
-    </div>
-  </div>
-</div>
 
 
 <div class="modalWrap" id="modalWrap" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="modalTitle">卓を編集</h3>
+
+        <div class="salesTabHead">
+      <button id="tabTimer" class="salesTabBtn active" type="button">タイマー</button>
+      <button id="tabSales" class="salesTabBtn" type="button">売上</button>
+    </div>
+
+    <div id="seatSales" class="seatSales" aria-hidden="true">
+      <div class="row">
+        <input id="prodSearch" class="prodSearch" placeholder="商品を検索（例: 指名, ボトル, 同伴）">
+      </div>
+      <div id="prodGrid" class="prodGrid"></div>
+      <div class="salesList" id="seatSalesList"></div>
+      <div class="salesFoot">
+        <div class="salesTotalBig">合計：<span id="seatSalesTotal">¥0</span></div>
+        <div class="btns">
+          <button id="seatSalesSend" class="sales-pill" type="button">登録</button>
+          <button id="seatSalesBack" class="sales-pill secondary" type="button">← タイマーに戻る</button>
+        </div>
+      </div>
+    </div>
 
     <div class="row">
       <input id="cast" placeholder="キャスト（カンマ区切り）" list="castList" />
@@ -1256,7 +1316,7 @@ document.getElementById('clear')?.addEventListener('click', async ()=>{
   closeModal();
 });
 
-  import { collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
 
 /* ====== 席モーダル：売上タブ ====== */
 const SALES_GAS_URL = 'https://script.google.com/macros/s/AKfycbwP_n70AlN5TrYvpVRR_tdaOJ8umm61B7bW_s-RQZ1cCeGBkIai3RlgLrbWK7ztPn5Z/exec';
@@ -1380,12 +1440,12 @@ openModal = function(id){
   if(prodSearch) prodSearch.value='';
 };
 
-/* 送信（GASへPOST） */
+
+/* 送信（Firestoreへ保存） */
 seatSalesSend?.addEventListener('click', async ()=>{
   const seat = seats.find(x=>x.id===currentId);
   const data = loadSeatSales(currentId);
   const items = (data.items||[]).filter(it=>it.product && Number(it.qty)>0);
-
   if(items.length===0){ alert('明細がありません'); return; }
 
   const cast = (castI.value||'').split(',').map(v=>v.trim()).filter(Boolean);
@@ -1395,30 +1455,31 @@ seatSalesSend?.addEventListener('click', async ()=>{
   const payload = {
     seatId: seat?.id || '',
     seatLabel: seat?.label || '',
-    rows: items.map(it=>({ product: it.product, unitPrice: Number(it.unitPrice||0), qty: Number(it.qty||0), amount: Number(it.unitPrice||0)*Number(it.qty||0) })),
-    cast, boy, total, timestamp: Date.now()
+    rows: items.map(it=>({
+      product: it.product,
+      unitPrice: Number(it.unitPrice||0),
+      qty: Number(it.qty||0),
+      amount: Number(it.unitPrice||0)*Number(it.qty||0)
+    })),
+    cast, boy, total,
+    createdAt: serverTimestamp()
   };
 
   try{
-    const res = await fetch(SALES_GAS_URL, {
-      method:'POST',
-      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-    let json={}; try{ json = JSON.parse(text); }catch(_){}
-    if(!res.ok || json.ok === false) throw new Error(json.error || `HTTP ${res.status}`);
+    const salesCol = collection(db,'rooms',ROOM_ID,'sales');
+    await addDoc(salesCol, payload);
+    alert('登録しました（幹部→売上一覧に反映）');
 
-    alert('登録しました');
     // この席の仮売上はクリア
     saveSeatSales(currentId, { items:[] });
     renderSeatSales(currentId);
     useTimerTab();
   }catch(e){
     console.error(e);
-    alert('送信エラー: ' + (e?.message || e));
+    alert('保存エラー: ' + (e?.message || e));
   }
 });
+
 
 
 
