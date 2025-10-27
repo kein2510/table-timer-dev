@@ -129,6 +129,36 @@ button.danger{background:#dc2626}
       background:#f8fafc !important;
     }
 
+
+    /* 売上（席モーダル内タブ） */
+.salesTabHead{ display:flex; gap:8px; margin:8px 0 4px; }
+.salesTabBtn{ padding:6px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#fff; color:#111; cursor:pointer; }
+.salesTabBtn.active{ background:#111; color:#fff; }
+
+.seatSales{ display:none; }
+.seatSales.show{ display:block; }
+
+.prodSearch{ padding:8px; border:1px solid #cbd5e1; border-radius:10px; width:100%; }
+.prodGrid{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.prodChip{
+  padding:6px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#fff; cursor:pointer;
+  font-size:13px; white-space:nowrap;
+}
+
+.salesList{ margin-top:10px; border-top:1px dashed #e5e7eb; }
+.salesItem{
+  display:grid; grid-template-columns: 1fr auto auto auto; gap:8px; align-items:center;
+  padding:8px 0; border-bottom:1px dashed #f0f2f4;
+}
+.salesItem .yen{ min-width:72px; text-align:right; }
+.qtyCtrl{ display:inline-flex; border:1px solid #cbd5e1; border-radius:10px; overflow:hidden; }
+.qtyCtrl button{ background:#fff; color:#111; padding:6px 10px; border-radius:0; }
+.qtyCtrl input{ width:48px; text-align:center; border:none; outline:none; }
+
+.salesFoot{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:10px; }
+.salesTotalBig{ font-size:18px; font-weight:800; }
+
+
     
 
 /* ←既存の<style>のどこでもOK */
@@ -894,6 +924,33 @@ btnPdAddBulk?.addEventListener('click', async ()=>{
   </main>
 
   <!-- 卓編集モーダル -->
+
+  <!-- タブ切替（追加） -->
+<div class="salesTabHead">
+  <button id="tabTimer" class="salesTabBtn active" type="button">タイマー</button>
+  <button id="tabSales" class="salesTabBtn" type="button">売上</button>
+</div>
+
+  <!-- 席用 売上タブ（追加） -->
+<div id="seatSales" class="seatSales" aria-hidden="true">
+  <div class="row">
+    <input id="prodSearch" class="prodSearch" placeholder="商品を検索（例: 指名, ボトル, 同伴）">
+  </div>
+
+  <div id="prodGrid" class="prodGrid"></div>
+
+  <div class="salesList" id="seatSalesList"></div>
+
+  <div class="salesFoot">
+    <div class="salesTotalBig">合計：<span id="seatSalesTotal">¥0</span></div>
+    <div class="btns">
+      <button id="seatSalesSend" class="sales-pill" type="button">登録</button>
+      <button id="seatSalesBack" class="sales-pill secondary" type="button">← タイマーに戻る</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modalWrap" id="modalWrap" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true">
     <h3 id="modalTitle">卓を編集</h3>
@@ -1198,6 +1255,171 @@ document.getElementById('clear')?.addEventListener('click', async ()=>{
   await pushSeatToFS(s);   // ← await OK
   closeModal();
 });
+
+  import { collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+/* ====== 席モーダル：売上タブ ====== */
+const SALES_GAS_URL = 'https://script.google.com/macros/s/AKfycbwP_n70AlN5TrYvpVRR_tdaOJ8umm61B7bW_s-RQZ1cCeGBkIai3RlgLrbWK7ztPn5Z/exec';
+const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
+
+const tabTimer = document.getElementById('tabTimer');
+const tabSales = document.getElementById('tabSales');
+const seatSalesEl = document.getElementById('seatSales');
+const prodGrid = document.getElementById('prodGrid');
+const prodSearch = document.getElementById('prodSearch');
+const seatSalesList = document.getElementById('seatSalesList');
+const seatSalesTotal = document.getElementById('seatSalesTotal');
+const seatSalesSend = document.getElementById('seatSalesSend');
+const seatSalesBack = document.getElementById('seatSalesBack');
+
+let PRODUCTS_ON = []; // Firestore products（active!==false）
+const pdColForTimer = collection(db,'rooms',ROOM_ID,'products');
+onSnapshot(pdColForTimer,(qs)=>{
+  const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+  PRODUCTS_ON = rows.filter(p=>p.active!==false).map(p=>({name:p.name, price:Number(p.price||0)}))
+                    .sort((a,b)=> String(a.name).localeCompare(String(b.name),'ja'));
+  buildProdGrid();
+});
+
+function buildProdGrid(q=''){
+  const list = PRODUCTS_ON.filter(p => !q || p.name.includes(q));
+  prodGrid.innerHTML = list.map(p => `
+    <button type="button" class="prodChip" data-name="${esc(p.name)}" data-price="${p.price}">
+      ${esc(p.name)}（${yen(p.price)}）
+    </button>
+  `).join('');
+  prodGrid.querySelectorAll('.prodChip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      addItemToSeat(currentId, { product: btn.dataset.name, unitPrice: Number(btn.dataset.price) });
+      renderSeatSales(currentId);
+    });
+  });
+}
+prodSearch?.addEventListener('input', e => buildProdGrid((e.target.value||'').trim()));
+
+/* 1席ごとの仮売上をローカル保持 */
+const SALES_LS_PREFIX = LS_PREFIX + 'seat.sales.';
+function loadSeatSales(seatId){
+  try{ return JSON.parse(localStorage.getItem(SALES_LS_PREFIX+seatId)||'{}'); }catch(_){ return {}; }
+}
+function saveSeatSales(seatId, data){
+  localStorage.setItem(SALES_LS_PREFIX+seatId, JSON.stringify(data||{}));
+}
+
+/* 商品追加（同一商品は数量+1） */
+function addItemToSeat(seatId, {product, unitPrice}){
+  const data = loadSeatSales(seatId);
+  data.items = Array.isArray(data.items) ? data.items : [];
+  const found = data.items.find(x=>x.product===product && Number(x.unitPrice)===Number(unitPrice));
+  if(found){ found.qty = Number(found.qty||0)+1; }
+  else{ data.items.push({product, unitPrice:Number(unitPrice||0), qty:1}); }
+  saveSeatSales(seatId, data);
+}
+
+/* 数量変更・削除 */
+function setQty(seatId, idx, qty){
+  const data = loadSeatSales(seatId);
+  if(!Array.isArray(data.items)) return;
+  if(qty<=0){ data.items.splice(idx,1); }
+  else{ data.items[idx].qty = qty; }
+  saveSeatSales(seatId, data);
+}
+
+/* 合計計算＋描画 */
+function renderSeatSales(seatId){
+  const data = loadSeatSales(seatId);
+  const items = Array.isArray(data.items) ? data.items : [];
+  seatSalesList.innerHTML = items.map((it, i)=>`
+    <div class="salesItem" data-idx="${i}">
+      <div>${esc(it.product)}</div>
+      <div class="yen">${yen(it.unitPrice)}</div>
+      <div class="qtyCtrl">
+        <button type="button" class="qminus">－</button>
+        <input type="number" min="0" step="1" value="${Number(it.qty||0)}">
+        <button type="button" class="qplus">＋</button>
+      </div>
+      <div class="yen">${yen(it.unitPrice * Number(it.qty||0))}</div>
+    </div>
+  `).join('');
+
+  seatSalesList.querySelectorAll('.salesItem').forEach(row=>{
+    const idx = Number(row.dataset.idx||0);
+    const input = row.querySelector('input');
+    row.querySelector('.qminus').addEventListener('click',()=>{
+      const v = Math.max(0, Number(input.value||0)-1);
+      input.value = v; setQty(seatId, idx, v); renderSeatSales(seatId);
+    });
+    row.querySelector('.qplus').addEventListener('click',()=>{
+      const v = Number(input.value||0)+1;
+      input.value = v; setQty(seatId, idx, v); renderSeatSales(seatId);
+    });
+    input.addEventListener('input',()=>{
+      const v = Math.max(0, Number(input.value||0));
+      setQty(seatId, idx, v); renderSeatSales(seatId);
+    });
+  });
+
+  const total = items.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
+  seatSalesTotal.textContent = yen(total);
+}
+
+/* タブ切替 */
+function useTimerTab(){ tabTimer.classList.add('active'); tabSales.classList.remove('active'); seatSalesEl.classList.remove('show'); seatSalesEl.setAttribute('aria-hidden','true'); }
+function useSalesTab(){ tabSales.classList.add('active'); tabTimer.classList.remove('active'); seatSalesEl.classList.add('show'); seatSalesEl.removeAttribute('aria-hidden'); buildProdGrid(); renderSeatSales(currentId); }
+tabTimer?.addEventListener('click', useTimerTab);
+tabSales?.addEventListener('click', useSalesTab);
+seatSalesBack?.addEventListener('click', useTimerTab);
+
+/* モーダルを開いた時点で売上タブを初期化できるように openModal の末尾に1行足す */
+const _openModalOrig = openModal;
+openModal = function(id){
+  _openModalOrig(id);
+  // タブ初期位置はタイマー
+  useTimerTab();
+  // 商品検索をリセット
+  if(prodSearch) prodSearch.value='';
+};
+
+/* 送信（GASへPOST） */
+seatSalesSend?.addEventListener('click', async ()=>{
+  const seat = seats.find(x=>x.id===currentId);
+  const data = loadSeatSales(currentId);
+  const items = (data.items||[]).filter(it=>it.product && Number(it.qty)>0);
+
+  if(items.length===0){ alert('明細がありません'); return; }
+
+  const cast = (castI.value||'').split(',').map(v=>v.trim()).filter(Boolean);
+  const boy  = (boyI.value||'').trim();
+  const total = items.reduce((a,b)=>a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
+
+  const payload = {
+    seatId: seat?.id || '',
+    seatLabel: seat?.label || '',
+    rows: items.map(it=>({ product: it.product, unitPrice: Number(it.unitPrice||0), qty: Number(it.qty||0), amount: Number(it.unitPrice||0)*Number(it.qty||0) })),
+    cast, boy, total, timestamp: Date.now()
+  };
+
+  try{
+    const res = await fetch(SALES_GAS_URL, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+    let json={}; try{ json = JSON.parse(text); }catch(_){}
+    if(!res.ok || json.ok === false) throw new Error(json.error || `HTTP ${res.status}`);
+
+    alert('登録しました');
+    // この席の仮売上はクリア
+    saveSeatSales(currentId, { items:[] });
+    renderSeatSales(currentId);
+    useTimerTab();
+  }catch(e){
+    console.error(e);
+    alert('送信エラー: ' + (e?.message || e));
+  }
+});
+
 
 
   document.getElementById('q').addEventListener('input', render);
