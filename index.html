@@ -229,6 +229,7 @@ button.danger{background:#dc2626}
     .rosterSearch{
   padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px; min-width:140px;
   background:#fff; font-size:13px;
+    }
 .rosterCol .staffSectionTitle{ margin-top:4px; } /* 既存を流用 */
 @media(max-width:900px){
   .rosterGrid{ grid-template-columns:1fr; }
@@ -1087,6 +1088,11 @@ onSnapshot(salesCol, (qs)=>{
   import {
     getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  // 文字エスケープ（このモジュール用に定義）
+const esc = s => String(s).replace(/[&<>"']/g, m => ({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[m]));
+
 
   // すでに初期化済みの app を取得
   const app = getApps()[0];
