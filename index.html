@@ -142,7 +142,8 @@ button.danger{background:#dc2626}
   display:none !important;
 }
     /* --- 席モーダルの売上タブを“上：検索+商品 / 中：明細(スクロール) / 下：合計+登録(固定)”の3分割に --- */
-#seatSales{ display:flex; flex-direction:column; max-height:72vh; } /* モーダル内での高さ上限 */
+##seatSales { display: none; }
+#seatSales.show { display: flex; flex-direction: column; max-height: 72vh; } /* モーダル内での高さ上限 */
 #seatSalesList{ flex:1 1 auto; overflow:auto; overscroll-behavior:contain; } /* ここだけスクロール */
 .salesFoot{ flex:0 0 auto; background:#fff; border-top:1px solid #e5e7eb; padding-top:8px; }
 
