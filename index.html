@@ -137,12 +137,22 @@ button.danger{background:#dc2626}
 
 .seatSales{ display:none; }
 .seatSales.show{ display:block; }
+    /* 売上タブ表示中は、後続の（時間/キャスト/ボーイ等の）行を隠す */
+.seatSales.show ~ *{
+  display:none !important;
+}
 
 .prodSearch{ padding:8px; border:1px solid #cbd5e1; border-radius:10px; width:100%; }
 .prodGrid{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .prodChip{
   padding:6px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#fff; cursor:pointer;
   font-size:13px; white-space:nowrap;
+}
+    /* 商品チップは白地・黒字で固定 */
+.prodChip{
+  color:#111 !important;
+  background:#fff !important;
+  border:1px solid #cbd5e1 !important;
 }
 
 .salesList{ margin-top:10px; border-top:1px dashed #e5e7eb; }
@@ -1086,7 +1096,7 @@ onSnapshot(salesCol, (qs)=>{
 <script type="module">
   import { getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import {
-    getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp
+    getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, addDoc
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
   // 文字エスケープ（このモジュール用に定義）
 const esc = s => String(s).replace(/[&<>"']/g, m => ({
