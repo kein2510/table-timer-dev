@@ -141,6 +141,21 @@ button.danger{background:#dc2626}
 .seatSales.show ~ *{
   display:none !important;
 }
+    /* --- 席モーダルの売上タブを“上：検索+商品 / 中：明細(スクロール) / 下：合計+登録(固定)”の3分割に --- */
+#seatSales{ display:flex; flex-direction:column; max-height:72vh; } /* モーダル内での高さ上限 */
+#seatSalesList{ flex:1 1 auto; overflow:auto; overscroll-behavior:contain; } /* ここだけスクロール */
+.salesFoot{ flex:0 0 auto; background:#fff; border-top:1px solid #e5e7eb; padding-top:8px; }
+
+/* 明細は8行まで可視、それ以上はスクロール（JSで行高を入れるfallback） */
+#seatSalesList{ max-height:calc(var(--rowH,48px)*8 + 8px); }
+
+/* トップの「売上入力」ページも同様にスクロール化 */
+#salesLines{ max-height:calc(var(--rowH,48px)*8 + 8px); overflow:auto; overscroll-behavior:contain; }
+
+/* スクロールバー（任意・お好み） */
+#seatSalesList::-webkit-scrollbar, #salesLines::-webkit-scrollbar{ width:10px; }
+#seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:8px; }
+
 
 .prodSearch{ padding:8px; border:1px solid #cbd5e1; border-radius:10px; width:100%; }
 .prodGrid{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
@@ -1452,6 +1467,12 @@ openModal = function(id){
   useTimerTab();
   // 商品検索をリセット
   if(prodSearch) prodSearch.value='';
+
+  const firstRow = seatSalesList.querySelector('.salesItem');
+if (firstRow) {
+  const h = Math.ceil(firstRow.getBoundingClientRect().height);
+  seatSalesList.style.setProperty('--rowH', h + 'px'); // 8行分に効く
+}
 };
 
 
@@ -1887,8 +1908,32 @@ function buildPickerList(){
     row.appendChild(sel); row.appendChild(unitEl); row.appendChild(qty); row.appendChild(subEl); row.appendChild(del);
     linesBox.appendChild(row);
   }
-  function rebuildAllLines(){ const keep=[...linesBox.querySelectorAll('.sales-row')].length || 1; linesBox.innerHTML=''; for(let i=0;i<keep;i++) buildLine(); recalcTotal(); }
-  function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ const sel=row.querySelector('select'); const unit=Number(sel.selectedOptions[0]?.dataset.price||0); const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
+  
+  function capSalesLinesHeight(){
+  const r = linesBox.querySelector('.sales-row');
+  if (!r) return;
+  const h = Math.ceil(r.getBoundingClientRect().height);
+  linesBox.style.setProperty('--rowH', h + 'px');
+}
+
+function rebuildAllLines(){
+  const keep = [...linesBox.querySelectorAll('.sales-row')].length || 1;
+  linesBox.innerHTML='';
+  for(let i=0;i<keep;i++) buildLine();
+  capSalesLinesHeight();     // ← 追加
+  recalcTotal();
+}
+
+// 明細行を追加した直後にも入れておくと安心
+document.getElementById('addSalesLine').addEventListener('click', ()=>{
+  buildLine();
+  capSalesLinesHeight();     // ← 追加
+});
+
+  function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ 
+    const sel=row.querySelector('select'); 
+    const unit=Number(sel.selectedOptions[0]?.dataset.price||0); 
+    const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
 
 
 
