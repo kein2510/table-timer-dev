@@ -515,17 +515,7 @@ button.danger{background:#dc2626}
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
 
   // 席書き込み（この module 内で使うなら残す／別moduleで使うなら window へ出す）
-  async function pushSeatToFS(s){
-  try{
-    await setDoc(
-      doc(seatsCol, s.id),
-      { /* ... */ },
-      { merge: true }
-    );
-  }catch(e){
-    console.error('[seats] write failed', e);
-  }
-}
+  
 
   // 他の module から必要なら公開しておく（任意）
   window.firebaseApp = app;
