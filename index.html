@@ -478,12 +478,10 @@ button.danger{background:#dc2626}
 <!-- 幹部ロジック（Firestore は既存のまま） -->
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-
-
-  // 先に initializeApp → それから getFirestore
+  // ---- Firebase init（重複なし）----
   const app = getApps().length ? getApps()[0] : initializeApp({
     apiKey:"AIzaSyBru7m0EGNXBgRTzsmQMZknlAAirkTwwpw",
     authDomain:"alexandria-8d142.firebaseapp.com",
@@ -493,36 +491,59 @@ button.danger{background:#dc2626}
     appId:"1:78904719003:web:234e7d8b0703bad614f83e",
     measurementId:"G-6TJNLEHJXQ"
   });
-  const db = getFirestore(app);
+
+  const db   = getFirestore(app);
   const auth = getAuth(app);
 
-  // 共通定義
+  // ---- 匿名サインイン：1回だけ ----
+  // window.__authReady を一度だけ作る
+  if (!window.__authReady) {
+    window.__authReady = new Promise((resolve, reject) => {
+      onAuthStateChanged(auth, (user) => { if (user) resolve(user); }, reject);
+    });
+    try {
+      await signInAnonymously(auth);
+      console.log('[auth] anonymous signed in');
+    } catch (e) {
+      console.error('[auth] signInAnonymously failed', e);
+    }
+  }
+
+  // ---- 共通定義（この module でも使うなら保持）----
   const ROOM_ID = "dev";
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
 
-
-  // ==== 認証（app ができてから auth を作る）====
-  const auth = getAuth(app);
-  try {
-    await signInAnonymously(auth);
-    console.log('[auth] anonymous signed in');
-  } catch (e) {
-    console.error('[auth] signInAnonymously failed', e);
+  // 席書き込み（この module 内で使うなら残す／別moduleで使うなら window へ出す）
+  async function pushSeatToFS(s){
+    try{
+      await setDoc(
+        doc(seatsCol, s.id),
+        {
+          id: s.id,
+          group: s.group,
+          label: s.label || '',
+          cast: s.cast || '',
+          boy:  s.boy  || '',
+          end:  s.end ?? null,
+          finished: !!s.finished,
+          extendCount: Number(s.extendCount||0),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }catch(e){
+      console.error('[seats] write failed', e);
+    }
   }
 
-  window.__authReady = new Promise((resolve, reject) => {
-  onAuthStateChanged(auth, (user) => {
-    if (user) resolve(user);
-  }, reject);
-});
+  // 他の module から必要なら公開しておく（任意）
+  window.firebaseApp = app;
+  window.db = db;
+  window.ROOM_ID = ROOM_ID;
+  window.pushSeatToFS = pushSeatToFS;
+</script>
 
-  try {
-  await signInAnonymously(auth);
-  console.log('[auth] anonymous signed in');
-} catch (e) {
-  console.error('[auth] signInAnonymously failed', e);
-}
 
   // ==== Firestore ====
 
