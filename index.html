@@ -142,7 +142,7 @@ button.danger{background:#dc2626}
   display:none !important;
 }
     /* --- 席モーダルの売上タブを“上：検索+商品 / 中：明細(スクロール) / 下：合計+登録(固定)”の3分割に --- */
-##seatSales { display: none; }
+#seatSales { display: none; }
 #seatSales.show { display: flex; flex-direction: column; max-height: 72vh; } /* モーダル内での高さ上限 */
 #seatSalesList{ flex:1 1 auto; overflow:auto; overscroll-behavior:contain; } /* ここだけスクロール */
 .salesFoot{ flex:0 0 auto; background:#fff; border-top:1px solid #e5e7eb; padding-top:8px; }
@@ -479,9 +479,7 @@ button.danger{background:#dc2626}
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-  import {
-    getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
 
 
@@ -496,6 +494,7 @@ button.danger{background:#dc2626}
     measurementId:"G-6TJNLEHJXQ"
   });
   const db = getFirestore(app);
+  const auth = getAuth(app);
 
   // 共通定義
   const ROOM_ID = "dev";
@@ -511,6 +510,19 @@ button.danger{background:#dc2626}
   } catch (e) {
     console.error('[auth] signInAnonymously failed', e);
   }
+
+  window.__authReady = new Promise((resolve, reject) => {
+  onAuthStateChanged(auth, (user) => {
+    if (user) resolve(user);
+  }, reject);
+});
+
+  try {
+  await signInAnonymously(auth);
+  console.log('[auth] anonymous signed in');
+} catch (e) {
+  console.error('[auth] signInAnonymously failed', e);
+}
 
   // ==== Firestore ====
 
@@ -1123,6 +1135,7 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
   // すでに初期化済みの app を取得
   const app = getApps()[0];
   const db  = getFirestore(app);
+  if (window.__authReady) await window.__authReady;
   const ROOM_ID = "dev";
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
