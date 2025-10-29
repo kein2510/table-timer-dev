@@ -516,26 +516,16 @@ button.danger{background:#dc2626}
 
   // 席書き込み（この module 内で使うなら残す／別moduleで使うなら window へ出す）
   async function pushSeatToFS(s){
-    try{
-      await setDoc(
-        doc(seatsCol, s.id),
-        {
-          id: s.id,
-          group: s.group,
-          label: s.label || '',
-          cast: s.cast || '',
-          boy:  s.boy  || '',
-          end:  s.end ?? null,
-          finished: !!s.finished,
-          extendCount: Number(s.extendCount||0),
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-    }catch(e){
-      console.error('[seats] write failed', e);
-    }
+  try{
+    await setDoc(
+      doc(seatsCol, s.id),
+      { /* ... */ },
+      { merge: true }
+    );
+  }catch(e){
+    console.error('[seats] write failed', e);
   }
+}
 
   // 他の module から必要なら公開しておく（任意）
   window.firebaseApp = app;
@@ -1154,9 +1144,18 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
 
 
   // すでに初期化済みの app を取得
-  const app = getApps()[0];
-  const db  = getFirestore(app);
-  if (window.__authReady) await window.__authReady;
+   // 先に「幹部ロジック」側の初期化/認証完了を待つ
+   if (window.__authReady) await window.__authReady;
+   // それでも間に合わない場合に備えて、getApps() が埋まるまで待機
+   if (!getApps().length) {
+     await new Promise(res => {
+       const id = setInterval(() => {
+         if (getApps().length) { clearInterval(id); res(); }
+       }, 30);
+     });
+   }
+   const app = getApps()[0] || window.firebaseApp;  // 念のためフォールバック
+   const db  = getFirestore(app);
   const ROOM_ID = "dev";
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
