@@ -479,7 +479,10 @@ button.danger{background:#dc2626}
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
-  import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  import {
+   getFirestore, collection, doc, setDoc, serverTimestamp,
+   onSnapshot, deleteDoc
+   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
   // ---- Firebase init（重複なし）----
   const app = getApps().length ? getApps()[0] : initializeApp({
@@ -547,7 +550,7 @@ button.danger{background:#dc2626}
   function showAdminSub(hash) {
     const h = hash || '#admin';
     // いったん全部隠す
-    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
+    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales'].forEach(id=>{
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -576,7 +579,7 @@ button.danger{background:#dc2626}
     if (open) {
       showAdminSub(location.hash);
     } else {
-      ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd'].forEach(id=>{
+      ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales'].forEach(id=>{
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
