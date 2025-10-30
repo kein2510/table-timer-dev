@@ -467,6 +467,12 @@ button.danger{background:#dc2626}
     <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
     <h2 style="margin:0">売上一覧</h2>
   </div>
+    <!-- 一括削除バー -->
+<div id="salesBulk" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;">
+  <button id="salesBulkDelete" class="sales-pill danger" type="button" disabled>選択をまとめて削除</button>
+  <span id="salesBulkCount" style="font-size:12px;color:#64748b">0件選択中</span>
+</div>
+
   <div id="salesListBox" style="font-size:14px"></div>
 </div>
 
@@ -980,25 +986,105 @@ const salesCol = collection(db,'rooms',ROOM_ID,'sales');
 
 function renderSalesRows(rows){
   const root = document.getElementById('salesListBox');
+  const bulkBtn   = document.getElementById('salesBulkDelete');
+  const bulkCount = document.getElementById('salesBulkCount');
   if(!root) return;
+
+  // 0件
   if(!rows.length){
     root.innerHTML = '<div style="color:#64748b">（データがありません）</div>';
+    if (bulkBtn) { bulkBtn.disabled = true; }
+    if (bulkCount) { bulkCount.textContent = '0件選択中'; }
     return;
   }
-  root.innerHTML = rows.map(r=>{
+
+  // 行テンプレ
+  const rowHTML = (r)=> {
     const when = r.createdAt
-      ? (r.createdAt.toDate?.() || new Date(r.createdAt.seconds*1000)).toLocaleString('ja-JP',{hour12:false})
+      ? (r.createdAt.toDate?.() || new Date(r.createdAt.seconds*1000))
+          .toLocaleString('ja-JP',{hour12:false})
       : '';
-    const lines = (r.rows||[]).map(it=>`${esc(it.product)} × ${Number(it.qty||0)} （${Number(it.unitPrice||0).toLocaleString()}円）`).join('、 ');
+    const lines = (r.rows||[])
+      .map(it => `${esc(it.product)} × ${Number(it.qty||0)} （${Number(it.unitPrice||0).toLocaleString()}円）`)
+      .join('、 ');
     return `
-      <div style="padding:8px 0; border-top:1px dashed #e5e7eb">
-        <div><b>${esc(r.seatLabel||r.seatId||'')}</b>｜合計 <b>¥${Number(r.total||0).toLocaleString()}</b>｜${when}</div>
-        <div style="color:#475569">キャスト：${esc((r.cast||[]).join(', ')||'なし')}　/　ボーイ：${esc(r.boy||'')}</div>
-        <div style="color:#111">${lines}</div>
+      <div class="salesRow" data-id="${esc(r.id)}" style="padding:8px 0; border-top:1px dashed #e5e7eb; display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start;">
+        <div style="padding-top:3px"><input type="checkbox" class="sel"></div>
+        <div>
+          <div><b>${esc(r.seatLabel||r.seatId||'')}</b>｜合計 <b>¥${Number(r.total||0).toLocaleString()}</b>｜${when}</div>
+          <div style="color:#475569">キャスト：${esc((r.cast||[]).join(', ')||'なし')}　/　ボーイ：${esc(r.boy||'')}</div>
+          <div style="color:#111">${lines}</div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="sales-pill edit">編集</button>
+          <button type="button" class="sales-pill danger dl">削除</button>
+        </div>
       </div>
     `;
-  }).join('');
+  };
+
+  // 描画
+  root.innerHTML = rows.map(rowHTML).join('');
+
+  // 選択数の更新
+  const updateBulkState = ()=>{
+    const n = root.querySelectorAll('.sel:checked').length;
+    if (bulkBtn) bulkBtn.disabled = n===0;
+    if (bulkCount) bulkCount.textContent = `${n}件選択中`;
+  };
+  root.querySelectorAll('.sel').forEach(chk => {
+    chk.addEventListener('change', updateBulkState);
+  });
+  updateBulkState();
+
+  // 単体削除
+  root.querySelectorAll('.dl').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const row = btn.closest('.salesRow');
+      const id  = row?.dataset.id;
+      if(!id) return;
+      if(!confirm('この売上を削除しますか？')) return;
+      try{
+        await deleteDoc(doc(salesCol, id));
+      }catch(e){
+        alert('削除に失敗しました: ' + (e?.message||e));
+      }
+    });
+  });
+
+  // 編集
+  root.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const row = btn.closest('.salesRow');
+      const id  = row?.dataset.id;
+      const rec = rows.find(x=>x.id===id);
+      if(!rec) return;
+      openSalesEditModal(rec);  // ↓3) に定義
+    });
+  });
+
+  // 一括削除
+  if (bulkBtn){
+    bulkBtn.onclick = async ()=>{
+      const ids = [...root.querySelectorAll('.sel:checked')]
+        .map(chk => chk.closest('.salesRow')?.dataset.id)
+        .filter(Boolean);
+      if(!ids.length) return;
+      if(!confirm(`${ids.length}件をまとめて削除します。よろしいですか？`)) return;
+
+      bulkBtn.disabled = true; bulkBtn.textContent = '削除中…';
+      try{
+        await Promise.all(ids.map(id => deleteDoc(doc(salesCol, id))));
+      }catch(e){
+        alert('一括削除に失敗しました: ' + (e?.message||e));
+      }finally{
+        bulkBtn.textContent = '選択をまとめて削除';
+        updateBulkState();
+      }
+    };
+  }
 }
+
 
 // 新しい順で表示
 onSnapshot(salesCol, (qs)=>{
@@ -1018,6 +1104,96 @@ onSnapshot(salesCol, (qs)=>{
   });
   renderSalesRows(rows);
 });
+
+  // ===== 売上レコード 編集モーダル =====
+function openSalesEditModal(rec){
+  // 既存があれば消す
+  document.getElementById('salesEditWrap')?.remove();
+
+  // テキスト化（明細は 1行= product,unitPrice,qty ）
+  const linesText = (rec.rows||[])
+    .map(it => [it.product, Number(it.unitPrice||0), Number(it.qty||0)].join(','))
+    .join('\n');
+
+  const wrap = document.createElement('div');
+  wrap.id = 'salesEditWrap';
+  wrap.className = 'modalWrap';
+  wrap.style.display = 'grid';
+  wrap.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" style="max-width:720px;">
+      <h3 style="margin:0 0 10px">売上を編集</h3>
+
+      <div class="row">
+        <input id="se-seat"  placeholder="席ラベル" value="${esc(rec.seatLabel||rec.seatId||'')}">
+        <input id="se-boy"   placeholder="ボーイ"    value="${esc(rec.boy||'')}">
+      </div>
+      <div class="row">
+        <input id="se-cast"  placeholder="キャスト（カンマ区切り）" value="${esc((rec.cast||[]).join(', '))}">
+      </div>
+
+      <div class="row" style="display:block">
+        <div class="suggTitle" style="margin-bottom:6px">明細（1行につき <code>商品名,単価,数量</code>）</div>
+        <textarea id="se-lines" style="width:100%;height:200px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">${linesText}</textarea>
+        <div style="font-size:12px;color:#64748b;margin-top:6px">例）ボトル,5000,2</div>
+      </div>
+
+      <div class="salesFoot">
+        <div style="font-size:12px;color:#64748b">* 保存すると合計金額は明細から再計算されます</div>
+        <div class="btns">
+          <button id="se-save" class="sales-pill" type="button">保存</button>
+          <button id="se-cancel" class="sales-pill secondary" type="button">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+
+  const close = ()=>wrap.remove();
+  wrap.addEventListener('click', e=>{ if(e.target===wrap) close(); });
+  wrap.querySelector('#se-cancel').addEventListener('click', close);
+
+  wrap.querySelector('#se-save').addEventListener('click', async ()=>{
+    // パース
+    const seatLabel = (wrap.querySelector('#se-seat').value||'').trim();
+    const boy  = (wrap.querySelector('#se-boy').value||'').trim();
+    const cast = (wrap.querySelector('#se-cast').value||'')
+                  .split(',')
+                  .map(v=>v.trim())
+                  .filter(Boolean);
+
+    const text = wrap.querySelector('#se-lines').value || '';
+    const items = text.split(/\n+/)
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map(line => {
+        const [p, u, q] = line.split(',').map(s => (s||'').trim());
+        return {
+          product: p,
+          unitPrice: Number((u||'').replace(/[^\d.-]/g,''))||0,
+          qty: Number((q||'').replace(/[^\d.-]/g,''))||0
+        };
+      })
+      .filter(it => it.product && it.qty>0);
+
+    const total = items.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
+
+    try{
+      await setDoc(
+        doc(salesCol, rec.id),
+        {
+          seatLabel, boy, cast,
+          rows: items,
+          total: total,
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+      close();
+    }catch(e){
+      alert('保存に失敗しました: ' + (e?.message || e));
+    }
+  });
+}
 
 
 
