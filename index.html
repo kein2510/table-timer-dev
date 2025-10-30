@@ -1260,7 +1260,7 @@ function openSalesEditModal(rec){
     <div class="row btns" style="justify-content:space-between">
       <button id="saveMeta" class="secondary" type="button">キャスト/ボーイを保存</button>
       <div>
-        <button id="clear" class="danger"    type="button">クリア（空席）</button>
+        <button id="seatClear" class="danger" type="button">クリア（空席）</button>
         <button id="close" class="secondary" type="button">閉じる</button>
       </div>
     </div>
@@ -1523,11 +1523,22 @@ document.querySelectorAll('button.extend').forEach(b=>b.addEventListener('click'
 }));
 
 // クリア
-document.getElementById('clear')?.addEventListener('click', async ()=>{
-  const s = seats.find(x=>x.id===currentId);
-  s.end = null; s.cast = ''; s.boy = ''; s.finished = false; s.extendCount = 0;
-  save(); render();
-  await pushSeatToFS(s);   // ← await OK
+document.getElementById('seatClear')?.addEventListener('click', async ()=>{
+  if (!currentId) return;
+  const s = seats.find(x => x.id === currentId);
+  if (!s) return;
+
+  // この席だけを空席に
+  s.end = null;
+  s.cast = '';
+  s.boy  = '';
+  s.finished = false;
+  s.extendCount = 0;
+
+  // ローカルとFirestoreもこの席だけ更新
+  save();
+  render();
+  await pushSeatToFS(s);
   closeModal();
 });
 
