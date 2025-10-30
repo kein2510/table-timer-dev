@@ -1963,34 +1963,58 @@ function fillSuggestionBlocks(){
 
 
 
-  /* === 売上ピッカー（UI側の選択だけ） === */
-  const boyField  = document.getElementById('boyField');
-  const castField = document.getElementById('castField');
-  const pickerWrap   = document.getElementById('pickerWrap');
-  const pickerTitle  = document.getElementById('pickerTitle');
-  const pickerList   = document.getElementById('pickerList');
-  const pickerOk     = document.getElementById('pickerOk');
-  const pickerClear  = document.getElementById('pickerClear');
-  const pickerClose  = document.getElementById('pickerClose');
 
+/* === 売上ピッカー（UI側の選択だけ）=== 
+   ※ boyField / castField が無い画面（今回の構成）では何もしないようにガードする
+*/
+(() => {
+  const boyField    = document.getElementById('boyField');
+  const castField   = document.getElementById('castField');
+  const pickerWrap  = document.getElementById('pickerWrap');
+  const pickerTitle = document.getElementById('pickerTitle');
+  const pickerList  = document.getElementById('pickerList');
+  const pickerOk    = document.getElementById('pickerOk');
+  const pickerClear = document.getElementById('pickerClear');
+  const pickerClose = document.getElementById('pickerClose');
+
+  // 外で参照しているフラグと関数（存在しないUIなら安全にno-op）
+  if (!boyField || !castField) {
+    window.renderSalesFields = () => {};
+    // dutyスナップショット側で呼ぶ「準備OKフラグ」も false のままにする
+    // （上流で let salesUIReady = false; と宣言されている前提）
+    return; 
+  }
+
+  // ここから先はフィールドがある場合のみ有効化
   let salesBoy = '';
   let salesCast = [];
   window.salesBoy = salesBoy;
   window.salesCast = salesCast;
-  let pickerMode = null; let tmpBoy = ''; let tmpCast = [];
+
+  let pickerMode = null;
+  let tmpBoy = '';
+  let tmpCast = [];
 
   function renderSalesFields(){
+    // 上流の window から値を拾う（他所で変更されている可能性に対応）
     if (typeof window.salesBoy !== 'undefined') salesBoy = window.salesBoy;
     if (Array.isArray(window.salesCast)) salesCast = [...window.salesCast];
 
+    // ピル表示
     boyField.classList.toggle('empty', !salesBoy);
     boyField.innerHTML = salesBoy ? `<span class="pill">${salesBoy}</span>` : 'タップして選択';
+
     castField.classList.toggle('empty', salesCast.length===0);
-    castField.innerHTML = salesCast.length ? salesCast.map(n=>`<span class="pill">${n}</span>`).join('') : 'タップして選択';
+    castField.innerHTML = salesCast.length 
+      ? salesCast.map(n=>`<span class="pill">${n}</span>`).join('')
+      : 'タップして選択';
   }
   window.renderSalesFields = renderSalesFields;
+
+  // 準備OK（dutyスナップショット側で renderSalesFields を呼べるように）
   salesUIReady = true;
 
+  // フィールドクリックでピッカーを開く
   boyField.addEventListener('click', ()=>openPicker('boy'));
   castField.addEventListener('click', ()=>openPicker('cast'));
 
@@ -2006,7 +2030,10 @@ function fillSuggestionBlocks(){
   function closePicker(){ pickerWrap.style.display='none'; pickerWrap.setAttribute('aria-hidden','true'); }
   pickerWrap.addEventListener('click', e=>{ if(e.target===pickerWrap) closePicker(); });
   pickerClose.addEventListener('click', closePicker);
-  pickerClear.addEventListener('click', ()=>{ if(pickerMode==='boy') tmpBoy=''; else tmpCast=[]; buildPickerList(); });
+  pickerClear.addEventListener('click', ()=>{
+    if(pickerMode==='boy') tmpBoy=''; else tmpCast=[];
+    buildPickerList();
+  });
   pickerOk.addEventListener('click', ()=>{
     if (pickerMode==='boy') salesBoy = tmpBoy;
     else salesCast = [...tmpCast];
@@ -2015,6 +2042,39 @@ function fillSuggestionBlocks(){
     renderSalesFields();
     closePicker();
   });
+
+  function isNameBusy(name){
+    name=name.trim();
+    return seats.some(s=>{
+      const castNames=(s.cast||'').split(',').map(x=>x.trim()).filter(Boolean);
+      if(castNames.includes(name) || (s.boy||'').trim()===name){ return !!(s.end || s.finished); }
+      return false;
+    });
+  }
+
+  function buildPickerList(){
+    let onList=[];
+    if (pickerMode==='boy'){
+      onList=(window.staff||[]).filter(s=>s.duty?.boy).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
+    }else{
+      onList=(window.staff||[]).filter(s=>s.duty?.cast).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
+    }
+    pickerList.innerHTML = onList.map(x=>{
+      const selected = (pickerMode==='boy') ? (tmpBoy===x.name) : tmpCast.includes(x.name);
+      return `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${selected?'selected':''}" data-name="${x.name}">${x.name}</button>`;
+    }).join('');
+    pickerList.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const name=b.dataset.name;
+        if(pickerMode==='boy'){ tmpBoy = (tmpBoy===name) ? '' : name; }
+        else { if(tmpCast.includes(name)) tmpCast = tmpCast.filter(n=>n!==name); else tmpCast = [...tmpCast, name]; }
+        buildPickerList();
+      });
+    });
+  }
+})();
+
+
 
 function buildPickerList(){
   let onList=[];
