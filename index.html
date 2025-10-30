@@ -277,11 +277,7 @@ button.danger{background:#dc2626}
       <input id="q" type="search" placeholder="キャスト名で検索（例: あや）" />
       <div class="now" id="now"></div>
     </div>
-    <nav class="top-tabs">
-      <a id="navTimer" class="tab active" href="#timer">卓タイマー管理</a>
-      <a id="navSales" class="tab" href="#sales">売上入力</a>
-      <a id="navAdmin" class="tab" href="#admin">幹部</a>
-    </nav>
+
   </header>
 
   <main>
@@ -340,24 +336,7 @@ button.danger{background:#dc2626}
   </section>
 </section>
 
-    <!-- 売上 -->
-    <section id="pageSales" class="page">
-      <section id="salesSection">
-        <div class="sales-card">
-          <div class="sales-grid">
-            <label>ボーイ（1名）<div id="boyField" class="pickerField empty">タップして選択</div></label>
-            <label>キャスト（複数可）<div id="castField" class="pickerField empty">タップして選択</div></label>
-          </div>
-          <div id="salesLines"></div>
-          <div class="sales-actions">
-            <button id="addSalesLine" type="button" class="sales-pill">＋ 明細行を追加</button>
-            <button id="submitSales"  type="button" class="sales-pill">送信</button>
-            <button id="reloadSales"  type="button" class="sales-pill">更新（商品・名簿）</button>
-          </div>
-          <div class="sales-total">合計：<span id="salesTotal">¥0</span></div>
-        </div>
-      </section>
-    </section>
+
 
 <!-- 幹部 -->
 <section id="pageAdmin" class="page">
@@ -2060,158 +2039,36 @@ function buildPickerList(){
   
 </script>
 
-<!-- ========= 売上（商品CSV/送信） ========= -->
-<script>
-  const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRdLnWcNEqCfi4VVuG6k4id4JjbBkg4r9eVnRS1mEqN1XY3jz11bQkCXs9MBOkE0y4SPeMgUhHaH8_e/pub?gid=1348648909&single=true&output=csv';
-  const SALES_GAS_URL    = 'https://script.google.com/macros/s/AKfycbwP_n70AlN5TrYvpVRR_tdaOJ8umm61B7bW_s-RQZ1cCeGBkIai3RlgLrbWK7ztPn5Z/exec';
 
-  const linesBox=document.getElementById('salesLines');
-  const totalEl=document.getElementById('salesTotal');
-  let PRODUCTS=[], LINE_SEQ=0;
-
-  const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
-
-  function parseCSV(str){const rows=[];let cur=[],val='',inQ=false;for(let i=0;i<str.length;i++){const c=str[i];if(inQ){if(c=='"'){if(str[i+1]=='"'){val+='"';i++;}else inQ=false;}else val+=c;}else{if(c=='"'){inQ=true;}else if(c==','){cur.push(val);val='';}else if(c=='\n'){cur.push(val);rows.push(cur);cur=[];val='';}else if(c=='\r'){}else val+=c;}} if(val.length>0||cur.length>0){cur.push(val);rows.push(cur);} return rows;}
-  function parseProductsFromCSV(csv){
-    const rows = parseCSV(csv).filter(r => r && r.some(c => (c||'').trim() !== ''));
-    if (!rows.length) return [];
-    let nameIdx = -1, priceIdx = -1, headerRow = -1;
-    for (let i = 0; i < Math.min(10, rows.length); i++){
-      const rr = rows[i];
-      const n  = rr.findIndex(c => /商品/.test(String(c||'')));
-      const p  = rr.findIndex(c => /(値段|価格|金額)/.test(String(c||'')));
-      if (n >= 0 && p >= 0){ nameIdx = n; priceIdx = p; headerRow = i; break; }
-    }
-    if (nameIdx < 0) nameIdx = 1;
-    if (priceIdx < 0) priceIdx = 2;
-    const dataRows = rows.slice(headerRow >= 0 ? headerRow + 1 : 0);
-    return dataRows.map(r => ({ name: (r[nameIdx]||'').trim(), price: Number(String(r[priceIdx]||'').replace(/[^\d.-]/g,'')) || 0 })).filter(p => p.name);
-  }
-
-  async function loadProducts(){
-    if(!PRODUCTS_CSV_URL) return;
-    const res=await fetch(PRODUCTS_CSV_URL,{cache:'no-store'});
-    const csv=await res.text(); PRODUCTS=parseProductsFromCSV(csv); rebuildAllLines();
-  }
-
-  function buildLine(init){
-    const id=++LINE_SEQ; const row=document.createElement('div'); row.className='sales-row'; row.dataset.lineId=id;
-    const sel=document.createElement('select');
-    sel.innerHTML=`<option value="">（商品を選択）</option>`+PRODUCTS.map(p=>`<option data-price="${p.price}" value="${p.name}">${p.name}</option>`).join('');
-    if(init?.product) sel.value=init.product;
-
-    const unitEl=document.createElement('div'); unitEl.className='sales-yen'; unitEl.textContent=yen(init?.unitPrice||0);
-    const qty=document.createElement('input'); qty.type='number'; qty.min='0'; qty.step='1'; qty.value=init?.qty ?? 0;
-    const subEl=document.createElement('div'); subEl.className='sales-yen'; subEl.textContent=yen((init?.unitPrice||0)*(init?.qty||0));
-    const del=document.createElement('button'); del.type='button'; del.className='sales-pill'; del.textContent='－ 削除'; del.addEventListener('click',()=>{ row.remove(); recalcTotal(); });
-
-    sel.addEventListener('change',()=>{ const price=Number(sel.selectedOptions[0]?.dataset.price||0); unitEl.textContent=yen(price); subEl.textContent=yen(price*Number(qty.value||0)); recalcTotal(); });
-    qty.addEventListener('input',()=>{ const price=Number(sel.selectedOptions[0]?.dataset.price||0); subEl.textContent=yen(price*Number(qty.value||0)); recalcTotal(); });
-
-    row.appendChild(sel); row.appendChild(unitEl); row.appendChild(qty); row.appendChild(subEl); row.appendChild(del);
-    linesBox.appendChild(row);
-  }
-  
-  function capSalesLinesHeight(){
-  const r = linesBox.querySelector('.sales-row');
-  if (!r) return;
-  const h = Math.ceil(r.getBoundingClientRect().height);
-  linesBox.style.setProperty('--rowH', h + 'px');
-}
-
-function rebuildAllLines(){
-  const keep = [...linesBox.querySelectorAll('.sales-row')].length || 1;
-  linesBox.innerHTML='';
-  for(let i=0;i<keep;i++) buildLine();
-  capSalesLinesHeight();     // ← 追加
-  recalcTotal();
-}
-
-// 明細行を追加した直後にも入れておくと安心
-document.getElementById('addSalesLine').addEventListener('click', ()=>{
-  buildLine();
-  capSalesLinesHeight();     // ← 追加
-});
-
-  function recalcTotal(){ let sum=0; linesBox.querySelectorAll('.sales-row').forEach(row=>{ 
-    const sel=row.querySelector('select'); 
-    const unit=Number(sel.selectedOptions[0]?.dataset.price||0); 
-    const qty=Number(row.querySelector('input').value||0); sum += unit*qty; }); totalEl.textContent=yen(sum); }
-
-
-
-
-
-
-  
-function collectPayload(){
-  const rows=[...linesBox.querySelectorAll('.sales-row')].map(row=>{
-    const sel=row.querySelector('select');
-    const unit=Number(sel.selectedOptions[0]?.dataset.price||0);
-    const qty=Number(row.querySelector('input').value||0);
-    const product=sel.value||'';
-    return {product,unitPrice:unit,qty,amount:unit*qty};
-  }).filter(r=>r.product && r.qty>0);
-
-  const cast=[...window.salesCast||[]];
-  const boy=window.salesBoy||'';
-  const total=rows.reduce((a,b)=>a+b.amount,0);
-  const split = { cast: 0.7, boy: 0.2, house: 0.1 };
-
-  // 同一人物が cast と boy 両方に入った場合は「ボーイ優先」でキャストから外す例
-  const uniqCast = cast.filter(n => n !== boy);
-
-  return { rows, cast: uniqCast, boy, total, split, timestamp: Date.now() };
-}
-
-
-  document.getElementById('addSalesLine').addEventListener('click',()=>buildLine());
-  document.getElementById('reloadSales').addEventListener('click',()=>{ loadProducts(); window.renderSalesFields?.(); });
-  document.getElementById('submitSales').addEventListener('click', async ()=>{
-    const payload = collectPayload();
-    if(!payload.rows.length) return alert('明細がありません');
-    if(!SALES_GAS_URL) return alert('送信先URLが未設定です');
-
-    try{
-      const res = await fetch(SALES_GAS_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-      const text = await res.text();
-      let json = {}; try { json = JSON.parse(text); } catch(_) {}
-      if(!res.ok || json.ok === false) throw new Error(json.error || `HTTP ${res.status}`);
-
-      alert('登録しました');
-      window.salesBoy = ''; window.salesCast = []; window.renderSalesFields?.();
-      linesBox.innerHTML=''; buildLine(); recalcTotal();
-    }catch(e){ alert('送信エラー: ' + e.message); console.error(e); }
-  });
-
-  loadProducts(); window.renderSalesFields?.(); buildLine();
-</script>
 
 
   <!-- ========= ルーター（最後に1本だけ） ========= -->
 <script>
   function route(){
-    const hash = location.hash || '#timer';
-    // トップレベルの表示判定
+    let hash = location.hash || '#timer';
+    // 旧URLの #sales で来た場合は #timer へ誘導
+    if (hash === '#sales') {
+      location.hash = '#timer';
+      hash = '#timer';
+    }
     const isAdmin = hash.startsWith('#admin');
-    const isTimer = !isAdmin && hash === '#timer';
-    const isSales = !isAdmin && hash === '#sales';
+    const isTimer = !isAdmin;  // それ以外は全部タイマー扱い
+
     const show=(id,on)=>{const el=document.getElementById(id); if(el) el.style.display=on?'block':'none';};
     const active=(id,on)=>{const el=document.getElementById(id); if(el) el.classList.toggle('active',!!on);};
 
-    show('pageTimer',isTimer);
-    show('pageSales',isSales);
-    show('pageAdmin',isAdmin);
+    show('pageTimer', isTimer);
+    show('pageAdmin', isAdmin);
 
-    active('navTimer',isTimer);
-    active('navSales',isSales);
-    active('navAdmin',isAdmin);
+    active('navTimer', isTimer);
+    active('navAdmin', isAdmin);
 
     window.scrollTo(0,0);
   }
-  window.addEventListener('hashchange',route);
+  window.addEventListener('hashchange', route);
   route();
 </script>
+
 
 </body>
 </html>
