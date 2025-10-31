@@ -2318,12 +2318,16 @@ function buildPickerList(){
 
     window.scrollTo(0,0);
   }
-  window.addEventListener('hashchange', ()=>{
+window.addEventListener('hashchange', ()=>{
+  route();  // ←これが抜けていた！
   if (location.hash.startsWith('#admin-sales')) {
-    renderSalesGroupedByBizDay(SALES_ROWS_CACHE, getSalesDayFromHash());
+    // これらがグローバルで未定義の環境でも落ちないようガード
+    if (window.renderSalesGroupedByBizDay && window.getSalesDayFromHash) {
+      renderSalesGroupedByBizDay(SALES_ROWS_CACHE, getSalesDayFromHash());
+    }
   }
 });
-  route();
+route();
 </script>
 
 
