@@ -967,6 +967,19 @@ btnPdAddBulk?.addEventListener('click', async ()=>{
   // ===== 売上一覧（幹部） =====
 const salesCol = collection(db,'rooms',ROOM_ID,'sales');
 
+  // --- 幹部側でも商品リストを使えるように購読 ---
+const pdColAdmin = collection(db,'rooms',ROOM_ID,'products');
+const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
+let PRODUCTS_MASTER = [];
+onSnapshot(pdColAdmin,(qs)=>{
+  const rows=[]; qs.forEach(d=>rows.push({id:d.id,...(d.data()||{})}));
+  PRODUCTS_MASTER = rows
+    .filter(p=>p.active!==false)
+    .map(p=>({name:p.name, price:Number(p.price||0)}))
+    .sort((a,b)=> String(a.name).localeCompare(String(b.name),'ja'));
+});
+
+
 function renderSalesRows(rows){
   const root = document.getElementById('salesListBox');
   const bulkBtn   = document.getElementById('salesBulkDelete');
@@ -1093,17 +1106,38 @@ function openSalesEditModal(rec){
   // 既存があれば消す
   document.getElementById('salesEditWrap')?.remove();
 
-  // テキスト化（明細は 1行= product,unitPrice,qty ）
-  const linesText = (rec.rows||[])
-    .map(it => [it.product, Number(it.unitPrice||0), Number(it.qty||0)].join(','))
-    .join('\n');
+  // 編集用のローカル状態
+  let items = (rec.rows||[]).map(it=>({
+    product: String(it.product||''),
+    unitPrice: Number(it.unitPrice||0),
+    qty: Number(it.qty||0)
+  })).filter(it=>it.product);
 
+  // 合計
+  const calcTotal = () => items.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
+
+  // 1商品追加（同一商品＆単価は数量+1）
+  function addItem(pName, price){
+    const found = items.find(x=>x.product===pName && Number(x.unitPrice)===Number(price));
+    if(found){ found.qty = Number(found.qty||0)+1; }
+    else{ items.push({ product:pName, unitPrice:Number(price||0), qty:1 }); }
+    renderList();
+  }
+
+  // 数量変更/削除
+  function setQty(idx, qty){
+    if (qty<=0){ items.splice(idx,1); }
+    else { items[idx].qty = qty; }
+    renderList();
+  }
+
+  // モーダル本体
   const wrap = document.createElement('div');
   wrap.id = 'salesEditWrap';
   wrap.className = 'modalWrap';
   wrap.style.display = 'grid';
   wrap.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true" style="max-width:720px;">
+    <div class="modal" role="dialog" aria-modal="true" style="max-width:920px;">
       <h3 style="margin:0 0 10px">売上を編集</h3>
 
       <div class="row">
@@ -1114,16 +1148,18 @@ function openSalesEditModal(rec){
         <input id="se-cast"  placeholder="キャスト（カンマ区切り）" value="${esc((rec.cast||[]).join(', '))}">
       </div>
 
-      <div class="row" style="display:block">
-        <div class="suggTitle" style="margin-bottom:6px">明細（1行につき <code>商品名,単価,数量</code>）</div>
-        <textarea id="se-lines" style="width:100%;height:200px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">${linesText}</textarea>
-        <div style="font-size:12px;color:#64748b;margin-top:6px">例）ボトル,5000,2</div>
+      <!-- 席の売上UIと同じ3分割：検索＋商品 / 明細スクロール / 合計＋保存 -->
+      <div class="row">
+        <input id="seSearch" class="prodSearch" placeholder="商品を検索（例: 指名, ボトル, 同伴）">
       </div>
+      <div id="seProdGrid" class="prodGrid" style="margin-bottom:4px"></div>
+
+      <div class="salesList" id="seList" style="max-height:calc(var(--rowH,48px)*8 + 8px); overflow:auto; overscroll-behavior:contain;"></div>
 
       <div class="salesFoot">
-        <div style="font-size:12px;color:#64748b">* 保存すると合計金額は明細から再計算されます</div>
+        <div class="salesTotalBig">合計：<span id="seTotal">${yen(calcTotal())}</span></div>
         <div class="btns">
-          <button id="se-save" class="sales-pill" type="button">保存</button>
+          <button id="se-save"   class="sales-pill" type="button">保存</button>
           <button id="se-cancel" class="sales-pill secondary" type="button">キャンセル</button>
         </div>
       </div>
@@ -1135,8 +1171,73 @@ function openSalesEditModal(rec){
   wrap.addEventListener('click', e=>{ if(e.target===wrap) close(); });
   wrap.querySelector('#se-cancel').addEventListener('click', close);
 
+  const seSearch   = wrap.querySelector('#seSearch');
+  const seProdGrid = wrap.querySelector('#seProdGrid');
+  const seList     = wrap.querySelector('#seList');
+  const seTotal    = wrap.querySelector('#seTotal');
+
+  // 商品チップ描画
+  function buildProdGrid(q=''){
+    const list = (PRODUCTS_MASTER||[]).filter(p => !q || p.name.includes(q));
+    seProdGrid.innerHTML = list.map(p => `
+      <button type="button" class="prodChip" data-name="${esc(p.name)}" data-price="${p.price}">
+        ${esc(p.name)}（${yen(p.price)}）
+      </button>
+    `).join('');
+    seProdGrid.querySelectorAll('.prodChip').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        addItem(btn.dataset.name, Number(btn.dataset.price));
+      });
+    });
+  }
+  buildProdGrid();
+  seSearch?.addEventListener('input', e => buildProdGrid((e.target.value||'').trim()));
+
+  // 明細描画
+  function renderList(){
+    seList.innerHTML = items.map((it,i)=>`
+      <div class="salesItem" data-idx="${i}">
+        <div>${esc(it.product)}</div>
+        <div class="yen">${yen(it.unitPrice)}</div>
+        <div class="qtyCtrl">
+          <button type="button" class="qminus">－</button>
+          <input type="number" min="0" step="1" value="${Number(it.qty||0)}">
+          <button type="button" class="qplus">＋</button>
+        </div>
+        <div class="yen">${yen(Number(it.unitPrice||0) * Number(it.qty||0))}</div>
+      </div>
+    `).join('');
+
+    // 行高を測って8行スクロールの高さを安定化
+    const firstRow = seList.querySelector('.salesItem');
+    if (firstRow){
+      const h = Math.ceil(firstRow.getBoundingClientRect().height);
+      seList.style.setProperty('--rowH', h + 'px');
+    }
+
+    seList.querySelectorAll('.salesItem').forEach(row=>{
+      const idx = Number(row.dataset.idx||0);
+      const input = row.querySelector('input');
+      row.querySelector('.qminus').addEventListener('click',()=>{
+        const v = Math.max(0, Number(input.value||0)-1);
+        input.value = v; setQty(idx, v);
+      });
+      row.querySelector('.qplus').addEventListener('click',()=>{
+        const v = Number(input.value||0)+1;
+        input.value = v; setQty(idx, v);
+      });
+      input.addEventListener('input',()=>{
+        const v = Math.max(0, Number(input.value||0));
+        setQty(idx, v);
+      });
+    });
+
+    seTotal.textContent = yen(calcTotal());
+  }
+  renderList();
+
+  // 保存（Firestore へ書き戻し）
   wrap.querySelector('#se-save').addEventListener('click', async ()=>{
-    // パース
     const seatLabel = (wrap.querySelector('#se-seat').value||'').trim();
     const boy  = (wrap.querySelector('#se-boy').value||'').trim();
     const cast = (wrap.querySelector('#se-cast').value||'')
@@ -1144,28 +1245,22 @@ function openSalesEditModal(rec){
                   .map(v=>v.trim())
                   .filter(Boolean);
 
-    const text = wrap.querySelector('#se-lines').value || '';
-    const items = text.split(/\n+/)
-      .map(line => line.trim())
-      .filter(Boolean)
-      .map(line => {
-        const [p, u, q] = line.split(',').map(s => (s||'').trim());
-        return {
-          product: p,
-          unitPrice: Number((u||'').replace(/[^\d.-]/g,''))||0,
-          qty: Number((q||'').replace(/[^\d.-]/g,''))||0
-        };
-      })
-      .filter(it => it.product && it.qty>0);
+    const cleanRows = items
+      .filter(it => it.product && Number(it.qty)>0)
+      .map(it => ({
+        product: it.product,
+        unitPrice: Number(it.unitPrice||0),
+        qty: Number(it.qty||0)
+      }));
 
-    const total = items.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
+    const total = cleanRows.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
 
     try{
       await setDoc(
         doc(salesCol, rec.id),
         {
           seatLabel, boy, cast,
-          rows: items,
+          rows: cleanRows,
           total: total,
           updatedAt: serverTimestamp()
         },
@@ -1177,6 +1272,7 @@ function openSalesEditModal(rec){
     }
   });
 }
+
 
 
 
