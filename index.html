@@ -450,11 +450,8 @@ button.danger{background:#dc2626}
     <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
     <h2 style="margin:0">売上一覧</h2>
   </div>
-    <!-- 一括削除バー -->
-<div id="salesBulk" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;">
-  <button id="salesBulkDelete" class="sales-pill danger" type="button" disabled>選択をまとめて削除</button>
-  <span id="salesBulkCount" style="font-size:12px;color:#64748b">0件選択中</span>
-</div>
+
+
 
   <div id="salesListBox" style="font-size:14px"></div>
 </div>
@@ -989,106 +986,176 @@ onSnapshot(pdColAdmin,(qs)=>{
 });
 
 
-function renderSalesRows(rows){
-  const root = document.getElementById('salesListBox');
-  const bulkBtn   = document.getElementById('salesBulkDelete');
-  const bulkCount = document.getElementById('salesBulkCount');
-  if(!root) return;
+// ===== 「2:00〜翌2:00」を1日として日別セクションにまとめて表示 =====
 
-  // 0件
-  if(!rows.length){
-    root.innerHTML = '<div style="color:#64748b">（データがありません）</div>';
-    if (bulkBtn) { bulkBtn.disabled = true; }
-    if (bulkCount) { bulkCount.textContent = '0件選択中'; }
-    return;
+// Firestore Timestamp -> JS Date 変換の安全関数
+function tsToDate(ts){
+  if (!ts) return null;
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  if (typeof ts.seconds === 'number') return new Date(ts.seconds * 1000);
+  if (ts instanceof Date) return ts;
+  return null;
+}
+
+// 2:00を境に営業日キー（YYYY-MM-DD）を返す
+function bizDayKeyFromDate(d){
+  const x = new Date(d.getTime());
+  if (x.getHours() < 2) {
+    // 2時前は前日の営業日扱い
+    x.setDate(x.getDate() - 1);
   }
+  const y = x.getFullYear();
+  const m = String(x.getMonth()+1).padStart(2,'0');
+  const day = String(x.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 
-  // 行テンプレ
-  const rowHTML = (r)=> {
-    const when = r.createdAt
+// 見出し用のラベル（YYYY/MM/DD + 範囲注記）
+function bizDayLabel(key){
+  if (key === 'unknown') return '未分類（日時なし）';
+  const [y,m,d] = key.split('-');
+  return `${y}/${m}/${d}（2:00〜翌2:00）`;
+}
+
+const yen = n => new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY'}).format(Number(n||0));
+
+// 個別行のHTML
+function salesRowHTML(r){
+  const when = r.createdAt
       ? (r.createdAt.toDate?.() || new Date(r.createdAt.seconds*1000))
           .toLocaleString('ja-JP',{hour12:false})
       : '';
-    const lines = (r.rows||[])
-      .map(it => `${esc(it.product)} × ${Number(it.qty||0)} （${Number(it.unitPrice||0).toLocaleString()}円）`)
-      .join('、 ');
-    return `
-      <div class="salesRow" data-id="${esc(r.id)}" style="padding:8px 0; border-top:1px dashed #e5e7eb; display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start;">
-        <div style="padding-top:3px"><input type="checkbox" class="sel"></div>
-        <div>
-          <div><b>${esc(r.seatLabel||r.seatId||'')}</b>｜合計 <b>¥${Number(r.total||0).toLocaleString()}</b>｜${when}</div>
-          <div style="color:#475569">キャスト：${esc((r.cast||[]).join(', ')||'なし')}　/　ボーイ：${esc(r.boy||'')}</div>
-          <div style="color:#111">${lines}</div>
-        </div>
-        <div style="display:flex; gap:8px">
-          <button type="button" class="sales-pill edit">編集</button>
-          <button type="button" class="sales-pill danger dl">削除</button>
-        </div>
+  const lines = (r.rows||[])
+    .map(it => `${esc(it.product)} × ${Number(it.qty||0)} （${Number(it.unitPrice||0).toLocaleString()}円）`)
+    .join('、 ');
+  return `
+    <div class="salesRow" data-id="${esc(r.id)}"
+         style="padding:8px 0; border-top:1px dashed #e5e7eb; display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:start;">
+      <div style="padding-top:3px"><input type="checkbox" class="sel"></div>
+      <div>
+        <div><b>${esc(r.seatLabel||r.seatId||'')}</b>｜合計 <b>¥${Number(r.total||0).toLocaleString()}</b>｜${when}</div>
+        <div style="color:#475569">キャスト：${esc((r.cast||[]).join(', ')||'なし')}　/　ボーイ：${esc(r.boy||'')}</div>
+        <div style="color:#111">${lines}</div>
       </div>
+      <div style="display:flex; gap:8px">
+        <button type="button" class="sales-pill edit">編集</button>
+        <button type="button" class="sales-pill danger dl">削除</button>
+      </div>
+    </div>
+  `;
+}
+
+// 日別にまとめて描画
+function renderSalesGroupedByBizDay(rows){
+  const root = document.getElementById('salesListBox');
+  if(!root) return;
+
+  if(!rows.length){
+    root.innerHTML = '<div style="color:#64748b">（データがありません）</div>';
+    return;
+  }
+
+  // 1) 日別にグルーピング（2:00区切り）
+  const groups = {};
+  for (const r of rows){
+    const d = tsToDate(r.createdAt);
+    const key = d ? bizDayKeyFromDate(d) : 'unknown';
+    (groups[key] ||= []).push(r);
+  }
+
+  // 2) キー降順（新しい営業日が上）
+  const keys = Object.keys(groups).sort().reverse();
+
+  // 3) セクションHTML
+  root.innerHTML = keys.map(key=>{
+    const listHTML = groups[key].map(salesRowHTML).join('');
+    return `
+      <section class="salesDay" data-day="${key}"
+        style="margin:10px 0 16px; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px">
+          <h3 style="margin:0; font-size:14px">${bizDayLabel(key)}</h3>
+        </div>
+
+        <!-- この日のみ対象の一括削除バー -->
+        <div class="salesBulkDay" style="display:flex; gap:8px; align-items:center; margin:4px 0 8px;">
+          <button class="sales-pill danger dayBulkDelete" type="button" disabled>この日の選択を削除</button>
+          <span class="dayBulkCount" style="font-size:12px; color:#64748b">0件選択中</span>
+        </div>
+
+        <div class="dayList">
+          ${listHTML}
+        </div>
+      </section>
     `;
-  };
+  }).join('');
 
-  // 描画
-  root.innerHTML = rows.map(rowHTML).join('');
+  // 4) ハンドラ（各セクションごと）
+  const salesCol = collection(db,'rooms',ROOM_ID,'sales');
 
-  // 選択数の更新
-  const updateBulkState = ()=>{
-    const n = root.querySelectorAll('.sel:checked').length;
-    if (bulkBtn) bulkBtn.disabled = n===0;
-    if (bulkCount) bulkCount.textContent = `${n}件選択中`;
-  };
-  root.querySelectorAll('.sel').forEach(chk => {
-    chk.addEventListener('change', updateBulkState);
-  });
-  updateBulkState();
+  root.querySelectorAll('.salesDay').forEach(section=>{
+    const bulkBtn   = section.querySelector('.dayBulkDelete');
+    const bulkCount = section.querySelector('.dayBulkCount');
 
-  // 単体削除
-  root.querySelectorAll('.dl').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const row = btn.closest('.salesRow');
-      const id  = row?.dataset.id;
-      if(!id) return;
-      if(!confirm('この売上を削除しますか？')) return;
-      try{
-        await deleteDoc(doc(salesCol, id));
-      }catch(e){
-        alert('削除に失敗しました: ' + (e?.message||e));
-      }
+    // 選択数更新（この日の中だけ）
+    const updateBulk = ()=>{
+      const n = section.querySelectorAll('.sel:checked').length;
+      bulkBtn.disabled = n===0;
+      bulkCount.textContent = `${n}件選択中`;
+    };
+    section.querySelectorAll('.sel').forEach(chk => chk.addEventListener('change', updateBulk));
+    updateBulk();
+
+    // 単体削除
+    section.querySelectorAll('.dl').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const row = btn.closest('.salesRow');
+        const id  = row?.dataset.id;
+        if(!id) return;
+        if(!confirm('この売上を削除しますか？')) return;
+        try{
+          await deleteDoc(doc(salesCol, id));
+        }catch(e){
+          alert('削除に失敗しました: ' + (e?.message||e));
+        }
+      });
     });
-  });
 
-  // 編集
-  root.querySelectorAll('.edit').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const row = btn.closest('.salesRow');
-      const id  = row?.dataset.id;
-      const rec = rows.find(x=>x.id===id);
-      if(!rec) return;
-      openSalesEditModal(rec);  // ↓3) に定義
+    // 編集
+    // rows を id 検索しやすいようにマップ
+    const rowsById = {};
+    keys.forEach(k => (groups[k]||[]).forEach(r=> rowsById[r.id]=r ));
+    section.querySelectorAll('.edit').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const row = btn.closest('.salesRow');
+        const id  = row?.dataset.id;
+        const rec = rowsById[id];
+        if(!rec) return;
+        openSalesEditModal(rec);
+      });
     });
-  });
 
-  // 一括削除
-  if (bulkBtn){
-    bulkBtn.onclick = async ()=>{
-      const ids = [...root.querySelectorAll('.sel:checked')]
+    // この日の一括削除
+    bulkBtn?.addEventListener('click', async ()=>{
+      const ids = [...section.querySelectorAll('.sel:checked')]
         .map(chk => chk.closest('.salesRow')?.dataset.id)
         .filter(Boolean);
       if(!ids.length) return;
-      if(!confirm(`${ids.length}件をまとめて削除します。よろしいですか？`)) return;
+      if(!confirm(`${ids.length}件を削除します。よろしいですか？`)) return;
 
-      bulkBtn.disabled = true; bulkBtn.textContent = '削除中…';
+      bulkBtn.disabled = true;
+      const oldTxt = bulkBtn.textContent;
+      bulkBtn.textContent = '削除中…';
       try{
         await Promise.all(ids.map(id => deleteDoc(doc(salesCol, id))));
       }catch(e){
         alert('一括削除に失敗しました: ' + (e?.message||e));
       }finally{
-        bulkBtn.textContent = '選択をまとめて削除';
-        updateBulkState();
+        bulkBtn.textContent = oldTxt;
       }
-    };
-  }
+    });
+  });
 }
+
 
 
 // 新しい順で表示
@@ -1107,7 +1174,7 @@ onSnapshot(salesCol, (qs)=>{
     const tb = b.createdAt?.seconds || 0;
     return tb - ta;
   });
-  renderSalesRows(rows);
+  renderSalesGroupedByBizDay(rows);
 });
 
   // ===== 売上レコード 編集モーダル =====
