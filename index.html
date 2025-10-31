@@ -652,10 +652,11 @@ async function pushSeatToFS(s){
       <div class="stRow" data-id="${esc(s.id)}">
         <input class="nm" value="${esc(s.name||'')}" placeholder="名前　例: あやか" disabled>
         <select class="rl" disabled>
-          <option value="cast" ${s.role==='cast'?'selected':''}>キャスト</option>
-          <option value="boy"  ${s.role==='boy'?'selected':''}>ボーイ</option>
-          <option value="staff"${s.role==='staff'?'selected':''}>スタッフ</option>
-        </select>
+          <option value="cast"  ${s.role==='cast' ?'selected':''}>キャスト</option>
+            <option value="boy"   ${s.role==='boy'  ?'selected':''}>ボーイ</option>
+            <option value="staff" ${s.role==='staff'?'selected':''}>スタッフ</option>
+            <option value="fired" ${s.role==='fired'?'selected':''}>解雇</option>
+          </select>
         <button class="edit stBtn sales-pill" type="button">編集</button>
         <button class="dl   stBtn sales-pill" type="button">削除</button>
       </div>
@@ -683,7 +684,8 @@ async function pushSeatToFS(s){
           // 保存して閲覧モードへ
           const name  = ($nm.value||'').trim();
           const role  = $rl.value || 'cast';
-          const duty  = !!rec.duty;           // 既存値を温存
+          // 役職が解雇なら duty は落とす
+          const duty  = (role==='fired') ? false : !!rec.duty;
           const active= rec.active!==false;   // 既存値を温存
 
           if(!name){ alert('名前は必須です'); $nm.focus(); return; }
@@ -734,9 +736,10 @@ function makeAddRow(init){
   row.innerHTML = `
     <input class="nm" placeholder="名前　例: あやか">
     <select class="rl">
-      <option value="cast" ${init?.role==='cast'?'selected':''}>キャスト</option>
-      <option value="boy"  ${init?.role==='boy' ?'selected':''}>ボーイ</option>
-      <option value="staff"${init?.role==='staff'?'selected':''}>スタッフ</option>
+      <option value="cast"  ${init?.role==='cast' ?'selected':''}>キャスト</option>
+      <option value="boy"   ${init?.role==='boy'  ?'selected':''}>ボーイ</option>
+      <option value="staff" ${init?.role==='staff'?'selected':''}>スタッフ</option>
+      <option value="fired" ${init?.role==='fired'?'selected':''}>解雇</option>
     </select>
     <div></div>
     <div></div>
@@ -823,7 +826,13 @@ onSnapshot(stCol, (qs)=>{
   qs.forEach(docSnap=>{
     rows.push({ id: docSnap.id, ...(docSnap.data() || {}) });
   });
-  rows.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'ja'));
+  // 役職順: cast/boy/staff(=0) → fired(=1) の優先度で、同順位は名前昇順
+  const prio = (r)=> r.role==='fired' ? 1 : 0;
+  rows.sort((a,b)=>{
+    const pa = prio(a), pb = prio(b);
+    if (pa!==pb) return pa-pb;
+    return String(a.name||'').localeCompare(String(b.name||''), 'ja');
+  });
   renderStaffRows(rows);   // ← これで一覧に描画される
 });
 
@@ -1842,6 +1851,8 @@ onSnapshot(stColForRoster, (qs)=>{
     if (!name) return;
 
     const role = d.role || 'cast';
+    // 解雇は現場UIから除外（控室・ピッカー等に出さない）
+    if (role === 'fired') return;
     // staffドキュメントの duty は boolean想定（省略可）
     // 役職ごとに {cast,boy} へマップ（cast: true/false, boy: true/false）
     const dutyBool = !!d.duty;
