@@ -1223,6 +1223,29 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
       });
     });
 
+        // 単体削除
+    section.querySelectorAll('.dl').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const row = btn.closest('.salesRow');
+        const id  = row?.dataset.id;
+        if(!id) return;
+        if(!confirm('この売上を削除しますか？')) return;
+        try{ await deleteDoc(doc(salesCol, id)); }catch(e){ alert('削除に失敗しました: ' + (e?.message||e)); }
+      });
+    });
+
+    // ★ 編集（モーダルを開く）
+    section.querySelectorAll('.edit').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const row = btn.closest('.salesRow');
+        const id  = row?.dataset.id;
+        if(!id) return;
+        const rec = (window.SALES_ROWS_CACHE || []).find(r => r.id === id);
+        if (rec) openSalesEditModal(rec);   // 既に定義済みの編集モーダル関数を呼ぶ
+      });
+    });
+
+
     // この日の“選択分だけ”一括削除
     bulkBtn?.addEventListener('click', async ()=>{
       const ids = [...section.querySelectorAll('.sel:checked')]
