@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>卓タイマー管理 + 控室（スプシ連携）【DEV】</title>
+  <title>ALEXANDRITE【DEV】</title>
   <link rel="icon" href="data:," />
   <style>
     :root{
@@ -272,7 +272,7 @@ button.danger{background:#dc2626}
   </div>
 
   <header>
-    <h1>卓タイマー管理</h1>
+    <h1>ALEXANDRITE</h1>
     <div class="toolbar">
       <input id="q" type="search" placeholder="キャスト名で検索（例: あや）" />
       <div class="now" id="now"></div>
@@ -1153,9 +1153,9 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
           }
         </div>
 
-        <!-- この日の一括削除バー：文言を「この日の選択を削除」に -->
+        <!-- この日の一括削除バー：文言を「選択を削除」に -->
         <div class="salesBulkDay" style="display:flex; gap:8px; align-items:center; margin:4px 0 8px;">
-          <button class="sales-pill danger dayBulkDelete" type="button" disabled>この日の選択を削除</button>
+          <button class="sales-pill danger dayBulkDelete" type="button" disabled>選択を削除</button>
           <span class="dayBulkCount" style="font-size:12px; color:#64748b">0件選択中</span>
           ${
             filterDay
