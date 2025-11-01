@@ -998,9 +998,7 @@ let SALES_ROWS_CACHE = [];
 
   window.SALES_ROWS_CACHE = window.SALES_ROWS_CACHE || [];
 
-// ... onSnapshot(salesCol, (qs)=>{ ... 最後の並べ替え後に:
-SALES_ROWS_CACHE = rows;
-window.SALES_ROWS_CACHE = rows;  // ← これを追加
+
 
 // Firestore Timestamp -> JS Date 変換の安全関数
 function tsToDate(ts){
@@ -1244,7 +1242,9 @@ onSnapshot(salesCol, (qs)=>{
     return tb - ta;
   });
 
-  SALES_ROWS_CACHE = rows;
+  
+  SALES_ROWS_CACHE = rows;                    // ★
+  window.SALES_ROWS_CACHE = rows; 
 
 // 現在のハッシュに応じて描画
 const day = getSalesDayFromHash(); // 例: "2025-10-30" or null
