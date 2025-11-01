@@ -31,6 +31,26 @@
     /* ← JSが落ちても白画面にしない保険 */
     #pageTimer{display:block}
 
+  <style>
+  /* 追加：ブランド並び用 */
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand .brand-mark{
+    height:34px;        /* ヘッダーの高さに合わせて良い感じのサイズ */
+    width:34px;
+    object-fit:contain; /* 正方形に収める */
+    border-radius:50%;  /* 円形に見せる（要らなければ削除OK） */
+    /* お好み：わずかに立体感 */
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+  }
+  /* 見出しの余白微調整（任意） */
+  header h1{ margin:0; font-size:18px; line-height:1; }
+
+
+
     /* ====== Floor / VIP / Roster（本鯖UI） ====== */
 .floor{
   position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
@@ -271,18 +291,22 @@ button.danger{background:#dc2626}
     開発用（DEV） / ROOM_ID: dev
   </div>
 
-  <header>
+ <header>
+  <div class="brand">
+    <img class="brand-mark" src="./alexandrite-logo.png" alt="ALEXANDRITE ロゴ">
     <h1>ALEXANDRITE</h1>
-    <div class="toolbar">
-      <input id="q" type="search" placeholder="キャスト名で検索（例: あや）" />
-      <div class="now" id="now"></div>
-    </div>
-    <nav class="top-tabs"> 
-      <a id="navTimer" class="tab active" href="#timer">卓タイマー管理</a> 
-      
-      <a id="navAdmin" class="tab" href="#admin">幹部</a> </nav>
+  </div>
 
-  </header>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="キャスト名で検索（例: あや）" />
+    <div class="now" id="now"></div>
+  </div>
+
+  <nav class="top-tabs">
+    <a id="navTimer" class="tab active" href="#timer">卓タイマー管理</a>
+    <a id="navAdmin" class="tab" href="#admin">幹部</a>
+  </nav>
+</header>
 
   <main>
     <!-- タイマー -->
