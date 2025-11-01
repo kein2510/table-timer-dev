@@ -445,11 +445,11 @@ button.danger{background:#dc2626}
 
 
   
-  <!--<div id="adminSales" class="sales-card" style="display:none">
+  <div id="adminSales" class="sales-card" style="display:none">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
     <h2 style="margin:0">売上一覧</h2>
-  </div>-->
+  </div>
 
 
 
@@ -995,6 +995,12 @@ function getSalesDayFromHash(){
 }
 // 最新の売上スナップショットを保持
 let SALES_ROWS_CACHE = [];
+
+  window.SALES_ROWS_CACHE = window.SALES_ROWS_CACHE || [];
+
+// ... onSnapshot(salesCol, (qs)=>{ ... 最後の並べ替え後に:
+SALES_ROWS_CACHE = rows;
+window.SALES_ROWS_CACHE = rows;  // ← これを追加
 
 // Firestore Timestamp -> JS Date 変換の安全関数
 function tsToDate(ts){
@@ -2391,17 +2397,18 @@ window.addEventListener('hashchange', ()=>{
   route();
 
   if (location.hash.startsWith('#admin-sales')) {
-    // sales スナップショット未着でも安全に動くようガード
     if (window.renderSalesGroupedByBizDay && window.getSalesDayFromHash && window.renderSalesIndex) {
       const day = getSalesDayFromHash();
-      if (day) {
-        renderSalesGroupedByBizDay(SALES_ROWS_CACHE, day); // その日のページ
-      } else {
-        renderSalesIndex(SALES_ROWS_CACHE);                 // 日一覧ページ
-      }
+const cache = window.SALES_ROWS_CACHE || [];
+if (location.hash.startsWith('#admin-sales')) {
+  if (day) renderSalesGroupedByBizDay(cache, day);
+  else     renderSalesIndex(cache);
+}
+
     }
   }
 });
+
 
 route();
 </script>
