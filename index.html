@@ -445,11 +445,11 @@ button.danger{background:#dc2626}
 
 
   
-  <div id="adminSales" class="sales-card" style="display:none">
+  <!--<div id="adminSales" class="sales-card" style="display:none">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
     <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
     <h2 style="margin:0">売上一覧</h2>
-  </div>
+  </div>-->
 
 
 
@@ -1213,6 +1213,11 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
     });
   });
 }
+
+  // --- sales（ルーターからも使うので公開）---
+window.getSalesDayFromHash        = getSalesDayFromHash;
+window.renderSalesIndex           = renderSalesIndex;
+window.renderSalesGroupedByBizDay = renderSalesGroupedByBizDay;
 
 
 
