@@ -394,6 +394,7 @@ button.danger{background:#dc2626}
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-list'">商品管理（一覧）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-add'">商品管理（追加）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-sales'">売上一覧</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">給料支払い</button>
     </div>
   </div>
 
@@ -480,6 +481,16 @@ button.danger{background:#dc2626}
   <div id="salesListBox" style="font-size:14px"></div>
 </div>
 
+  <!-- ===== 給料：ページ ===== -->
+<div id="adminPayroll" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+    <h2 style="margin:0">給料支払い</h2>
+  </div>
+  <div id="payrollListBox" style="font-size:14px"></div>
+</div>
+
+
 
 
 </section>
@@ -560,7 +571,7 @@ button.danger{background:#dc2626}
   function showAdminSub(hash) {
     const h = hash || '#admin';
     // いったん全部隠す
-    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales'].forEach(id=>{
+    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll'].forEach(id=>{
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -571,6 +582,7 @@ button.danger{background:#dc2626}
     else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
     else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
     else if (h.startsWith('#admin-sales')) target = 'adminSales';
+    else if (h.startsWith('#admin-payroll')) target = 'adminPayroll';
 
 
     const el = document.getElementById(target);
@@ -1262,6 +1274,230 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
       finally{ bulkBtn.textContent = oldTxt; }
     });
   });
+
+  /* ========= 給料支払い ========= */
+
+// 既存の営業日関数を流用（getSalesDayFromHash, bizDayLabel, groupSalesByBizDay, SALES_ROWS_CACHE は上で定義済み）
+
+// 給料確定ドキュメントのキャッシュ（{ [dayKey]: {exists:true, doc:{…}} }）
+let PAYROLL_INDEX = {};
+onSnapshot(payrollCol, (qs)=>{
+  const next = {};
+  qs.forEach(d => next[d.id] = { exists:true, doc:{ id:d.id, ...(d.data()||{}) }});
+  PAYROLL_INDEX = next;
+  // 表示中が給料ページなら再描画
+  if (location.hash.startsWith('#admin-payroll')) {
+    const day = getPayrollDayFromHash();
+    if (day) renderPayrollDay(day);
+    else     renderPayrollIndex();
+  }
+});
+
+// #admin-payroll/2025-11-02 のような詳細ページ判定
+function getPayrollDayFromHash(){
+  const m = location.hash.match(/^#admin-payroll\/(\d{4}-\d{2}-\d{2})$/);
+  return m ? m[1] : null;
+}
+window.getPayrollDayFromHash = getPayrollDayFromHash;
+
+// 1日の売上配列 → { entries:[{name,role,amount}], totals:{sales,cast,boy,shop}, byName:{name:{role,amount}} }
+function computePayrollForDay(dayKey, rows){
+  const byName = {}; // name -> { role:'cast'|'boy', amount:number }
+  let salesTotal = 0, castTotal = 0, boyTotal = 0;
+
+  for (const r of rows){
+    const total = Number(r.total||0);
+    if (!total) continue;
+    salesTotal += total;
+
+    // キャスト配分
+    const casts = Array.isArray(r.cast) ? r.cast.filter(Boolean) : [];
+    const castShare = total * 0.7;
+    if (casts.length){
+      const per = castShare / casts.length;
+      casts.forEach(n=>{
+        const key = n.trim(); if(!key) return;
+        byName[key] ||= { role:'cast', amount:0 };
+        byName[key].role = 'cast';
+        byName[key].amount += per;
+      });
+      castTotal += castShare;
+    }
+
+    // ボーイ配分（1名）
+    const boy = (r.boy||'').trim();
+    if (boy){
+      const boyShare = total * 0.2;
+      byName[boy] ||= { role:'boy', amount:0 };
+      byName[boy].role = 'boy';
+      byName[boy].amount += boyShare;
+      boyTotal += boyShare;
+    }
+  }
+
+  const entries = Object.entries(byName)
+    .map(([name,v]) => ({ name, role:v.role, amount: Math.round(v.amount) })) // 円未満は四捨五入
+    .sort((a,b)=> a.role===b.role
+      ? String(a.name).localeCompare(b.name,'ja')
+      : (a.role==='cast'? -1 : 1)); // cast→boy の順
+
+  const shop = Math.round(salesTotal - castTotal - boyTotal); // 参考：店取り
+  return {
+    day: dayKey,
+    entries,
+    totals: {
+      sales: Math.round(salesTotal),
+      cast:  Math.round(castTotal),
+      boy:   Math.round(boyTotal),
+      shop
+    }
+  };
+}
+
+// 「インデックス（営業日リスト）」を描画
+function renderPayrollIndex(){
+  const root = document.getElementById('payrollListBox');
+  if (!root) return;
+
+  // 売上の営業日単位にまとめる（売上がない日は表示しない）
+  const groups = groupSalesByBizDay(SALES_ROWS_CACHE||[]);
+  let keys = Object.keys(groups).sort().reverse();
+  if (!keys.length){
+    root.innerHTML = '<div style="color:#64748b">（売上データがありません）</div>';
+    return;
+  }
+
+  const cards = keys.map(k=>{
+    const preview = computePayrollForDay(k, groups[k]);
+    const status = PAYROLL_INDEX[k]?.exists ? '確定済' : '未確定';
+    const href = `#admin-payroll/${k}`;
+    return `
+      <a href="${href}" style="display:block;padding:12px;margin:8px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:inherit;text-decoration:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div>
+            <div style="font-weight:700">${bizDayLabel(k)}</div>
+            <div style="font-size:12px;color:#64748b">${status}／合計売上：¥${preview.totals.sales.toLocaleString()}</div>
+          </div>
+          <div style="text-align:right">
+            <div>CAST ¥${preview.totals.cast.toLocaleString()}</div>
+            <div>BOY  ¥${preview.totals.boy.toLocaleString()}</div>
+          </div>
+        </div>
+      </a>
+    `;
+  }).join('');
+
+  root.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <h2 style="margin:0">給料支払い（日別）</h2>
+    </div>
+    ${cards}
+  `;
+}
+window.renderPayrollIndex = renderPayrollIndex;
+
+// 日別ページを描画
+async function renderPayrollDay(dayKey){
+  const root = document.getElementById('payrollListBox');
+  if (!root) return;
+
+  // その日の売上
+  const groups = groupSalesByBizDay(SALES_ROWS_CACHE||[]);
+  const rows = groups[dayKey] || [];
+  const preview = computePayrollForDay(dayKey, rows);
+
+  // 確定済みかチェック
+  const confirmed = !!PAYROLL_INDEX[dayKey]?.exists;
+  const docSnap = confirmed ? PAYROLL_INDEX[dayKey].doc : null;
+
+  const table = `
+    <div style="margin:6px 0 10px;color:#64748b">${bizDayLabel(dayKey)} の配当プレビュー</div>
+    <div style="overflow:auto">
+      <table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">名前</th>
+            <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">区分</th>
+            <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">金額</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${preview.entries.map(e=>`
+            <tr>
+              <td style="padding:8px;border-bottom:1px dashed #eef2f6">${esc(e.name)}</td>
+              <td style="padding:8px;border-bottom:1px dashed #eef2f6">${e.role==='cast'?'キャスト':'ボーイ'}</td>
+              <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${e.amount.toLocaleString()}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:#f8fafc">
+            <td style="padding:8px;font-weight:700">合計</td>
+            <td style="padding:8px">CAST / BOY / 店取り</td>
+            <td style="padding:8px;text-align:right">
+              売上 ¥${preview.totals.sales.toLocaleString()} ／
+              CAST ¥${preview.totals.cast.toLocaleString()} ／
+              BOY ¥${preview.totals.boy.toLocaleString()} ／
+              店 ¥${preview.totals.shop.toLocaleString()}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+
+  const btns = confirmed
+    ? `
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">← 日一覧へ</button>
+        <span class="pill" style="background:#e7ffe7;border:1px solid #34a853;color:#0b6630">確定済</span>
+        <button id="prReopen" type="button" class="sales-pill danger">確定を取り消す</button>
+      </div>
+    `
+    : `
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">← 日一覧へ</button>
+        <button id="prConfirm" type="button" class="sales-pill">この日を確定する</button>
+      </div>
+    `;
+
+  root.innerHTML = table + btns;
+
+  // ボタン動作
+  root.querySelector('#prConfirm')?.addEventListener('click', async ()=>{
+    if (!confirm('この日の給料を確定します。よろしいですか？')) return;
+    try{
+      await setDoc(
+        doc(payrollCol, dayKey),
+        {
+          day: dayKey,
+          entries: preview.entries,
+          totals: preview.totals,
+          salesTotal: preview.totals.sales,
+          createdAt: serverTimestamp(),
+          confirmedAt: serverTimestamp()
+        },
+        { merge: false } // 既存があればエラーにしても良い（上書きしない運用）
+      );
+      alert('確定しました');
+    }catch(e){
+      alert('確定に失敗しました: ' + (e?.message || e));
+    }
+  });
+
+  root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
+    if (!confirm('確定を取り消しますか？（ドキュメントを削除）')) return;
+    try{
+      await deleteDoc(doc(payrollCol, dayKey));
+      alert('確定を取り消しました');
+    }catch(e){
+      alert('取り消しに失敗しました: ' + (e?.message || e));
+    }
+  });
+}
+window.renderPayrollDay = renderPayrollDay;
+
+  
 }
 
   // --- sales（ルーターからも使うので公開）---
@@ -1608,6 +1844,7 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
   const ROOM_ID = "dev";
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+  const payrollCol = collection(db,'rooms',ROOM_ID,'payroll');
 
   // このブロックでも pushSeatToFS が必要（別スコープなので再定義）
   async function pushSeatToFS(s){
@@ -2442,18 +2679,24 @@ function buildPickerList(){
 window.addEventListener('hashchange', ()=>{
   route();
 
+  // 既存：売上日別ナビ
   if (location.hash.startsWith('#admin-sales')) {
     if (window.renderSalesGroupedByBizDay && window.getSalesDayFromHash && window.renderSalesIndex) {
       const day = getSalesDayFromHash();
-const cache = window.SALES_ROWS_CACHE || [];
-if (location.hash.startsWith('#admin-sales')) {
-  if (day) renderSalesGroupedByBizDay(cache, day);
-  else     renderSalesIndex(cache);
-}
-
+      const cache = window.SALES_ROWS_CACHE || [];
+      if (day) renderSalesGroupedByBizDay(cache, day);
+      else     renderSalesIndex(cache);
     }
   }
+
+  // 追加：給料ページ
+  if (location.hash.startsWith('#admin-payroll')) {
+    const day = window.getPayrollDayFromHash && getPayrollDayFromHash();
+    if (day) window.renderPayrollDay && renderPayrollDay(day);
+    else     window.renderPayrollIndex && renderPayrollIndex();
+  }
 });
+
 
 
 route();
