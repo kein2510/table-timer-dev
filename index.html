@@ -868,6 +868,10 @@ onSnapshot(stCol, (qs)=>{
     return String(a.name||'').localeCompare(String(b.name||''), 'ja');
   });
   renderStaffRows(rows);   // ← これで一覧に描画される
+  // 給料ページ用に全従業員の簡易マスターを保持
+  window.STAFF_MASTER = rows
+    .filter(r => r.role !== 'fired' && r.active !== false)
+    .map(r => ({ name: r.name, role: (r.role === 'boy' ? 'boy' : 'cast') }));
 });
 
 
@@ -1276,6 +1280,25 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
     });
   });
 }
+  
+  // --- 給料ページ：追加入力＆追加支払者をローカルに保持 ---
+const LS_PAYROLL = (window.LS_PREFIX || 'tt-dev-') + 'payroll.extra.';
+// 形式: { manualAdds: { [name]: number }, extra: [{name, role, amount}] }
+function loadPayrollExtras(day){
+  try{ return JSON.parse(localStorage.getItem(LS_PAYROLL+day) || '{}'); }
+  catch(_){ return {}; }
+}
+function savePayrollExtras(day, data){
+  localStorage.setItem(LS_PAYROLL+day, JSON.stringify(data || {}));
+}
+function getExtrasSafe(day){
+  const x = loadPayrollExtras(day);
+  return {
+    manualAdds: (x.manualAdds && typeof x.manualAdds === 'object') ? x.manualAdds : {},
+    extra: Array.isArray(x.extra) ? x.extra : []
+  };
+}
+
   /* ========= 給料支払い ========= */
 
 // 既存の営業日関数を流用（getSalesDayFromHash, bizDayLabel, groupSalesByBizDay, SALES_ROWS_CACHE は上で定義済み）
@@ -1402,88 +1425,232 @@ async function renderPayrollDay(dayKey){
   const root = document.getElementById('payrollListBox');
   if (!root) return;
 
-  // その日の売上
-  const groups = groupSalesByBizDay(SALES_ROWS_CACHE||[]);
-  const rows = groups[dayKey] || [];
-  const preview = computePayrollForDay(dayKey, rows);
+  // その日の売上（自動計算のベース）
+  const groups  = groupSalesByBizDay(SALES_ROWS_CACHE||[]);
+  const rows    = groups[dayKey] || [];
+  const preview = computePayrollForDay(dayKey, rows); // {entries, totals}
 
-  // 確定済みかチェック
+  // 追加入力・追加支払者（ローカル保持）
+  const extras  = getExtrasSafe(dayKey);
+  const adds    = extras.manualAdds;                  // { name: number }
+  const extraRs = extras.extra;                       // [{name, role, amount}]
+
+  // 確定済みチェック
   const confirmed = !!PAYROLL_INDEX[dayKey]?.exists;
-  const docSnap = confirmed ? PAYROLL_INDEX[dayKey].doc : null;
 
-  const table = `
-    <div style="margin:6px 0 10px;color:#64748b">${bizDayLabel(dayKey)} の配当プレビュー</div>
-    <div style="overflow:auto">
-      <table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
-        <thead>
-          <tr style="background:#f8fafc">
-            <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">名前</th>
-            <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">区分</th>
-            <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">金額</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${preview.entries.map(e=>`
-            <tr>
-              <td style="padding:8px;border-bottom:1px dashed #eef2f6">${esc(e.name)}</td>
-              <td style="padding:8px;border-bottom:1px dashed #eef2f6">${e.role==='cast'?'キャスト':'ボーイ'}</td>
-              <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${e.amount.toLocaleString()}</td>
+  // テーブル行の計算（自動 + 手入力）
+  function buildAllRows(){
+    const baseRows = preview.entries.map(e => {
+      const plus = Number(adds[e.name] || 0);
+      return {
+        name:  e.name,
+        role:  e.role,                 // 'cast' | 'boy'
+        base:  Number(e.amount || 0),  // 自動
+        plus:  plus,                   // 手入力
+        total: Number(e.amount || 0) + plus
+      };
+    });
+
+    const extraRows = extraRs.map(r => ({
+      name:  String(r.name || ''),
+      role:  (r.role === 'boy' ? 'boy' : 'cast'),
+      base:  0,
+      plus:  Number(r.amount || 0),
+      total: Number(r.amount || 0),
+      _extra:true                     // 追加行フラグ
+    }));
+
+    // 名前昇順 / cast→boy の順
+    const all = [...baseRows, ...extraRows].sort((a,b)=>{
+      if (a.role!==b.role) return a.role==='cast' ? -1 : 1;
+      return String(a.name).localeCompare(String(b.name),'ja');
+    });
+    return all;
+  }
+
+  function sumByRole(all, role){
+    return all.filter(x=>x.role===role).reduce((a,b)=>a+Number(b.total||0),0);
+  }
+
+  // DOM 描画
+  function render(){
+    const all = buildAllRows();
+    const castSum = sumByRole(all, 'cast');
+    const boySum  = sumByRole(all, 'boy');
+    const shop    = Math.max(0, Number(preview.totals.sales||0) - castSum - boySum);
+
+    const rowsHTML = all.map(r => `
+      <tr data-name="${esc(r.name)}" data-role="${r.role}" ${r._extra?'data-extra="1"':''}>
+        <td style="padding:8px;border-bottom:1px dashed #eef2f6">${esc(r.name)}</td>
+        <td style="padding:8px;border-bottom:1px dashed #eef2f6">${r.role==='cast'?'キャスト':'ボーイ'}</td>
+
+        <!-- 金額（自動・赤丸） -->
+        <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${Number(r.base).toLocaleString()}</td>
+
+        <!-- 追加入力（青丸） -->
+        <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;min-width:120px">
+          <input type="number" inputmode="numeric" class="pr-plus"
+                 value="${Number(r.plus)}" ${confirmed ? 'disabled' : ''} 
+                 style="width:110px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;text-align:right;background:#fff">
+          ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''}
+                   style="margin-left:6px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff">削除</button>` : ''}
+        </td>
+
+        <!-- 総支払額（オレンジ） -->
+        <td class="pr-total" style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;font-weight:700">
+          ¥${Number(r.total).toLocaleString()}
+        </td>
+      </tr>
+    `).join('');
+
+    root.innerHTML = `
+      <div style="margin:6px 0 10px;color:#64748b">${bizDayLabel(dayKey)} の配当プレビュー</div>
+      <div style="overflow:auto">
+        <table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">名前</th>
+              <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">区分</th>
+              <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">金額（自動）</th>
+              <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">追加入力</th>
+              <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">総支払額</th>
             </tr>
-          `).join('')}
-        </tbody>
-        <tfoot>
-          <tr style="background:#f8fafc">
-            <td style="padding:8px;font-weight:700">合計</td>
-            <td style="padding:8px">CAST / BOY / 店取り</td>
-            <td style="padding:8px;text-align:right">
-              売上 ¥${preview.totals.sales.toLocaleString()} ／
-              CAST ¥${preview.totals.cast.toLocaleString()} ／
-              BOY ¥${preview.totals.boy.toLocaleString()} ／
-              店 ¥${preview.totals.shop.toLocaleString()}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  `;
-
-  const btns = confirmed
-    ? `
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-        <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">← 日一覧へ</button>
-        <span class="pill" style="background:#e7ffe7;border:1px solid #34a853;color:#0b6630">確定済</span>
-        <button id="prReopen" type="button" class="sales-pill danger">確定を取り消す</button>
+          </thead>
+          <tbody>${rowsHTML}</tbody>
+          <tfoot>
+            <tr style="background:#f8fafc">
+              <td style="padding:8px;font-weight:700">合計</td>
+              <td style="padding:8px">CAST / BOY / 店取り</td>
+              <td style="padding:8px;text-align:right">売上 ¥${Number(preview.totals.sales||0).toLocaleString()}</td>
+              <td style="padding:8px;text-align:right"></td>
+              <td style="padding:8px;text-align:right">
+                CAST ¥${castSum.toLocaleString()} ／
+                BOY ¥${boySum.toLocaleString()} ／
+                店 ¥${shop.toLocaleString()}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
-    `
-    : `
+
       <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
         <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">← 日一覧へ</button>
-        <button id="prConfirm" type="button" class="sales-pill">この日を確定する</button>
+        ${confirmed
+          ? `<span class="pill" style="background:#e7ffe7;border:1px solid #34a853;color:#0b6630">確定済</span>
+             <button id="prReopen" type="button" class="sales-pill danger">確定を取り消す</button>`
+          : `<button id="btnAddPayer" type="button" class="sales-pill">＋ 支払者を追加</button>
+             <button id="prConfirm"  type="button" class="sales-pill">この日を確定する</button>`
+        }
       </div>
     `;
 
-  root.innerHTML = table + btns;
+    // 追加入力の変更イベント
+    root.querySelectorAll('.pr-plus').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const tr   = inp.closest('tr');
+        const name = tr?.dataset.name || '';
+        const isExtra = tr?.dataset.extra === '1';
 
-  // ボタン動作
-  root.querySelector('#prConfirm')?.addEventListener('click', async ()=>{
-    if (!confirm('この日の給料を確定します。よろしいですか？')) return;
-    try{
-      await setDoc(
-        doc(payrollCol, dayKey),
-        {
-          day: dayKey,
-          entries: preview.entries,
-          totals: preview.totals,
-          salesTotal: preview.totals.sales,
-          createdAt: serverTimestamp(),
-          confirmedAt: serverTimestamp()
-        },
-        { merge: false } // 既存があればエラーにしても良い（上書きしない運用）
-      );
-      alert('確定しました');
-    }catch(e){
-      alert('確定に失敗しました: ' + (e?.message || e));
-    }
+        const v = Math.max(0, Number(inp.value||0));
+        if (isExtra){
+          // 追加行は extras.extra を更新
+          const idx = extraRs.findIndex(r => r.name===name);
+          if (idx>=0){ extraRs[idx].amount = v; }
+        }else{
+          adds[name] = v;
+        }
+        savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
+        render(); // 総額と合計を再計算
+      }, {passive:true});
+    });
+
+    // 追加行の削除
+    root.querySelectorAll('.btn-extra-del').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const tr   = btn.closest('tr');
+        const name = tr?.dataset.name || '';
+        const idx  = extraRs.findIndex(r => r.name===name);
+        if (idx>=0){
+          extraRs.splice(idx,1);
+          savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
+          render();
+        }
+      });
+    });
+
+    // 追加ボタン
+    root.querySelector('#btnAddPayer')?.addEventListener('click', ()=>{
+      // 追加ダイアログ（簡易セレクタ）
+      const already = new Set(all.map(r=>r.name));
+      const staff   = (window.STAFF_MASTER || []);
+      const choices = staff.filter(s => !already.has(s.name));
+
+      // 簡易UI（prompt連結）→ 失敗時は何もしない
+      const name = (function(){
+        if (!choices.length){ alert('追加できる従業員がいません'); return ''; }
+        const list = choices.map((s,i)=>`${i+1}. ${s.name}（${s.role==='boy'?'ボーイ':'キャスト'}）`).join('\n');
+        const idx  = Number(prompt('追加する従業員の番号を入力:\n'+list, '1')||0) - 1;
+        return choices[idx]?.name || '';
+      })();
+      if (!name) return;
+
+      const role = (window.STAFF_MASTER.find(s=>s.name===name)?.role === 'boy') ? 'boy' : 'cast';
+      const amount = Number(prompt('追加入力の金額（円）を入力', '0')||0);
+
+      extraRs.push({ name, role, amount: Math.max(0, amount) });
+      savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
+      render();
+    });
+
+    // 確定／取り消し
+    root.querySelector('#prConfirm')?.addEventListener('click', async ()=>{
+      const all = buildAllRows();
+      if (!confirm('この日の給料を確定します。よろしいですか？')) return;
+      try{
+        await setDoc(
+          doc(payrollCol, dayKey),
+          {
+            day: dayKey,
+            // 確定は “総支払額” を entries.amount として保存
+            entries: all.map(r => ({ name:r.name, role:r.role, amount: Math.round(r.total) })),
+            totals: {
+              sales: Math.round(Number(preview.totals.sales||0)),
+              cast:  Math.round(sumByRole(all,'cast')),
+              boy:   Math.round(sumByRole(all,'boy')),
+              shop:  Math.round(Math.max(0, Number(preview.totals.sales||0) - sumByRole(all,'cast') - sumByRole(all,'boy')))
+            },
+            // 監査用に内訳も残す
+            meta: {
+              base: preview.entries,
+              manualAdds: adds,
+              extra: extraRs
+            },
+            salesTotal: Math.round(Number(preview.totals.sales||0)),
+            createdAt: serverTimestamp(),
+            confirmedAt: serverTimestamp()
+          },
+          { merge: false }
+        );
+        alert('確定しました');
+      }catch(e){
+        alert('確定に失敗しました: ' + (e?.message || e));
+      }
+    });
+
+    root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
+      if (!confirm('確定を取り消しますか？（ドキュメントを削除）')) return;
+      try{
+        await deleteDoc(doc(payrollCol, dayKey));
+        alert('確定を取り消しました');
+      }catch(e){
+        alert('取り消しに失敗しました: ' + (e?.message || e));
+      }
+    });
+  }
+
+  render();
+}
+
   });
 
   root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
