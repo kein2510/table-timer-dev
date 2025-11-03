@@ -490,6 +490,30 @@ button.danger{background:#dc2626}
   <div id="payrollListBox" style="font-size:14px"></div>
 </div>
 
+  <!-- 支払者追加ピッカー -->
+<div class="pickerWrap" id="payrollAddWrap" aria-hidden="true" style="display:none">
+  <div class="pickerPanel" role="dialog" aria-modal="true" style="max-width:720px">
+    <div class="pickerHead">
+      <h3 style="margin:0;font-size:16px">支払者を追加</h3>
+      <div class="pickerBtns">
+        <button id="paClose"  class="secondary" type="button">閉じる</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input id="paSearch" class="prodSearch" placeholder="名前で検索（例: かな、にゃん）" style="flex:1">
+      <input id="paAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="初期金額（円）"
+             style="width:160px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;text-align:right">
+      <button id="paAdd" type="button" class="sales-pill">追加</button>
+    </div>
+
+    <div id="paList" class="suggList" style="row-gap:8px"></div>
+    <div style="font-size:12px;color:#64748b;margin-top:6px">
+      * 一覧は現在の従業員マスターから「未追加の人」だけを表示します（役職は自動判定）
+    </div>
+  </div>
+
+
 
 
 
@@ -1480,28 +1504,29 @@ async function renderPayrollDay(dayKey){
     const shop    = Math.max(0, Number(preview.totals.sales||0) - castSum - boySum);
 
     const rowsHTML = all.map(r => `
-      <tr data-name="${esc(r.name)}" data-role="${r.role}" ${r._extra?'data-extra="1"':''}>
-        <td style="padding:8px;border-bottom:1px dashed #eef2f6">${esc(r.name)}</td>
-        <td style="padding:8px;border-bottom:1px dashed #eef2f6">${r.role==='cast'?'キャスト':'ボーイ'}</td>
+  <tr data-name="${esc(r.name)}" data-role="${r.role}" data-base="${Number(r.base)}" ${r._extra?'data-extra="1"':''}>
+    <td style="padding:8px;border-bottom:1px dashed #eef2f6">${esc(r.name)}</td>
+    <td style="padding:8px;border-bottom:1px dashed #eef2f6">${r.role==='cast'?'キャスト':'ボーイ'}</td>
 
-        <!-- 金額（自動・赤丸） -->
-        <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${Number(r.base).toLocaleString()}</td>
+    <!-- 金額（自動・赤丸） -->
+    <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${Number(r.base).toLocaleString()}</td>
 
-        <!-- 追加入力（青丸） -->
-        <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;min-width:120px">
-          <input type="number" inputmode="numeric" class="pr-plus"
-                 value="${Number(r.plus)}" ${confirmed ? 'disabled' : ''} 
-                 style="width:110px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;text-align:right;background:#fff">
-          ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''}
-                   style="margin-left:6px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff">削除</button>` : ''}
-        </td>
+    <!-- 追加入力（青丸） -->
+    <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;min-width:160px">
+      <input type="number" inputmode="numeric" class="pr-plus"
+             value="${Number(r.plus)}" ${confirmed ? 'disabled' : ''} 
+             style="width:140px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;text-align:right;background:#fff;font-size:14px">
+      ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''}
+               style="margin-left:8px;padding:8px 12px;border-radius:10px;border:1px solid #cbd5e1;background:#fff">削除</button>` : ''}
+    </td>
 
-        <!-- 総支払額（オレンジ） -->
-        <td class="pr-total" style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;font-weight:700">
-          ¥${Number(r.total).toLocaleString()}
-        </td>
-      </tr>
-    `).join('');
+    <!-- 総支払額（オレンジ） -->
+    <td class="pr-total" style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;font-weight:700">
+      ¥${Number(r.total).toLocaleString()}
+    </td>
+  </tr>
+`).join('');
+
 
     root.innerHTML = `
       <div style="margin:6px 0 10px;color:#64748b">${bizDayLabel(dayKey)} の配当プレビュー</div>
@@ -1524,13 +1549,12 @@ async function renderPayrollDay(dayKey){
               <td style="padding:8px;text-align:right">売上 ¥${Number(preview.totals.sales||0).toLocaleString()}</td>
               <td style="padding:8px;text-align:right"></td>
               <td style="padding:8px;text-align:right">
-                CAST ¥${castSum.toLocaleString()} ／
-                BOY ¥${boySum.toLocaleString()} ／
-                店 ¥${shop.toLocaleString()}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+                CAST <span class="sum-cast">¥0</span> ／
+                BOY  <span class="sum-boy">¥0</span> ／
+                店   <span class="sum-shop">¥0</span>
+             </td>
+          </tr>
+        </tfoot>
       </div>
 
       <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
@@ -1544,63 +1568,147 @@ async function renderPayrollDay(dayKey){
       </div>
     `;
 
-    // 追加入力の変更イベント
-    root.querySelectorAll('.pr-plus').forEach(inp=>{
-      inp.addEventListener('input', ()=>{
-        const tr   = inp.closest('tr');
-        const name = tr?.dataset.name || '';
-        const isExtra = tr?.dataset.extra === '1';
+    // 合計の表示だけ更新するユーティリティ
+function refreshFooterSums(){
+  const tmpAll = buildAllRows(); // adds / extraRs を使って再計算
+  const castSum = sumByRole(tmpAll,'cast');
+  const boySum  = sumByRole(tmpAll,'boy');
+  const shop    = Math.max(0, Number(preview.totals.sales||0) - castSum - boySum);
+  root.querySelector('.sum-cast').textContent = '¥' + castSum.toLocaleString();
+  root.querySelector('.sum-boy').textContent  = '¥' + boySum .toLocaleString();
+  root.querySelector('.sum-shop').textContent = '¥' + shop   .toLocaleString();
+}
+refreshFooterSums();
 
-        const v = Math.max(0, Number(inp.value||0));
-        if (isExtra){
-          // 追加行は extras.extra を更新
-          const idx = extraRs.findIndex(r => r.name===name);
-          if (idx>=0){ extraRs[idx].amount = v; }
-        }else{
-          adds[name] = v;
-        }
-        savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
-        render(); // 総額と合計を再計算
-      }, {passive:true});
-    });
+// 追加入力の変更イベント（入力中に全体は再描画しない）
+root.querySelectorAll('.pr-plus').forEach(inp=>{
+  const tr = inp.closest('tr');
+  const base = Number(tr?.dataset.base || 0);
+  const totalCell = tr?.querySelector('.pr-total');
 
-    // 追加行の削除
-    root.querySelectorAll('.btn-extra-del').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const tr   = btn.closest('tr');
-        const name = tr?.dataset.name || '';
-        const idx  = extraRs.findIndex(r => r.name===name);
-        if (idx>=0){
-          extraRs.splice(idx,1);
-          savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
-          render();
-        }
+  // 初期の合計表示を念のため整える
+  totalCell.textContent = '¥' + (base + Number(inp.value||0)).toLocaleString();
+
+  // 入力中：値を配列に反映し、行とフッターだけ更新
+  inp.addEventListener('input', ()=>{
+    const name = tr?.dataset.name || '';
+    const isExtra = tr?.dataset.extra === '1';
+    const v = Math.max(0, Number(inp.value || 0));
+
+    if (isExtra){
+      const idx = extraRs.findIndex(r => r.name===name);
+      if (idx>=0) extraRs[idx].amount = v;
+    }else{
+      adds[name] = v;
+    }
+    savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
+
+    // 行の合計
+    totalCell.textContent = '¥' + (base + v).toLocaleString();
+
+    // 下の合計
+    refreshFooterSums();
+  });
+
+  // フォーカス外れでフォーマットだけ整える
+  inp.addEventListener('blur', ()=>{
+    const v = Math.max(0, Number(inp.value || 0));
+    inp.value = v; // 余計な 0 や空文字を正規化
+  });
+});
+
+// 追加行の削除（UIだけ更新してフッター再計算）
+root.querySelectorAll('.btn-extra-del').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const tr   = btn.closest('tr');
+    const name = tr?.dataset.name || '';
+    const idx  = extraRs.findIndex(r => r.name===name);
+    if (idx>=0){
+      extraRs.splice(idx,1);
+      savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
+      // 行をDOMから消す
+      tr.remove();
+      refreshFooterSums();
+    }
+  });
+});
+
+
+    // 追加ピッカー（検索＋チップ）
+function openAddPicker(){
+  const wrap  = document.getElementById('payrollAddWrap');
+  const list  = document.getElementById('paList');
+  const qInp  = document.getElementById('paSearch');
+  const amtInp= document.getElementById('paAmount');
+  const btnAdd= document.getElementById('paAdd');
+  const btnClose = document.getElementById('paClose');
+
+  // 既に入っている人は除外
+  const already = new Set(buildAllRows().map(r=>r.name));
+  const choices = (window.STAFF_MASTER || []).filter(s => !already.has(s.name));
+
+  let picked = ''; // クリックで選んだ人の名前
+  let q = '';
+
+  function renderChips(){
+    const view = choices
+      .filter(s => !q || s.name.includes(q))
+      .map(s => ({
+        name: s.name,
+        role: (s.role === 'boy' ? 'boy' : 'cast'),
+      }));
+
+    list.innerHTML = view.map(v => `
+      <button type="button"
+        class="staffChip on ${picked===v.name?'selected':''}"
+        data-name="${esc(v.name)}"
+        title="${v.role==='boy'?'ボーイ':'キャスト'}">
+        ${esc(v.name)}
+      </button>
+    `).join('');
+
+    list.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const n = b.dataset.name || '';
+        picked = (picked === n) ? '' : n;
+        renderChips();
       });
     });
 
-    // 追加ボタン
-    root.querySelector('#btnAddPayer')?.addEventListener('click', ()=>{
-      // 追加ダイアログ（簡易セレクタ）
-      const already = new Set(all.map(r=>r.name));
-      const staff   = (window.STAFF_MASTER || []);
-      const choices = staff.filter(s => !already.has(s.name));
+    // 1人選ばれていないと追加ボタンは押せない
+    btnAdd.disabled = !picked;
+  }
 
-      // 簡易UI（prompt連結）→ 失敗時は何もしない
-      const name = (function(){
-        if (!choices.length){ alert('追加できる従業員がいません'); return ''; }
-        const list = choices.map((s,i)=>`${i+1}. ${s.name}（${s.role==='boy'?'ボーイ':'キャスト'}）`).join('\n');
-        const idx  = Number(prompt('追加する従業員の番号を入力:\n'+list, '1')||0) - 1;
-        return choices[idx]?.name || '';
-      })();
-      if (!name) return;
+  qInp.value = '';
+  amtInp.value = '0';
+  picked = '';
+  renderChips();
 
-      const role = (window.STAFF_MASTER.find(s=>s.name===name)?.role === 'boy') ? 'boy' : 'cast';
-      const amount = Number(prompt('追加入力の金額（円）を入力', '0')||0);
+  qInp.oninput = () => { q = (qInp.value||'').trim(); renderChips(); };
+  btnClose.onclick = () => { wrap.style.display='none'; wrap.setAttribute('aria-hidden','true'); };
 
-      extraRs.push({ name, role, amount: Math.max(0, amount) });
-      savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
-      render();
-    });
+  btnAdd.onclick = () => {
+    if (!picked) return;
+    const role = (window.STAFF_MASTER.find(s=>s.name===picked)?.role === 'boy') ? 'boy' : 'cast';
+    const amount = Math.max(0, Number(amtInp.value || 0));
+    extraRs.push({ name:picked, role, amount });
+    savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
+
+    // テーブル側を再構成して見せる（ここだけ再描画）
+    render();
+
+    // モーダルを閉じる
+    wrap.style.display='none'; wrap.setAttribute('aria-hidden','true');
+  };
+
+  // 開く
+  wrap.style.display='grid';
+  wrap.removeAttribute('aria-hidden');
+  qInp.focus();
+}
+
+root.querySelector('#btnAddPayer')?.addEventListener('click', openAddPicker);
+
 
     // 確定／取り消し
     root.querySelector('#prConfirm')?.addEventListener('click', async ()=>{
