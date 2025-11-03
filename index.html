@@ -288,6 +288,16 @@ button.danger{background:#dc2626}
   padding: 6px 10px;
 }
 
+    /* 未払い者ページの赤い仕切り線 */
+.payouts-sep{
+  border: none;
+  height: 4px;
+  background: linear-gradient(90deg, #dc2626, #ef4444);
+  border-radius: 999px;
+  margin: 16px 0;
+}
+
+
 
 
 
@@ -1519,6 +1529,7 @@ function renderPayoutsPage(){
   // 上段：未払いリスト
   if (!items.length){
     box.innerHTML = `<div style="color:#64748b">（未払いはありません）</div>`;
+    
   }else{
     const rows = items.map(it=>`
       <div class="stRow" data-key="${esc(it.key)}" style="grid-template-columns: 2fr 1fr auto auto; gap:12px;">
@@ -1539,40 +1550,52 @@ function renderPayoutsPage(){
       </div>
       <div class="admin-st-list">${rows}</div>
     `;
+    // 未払いリストの下に赤い仕切り線を追加
+box.insertAdjacentHTML('beforeend', '<hr class="payouts-sep">');
+
 
     // 個別ボタン
-    box.querySelectorAll('.stRow .pay').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        const row = btn.closest('.stRow');
-        const key = row?.dataset.key || '';
-        const rec = items.find(x=>x.key===key);
-        const note = (row.querySelector('.memo')?.value || '').trim();
-        if (!rec) return;
-        btn.disabled = true; btn.textContent = '更新中…';
-        await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-        // UIから即時消す
-        row.remove();
-        const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-        if (ok) row.remove();      // ★ 成功時のみ
-        btn.disabled = false; btn.textContent = '支払済にする';
-      });
-    });
+box.querySelectorAll('.stRow .pay').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const row = btn.closest('.stRow');
+    const key = row?.dataset.key || '';
+    const rec = items.find(x=>x.key===key);
+    const note = (row.querySelector('.memo')?.value || '').trim();
+    if (!rec) return;
+
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = '更新中…';
+
+    const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
+    if (ok) row.remove();            // ★ 成功時だけ消す
+
+    btn.disabled = false;
+    btn.textContent = old;
+  });
+});
+
 
     // 一括
-    box.querySelector('#payoutsPayAll')?.addEventListener('click', async ()=>{
-      if (!confirm(`表示中の ${items.length} 件を支払済にします。よろしいですか？`)) return;
-      const rows = [...box.querySelectorAll('.stRow')];
-      for (const row of rows){
-        const key = row.dataset.key || '';
-        const rec = items.find(x=>x.key===key);
-        if (!rec) continue;
-        const note = (row.querySelector('.memo')?.value || '').trim();
-        await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-        const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-        if (ok) row.remove();      // ★ 成功時のみ
-        }
-      alert('更新しました');
-    });
+box.querySelector('#payoutsPayAll')?.addEventListener('click', async ()=>{
+  if (!confirm(`表示中の ${items.length} 件を支払済にします。よろしいですか？`)) return;
+
+  const rows = [...box.querySelectorAll('.stRow')];
+  let okCount = 0;
+
+  for (const row of rows){
+    const key  = row.dataset.key || '';
+    const rec  = items.find(x=>x.key===key);
+    if (!rec) continue;
+    const note = (row.querySelector('.memo')?.value || '').trim();
+
+    const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
+    if (ok) { row.remove(); okCount++; }   // ★ 成功した分だけ削除
+  }
+
+  alert(`${okCount} 件を更新しました`);
+});
+
   }
 
   // 下段：履歴（直近20件）
