@@ -251,6 +251,29 @@ button.danger{background:#dc2626}
   background:#fff; font-size:14px; width:100%;
 }
 
+    /* 追加入力：金額と削除ボタンを横並びで崩れないように */
+.payroll-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.payroll-inline input {
+  width: 140px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  text-align: right;
+  font-size: 14px;
+}
+.payroll-inline .btn-extra-del{
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+
 
 
 
@@ -1416,24 +1439,38 @@ function renderPayrollIndex(){
   }
 
   const cards = keys.map(k=>{
-    const preview = computePayrollForDay(k, groups[k]);
-    const status = PAYROLL_INDEX[k]?.exists ? '確定済' : '未確定';
-    const href = `#admin-payroll/${k}`;
-    return `
-      <a href="${href}" style="display:block;padding:12px;margin:8px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:inherit;text-decoration:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <div>
-            <div style="font-weight:700">${bizDayLabel(k)}</div>
-            <div style="font-size:12px;color:#64748b">${status}／合計売上：¥${preview.totals.sales.toLocaleString()}</div>
+  const preview = computePayrollForDay(k, groups[k]); // 自動：CAST/BOY/売上
+  const status = PAYROLL_INDEX[k]?.exists ? '確定済' : '未確定';
+
+  // その日のローカル追加入力を合算
+  const ex = getExtrasSafe(k); // { manualAdds:{}, extra:[] }
+  const manualAddsSum = Object.values(ex.manualAdds||{}).reduce((a,b)=>a+Number(b||0),0);
+  const manualExtraSum= (ex.extra||[]).reduce((a,b)=>a+Number(b.amount||0),0);
+  const manualTotal = manualAddsSum + manualExtraSum;
+
+  const totalPayout = Number(preview.totals.cast||0) + Number(preview.totals.boy||0) + manualTotal;
+  const href  = `#admin-payroll/${k}`;
+
+  return `
+    <a href="${href}" style="
+      display:block; padding:12px; margin:8px 0; border:1px solid #e5e7eb;
+      border-radius:12px; background:#fff; text-decoration:none; color:inherit;">
+      <div style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+        <div>
+          <div style="font-weight:700">${bizDayLabel(k)}</div>
+          <div style="font-size:12px; color:#64748b">
+            ${status}／合計売上：¥${Number(preview.totals.sales||0).toLocaleString()}
           </div>
-          <div style="text-align:right">
-            <div>CAST ¥${preview.totals.cast.toLocaleString()}</div>
-            <div>BOY  ¥${preview.totals.boy.toLocaleString()}</div>
+          <div style="font-size:12px; color:#111; margin-top:4px">
+            総支払額：<b>¥${totalPayout.toLocaleString()}</b>
+            <span style="color:#64748b">（CAST ¥${Number(preview.totals.cast||0).toLocaleString()} ／ BOY ¥${Number(preview.totals.boy||0).toLocaleString()} ／ 追加入力 ¥${manualTotal.toLocaleString()}）</span>
           </div>
         </div>
-      </a>
-    `;
-  }).join('');
+      </div>
+    </a>
+  `;
+}).join('');
+
 
   root.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
@@ -1512,12 +1549,12 @@ async function renderPayrollDay(dayKey){
     <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${Number(r.base).toLocaleString()}</td>
 
     <!-- 追加入力（青丸） -->
-    <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;min-width:160px">
-      <input type="number" inputmode="numeric" class="pr-plus"
-             value="${Number(r.plus)}" ${confirmed ? 'disabled' : ''} 
-             style="width:140px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;text-align:right;background:#fff;font-size:14px">
-      ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''}
-               style="margin-left:8px;padding:8px 12px;border-radius:10px;border:1px solid #cbd5e1;background:#fff">削除</button>` : ''}
+    <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;min-width:200px">
+      <span class="payroll-inline">
+        <input type="number" inputmode="numeric" class="pr-plus"
+               value="${Number(r.plus)}" ${confirmed ? 'disabled' : ''}>
+        ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''} title="この追加行を削除">削除</button>` : ''}
+      </span>
     </td>
 
     <!-- 総支払額（オレンジ） -->
@@ -1526,6 +1563,7 @@ async function renderPayrollDay(dayKey){
     </td>
   </tr>
 `).join('');
+
 
 
     root.innerHTML = `
@@ -1543,19 +1581,20 @@ async function renderPayrollDay(dayKey){
           </thead>
           <tbody>${rowsHTML}</tbody>
           <tfoot>
-            <tr style="background:#f8fafc">
-              <td style="padding:8px;font-weight:700">合計</td>
-              <td style="padding:8px">CAST / BOY / 店取り</td>
-              <td style="padding:8px;text-align:right">売上 ¥${Number(preview.totals.sales||0).toLocaleString()}</td>
-              <td style="padding:8px;text-align:right"></td>
-              <td style="padding:8px;text-align:right">
-                CAST <span class="sum-cast">¥0</span> ／
-                BOY  <span class="sum-boy">¥0</span> ／
-                店   <span class="sum-shop">¥0</span>
-             </td>
-          </tr>
-        </tfoot>
-      </div>
+  <tr style="background:#f8fafc">
+    <td style="padding:8px;font-weight:700">合計</td>
+    <td style="padding:8px">CAST / BOY / 店 / 追加入力</td>
+    <td style="padding:8px;text-align:right">売上 ¥${Number(preview.totals.sales||0).toLocaleString()}</td>
+    <td style="padding:8px;text-align:right"></td>
+    <td style="padding:8px;text-align:right">
+      CAST <span class="sum-cast">¥0</span> ／
+      BOY  <span class="sum-boy">¥0</span> ／
+      店   <span class="sum-shop">¥0</span> ／
+      追加入力 <span class="sum-manual">¥0</span>
+    </td>
+  </tr>
+</tfoot>
+
 
       <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
         <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">← 日一覧へ</button>
@@ -1570,14 +1609,28 @@ async function renderPayrollDay(dayKey){
 
     // 合計の表示だけ更新するユーティリティ
 function refreshFooterSums(){
-  const tmpAll = buildAllRows(); // adds / extraRs を使って再計算
-  const castSum = sumByRole(tmpAll,'cast');
-  const boySum  = sumByRole(tmpAll,'boy');
-  const shop    = Math.max(0, Number(preview.totals.sales||0) - castSum - boySum);
-  root.querySelector('.sum-cast').textContent = '¥' + castSum.toLocaleString();
-  root.querySelector('.sum-boy').textContent  = '¥' + boySum .toLocaleString();
-  root.querySelector('.sum-shop').textContent = '¥' + shop   .toLocaleString();
+  // 自動配当分のみの合計
+  const baseCast = preview.entries.filter(e=>e.role==='cast')
+                    .reduce((a,b)=>a+Number(b.amount||0),0);
+  const baseBoy  = preview.entries.filter(e=>e.role==='boy')
+                    .reduce((a,b)=>a+Number(b.amount||0),0);
+
+  // 追加入力（手入力）合計：manualAdds + extraRs
+  const manualSumFromAdds = Object.values(adds||{}).reduce((a,b)=>a+Number(b||0),0);
+  const manualSumFromExtra= (extraRs||[]).reduce((a,b)=>a+Number(b.amount||0),0);
+  const manualTotal = manualSumFromAdds + manualSumFromExtra;
+
+  const salesTotal = Number(preview.totals.sales||0);
+  const shop = Math.max(0, salesTotal - baseCast - baseBoy - manualTotal);
+
+  const fmt = n => '¥' + Number(n||0).toLocaleString();
+
+  root.querySelector('.sum-cast').textContent   = fmt(baseCast);
+  root.querySelector('.sum-boy').textContent    = fmt(baseBoy);
+  root.querySelector('.sum-manual').textContent = fmt(manualTotal);
+  root.querySelector('.sum-shop').textContent   = fmt(shop);
 }
+
 refreshFooterSums();
 
 // 追加入力の変更イベント（入力中に全体は再描画しない）
