@@ -537,6 +537,7 @@ button.danger{background:#dc2626}
   const ROOM_ID = "dev";
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
+  const payrollCol = collection(db, 'rooms', ROOM_ID, 'payroll');
 
   // 席書き込み（この module 内で使うなら残す／別moduleで使うなら window へ出す）
   
@@ -1274,7 +1275,7 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
       finally{ bulkBtn.textContent = oldTxt; }
     });
   });
-
+}
   /* ========= 給料支払い ========= */
 
 // 既存の営業日関数を流用（getSalesDayFromHash, bizDayLabel, groupSalesByBizDay, SALES_ROWS_CACHE は上で定義済み）
@@ -1498,7 +1499,6 @@ async function renderPayrollDay(dayKey){
 window.renderPayrollDay = renderPayrollDay;
 
   
-}
 
   // --- sales（ルーターからも使うので公開）---
 window.getSalesDayFromHash        = getSalesDayFromHash;
