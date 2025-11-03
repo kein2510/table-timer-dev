@@ -537,6 +537,7 @@ button.danger{background:#dc2626}
         <button id="paClose"  class="secondary" type="button">閉じる</button>
       </div>
     </div>
+  </div>
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input id="paSearch" class="prodSearch" placeholder="名前で検索（例: かな、にゃん）" style="flex:1">
@@ -648,7 +649,7 @@ button.danger{background:#dc2626}
   function showAdminSub(hash) {
     const h = hash || '#admin';
     // いったん全部隠す
-    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll'].forEach(id=>{
+    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll','adminPayouts'].forEach(id=>{
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -1938,63 +1939,77 @@ root.querySelector('#btnAddPayer')?.addEventListener('click', openAddPicker);
 
 
     // 確定／取り消し
-    root.querySelector('#prConfirm')?.addEventListener('click', async ()=>{
-      const all = buildAllRows();
-      if (!confirm('この日の給料を確定します。よろしいですか？')) return;
-      try{
-        await setDoc(
-          doc(payrollCol, dayKey),
-          {
-            day: dayKey,
-            // 確定は “総支払額” を entries.amount として保存
-            entries: all.map(r => ({ name:r.name, role:r.role, amount: Math.round(r.total) })),
-            totals: {
-              sales: Math.round(Number(preview.totals.sales||0)),
-              cast:  Math.round(sumByRole(all,'cast')),
-              boy:   Math.round(sumByRole(all,'boy')),
-              shop:  Math.round(Math.max(0, Number(preview.totals.sales||0) - sumByRole(all,'cast') - sumByRole(all,'boy')
-              // 確定直後：当日の entries から payouts 雛形を作成（既存があれば触らない）
-try{
-  const all = buildAllRows(); // 確定直前に使っているやつ（総支払額）
-  await Promise.all(all.map(r=>{
-    const id = `${dayKey}__${r.name}`.replace(/\//g,'／');
-    return setDoc(doc(payoutsCol, id), {
-      id, day: dayKey, name: r.name,
-      amount: Math.round(Number(r.total||0)),
-      paid: false,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  }));
-}catch(_){}
-))
-            },
-            // 監査用に内訳も残す
-            meta: {
-              base: preview.entries,
-              manualAdds: adds,
-              extra: extraRs
-            },
-            salesTotal: Math.round(Number(preview.totals.sales||0)),
-            createdAt: serverTimestamp(),
-            confirmedAt: serverTimestamp()
-          },
-          { merge: false }
-        );
-        alert('確定しました');
-      }catch(e){
-        alert('確定に失敗しました: ' + (e?.message || e));
-      }
-    });
+root.querySelector('#prConfirm')?.addEventListener('click', async ()=>{
+  const all = buildAllRows();
+  if (!confirm('この日の給料を確定します。よろしいですか？')) return;
 
-    root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
-      if (!confirm('確定を取り消しますか？（ドキュメントを削除）')) return;
-      try{
-        await deleteDoc(doc(payrollCol, dayKey));
-        alert('確定を取り消しました');
-      }catch(e){
-        alert('取り消しに失敗しました: ' + (e?.message || e));
-      }
-    });
+  try{
+    // ① 給料ドキュメントを確定保存
+    await setDoc(
+      doc(payrollCol, dayKey),
+      {
+        day: dayKey,
+        // 確定は “総支払額” を entries.amount として保存
+        entries: all.map(r => ({ name:r.name, role:r.role, amount: Math.round(r.total) })),
+        totals: {
+          sales: Math.round(Number(preview.totals.sales||0)),
+          cast:  Math.round(sumByRole(all,'cast')),
+          boy:   Math.round(sumByRole(all,'boy')),
+          shop:  Math.round(
+                   Math.max(
+                     0,
+                     Number(preview.totals.sales||0)
+                       - sumByRole(all,'cast')
+                       - sumByRole(all,'boy')
+                   )
+                 )
+        },
+        // 監査用に内訳も残す
+        meta: {
+          base: preview.entries,
+          manualAdds: adds,
+          extra: extraRs
+        },
+        salesTotal: Math.round(Number(preview.totals.sales||0)),
+        createdAt: serverTimestamp(),
+        confirmedAt: serverTimestamp()
+      },
+      { merge: false }
+    );
+
+    // ② 未払い雛形（payouts）を作成/更新（既存あれば温存）
+    try{
+      await Promise.all(all.map(r=>{
+        const id = `${dayKey}__${r.name}`.replace(/\//g,'／');
+        return setDoc(
+          doc(payoutsCol, id),
+          {
+            id, day: dayKey, name: r.name,
+            amount: Math.round(Number(r.total||0)),
+            paid: false,
+            updatedAt: serverTimestamp()
+          },
+          { merge: true }
+        );
+      }));
+    }catch(_){ /* 雛形は失敗しても致命ではないので握りつぶし */ }
+
+    alert('確定しました');
+  }catch(e){
+    alert('確定に失敗しました: ' + (e?.message || e));
+  }
+});
+
+root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
+  if (!confirm('確定を取り消しますか？（ドキュメントを削除）')) return;
+  try{
+    await deleteDoc(doc(payrollCol, dayKey));
+    alert('確定を取り消しました');
+  }catch(e){
+    alert('取り消しに失敗しました: ' + (e?.message || e));
+  }
+});
+
   }
 
   render();
