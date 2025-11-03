@@ -1651,7 +1651,7 @@ async function renderPayrollDay(dayKey){
   render();
 }
 
-  );
+
 
   root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
     if (!confirm('確定を取り消しますか？（ドキュメントを削除）')) return;
@@ -2790,26 +2790,7 @@ function fillSuggestionBlocks(){
 
 
 
-function buildPickerList(){
-  let onList=[];
-  if (pickerMode==='boy'){
-    onList=(window.staff||[]).filter(s=>s.duty?.boy).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
-  }else{
-    onList=(window.staff||[]).filter(s=>s.duty?.cast).map(s=>({name:s.name, busy:isNameBusy(s.name)}));
-  }
-  pickerList.innerHTML = onList.map(x=>{
-    const selected = (pickerMode==='boy') ? (tmpBoy===x.name) : tmpCast.includes(x.name);
-    return `<button type="button" class="staffChip ${x.busy?'busy':'on'} ${selected?'selected':''}" data-name="${x.name}">${x.name}</button>`;
-  }).join('');
-  pickerList.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const name=b.dataset.name;
-      if(pickerMode==='boy'){ tmpBoy = (tmpBoy===name) ? '' : name; }
-      else { if(tmpCast.includes(name)) tmpCast = tmpCast.filter(n=>n!==name); else tmpCast = [...tmpCast, name]; }
-      buildPickerList();
-    });
-  });
-}
+
 
 
   /* === 初期化 === */
