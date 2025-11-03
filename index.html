@@ -432,6 +432,7 @@ button.danger{background:#dc2626}
       <button type="button" class="sales-pill" onclick="location.hash='#admin-prod-add'">商品管理（追加）</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-sales'">売上一覧</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">給料支払い</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-payouts'">未払い者</button>
     </div>
   </div>
 
@@ -550,6 +551,19 @@ button.danger{background:#dc2626}
     </div>
   </div>
 
+    <!-- ===== 未払い者 ===== -->
+<div id="adminPayouts" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+    <h2 style="margin:0">未払い者</h2>
+  </div>
+
+  <!-- 上：未払いリスト -->
+  <div id="payoutsListBox"></div>
+
+  <!-- 下：履歴（支払済ログ） -->
+  <div id="payoutsHistoryBox" style="margin-top:12px"></div>
+</div>
 
 
 
@@ -563,7 +577,7 @@ button.danger{background:#dc2626}
   import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
   import {
    getFirestore, collection, doc, setDoc, serverTimestamp,
-   onSnapshot, deleteDoc
+   onSnapshot, deleteDoc, arrayUnion
    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
   // ---- Firebase init（重複なし）----
@@ -599,6 +613,7 @@ button.danger{background:#dc2626}
   const seatsCol = collection(db, 'rooms', ROOM_ID, 'seats');
   const dutyCol  = collection(db, 'rooms', ROOM_ID, 'duty');
   const payrollCol = collection(db, 'rooms', ROOM_ID, 'payroll');
+  const payoutsCol = collection(db, 'rooms', ROOM_ID, 'payouts');
 
   // 席書き込み（この module 内で使うなら残す／別moduleで使うなら window へ出す）
   
@@ -645,6 +660,7 @@ button.danger{background:#dc2626}
     else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
     else if (h.startsWith('#admin-sales')) target = 'adminSales';
     else if (h.startsWith('#admin-payroll')) target = 'adminPayroll';
+    else if (h.startsWith('#admin-payouts')) target = 'adminPayouts';
 
 
     const el = document.getElementById(target);
@@ -1439,6 +1455,146 @@ function computePayrollForDay(dayKey, rows){
   };
 }
 
+  // 日付ラベル再利用: bizDayLabel(dayKey) は既存
+
+// 1件を支払済にする
+async function markPayoutPaid({day, name, amount, note}){
+  const id = `${day}__${name}`.replace(/\//g,'／');
+  // すでにあるなら更新、無いなら作成
+  try{
+    await setDoc(
+      doc(payoutsCol, id),
+      {
+        id, day, name,
+        amount: Math.round(Number(amount||0)),
+        paid: true,
+        note: (note||''),
+        paidAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        history: arrayUnion(
+          `[${new Date().toLocaleString('ja-JP',{hour12:false})}] 支払済 ¥${Math.round(Number(amount||0)).toLocaleString()} ${note?`（${note}）`:''}`
+        )
+      },
+      { merge: true }
+    );
+  }catch(e){
+    alert('更新に失敗しました: ' + (e?.message||e));
+  }
+}
+
+// 未払い者ページを描画
+function renderPayoutsPage(){
+  const box = document.getElementById('payoutsListBox');
+  const histBox = document.getElementById('payoutsHistoryBox');
+  if (!box || !histBox) return;
+
+  // すべての「確定済み給与」から候補を集める
+  const items = [];
+  // PAYROLL_INDEX は onSnapshot(payrollCol) で doc 全体を保持済み
+  Object.values(PAYROLL_INDEX||{}).forEach(({doc})=>{
+    if (!doc?.entries || !Array.isArray(doc.entries)) return;
+    const day = doc.day || '';
+    doc.entries.forEach(e=>{
+      const name = e.name || '';
+      const amount = Number(e.amount||0);
+      const key = `${day}__${name}`.replace(/\//g,'／');
+      const paidRec = PAYOUTS_INDEX[key];
+      // paid === true なら除外、未作成 or false を「未払い」とみなす
+      if (!paidRec || paidRec.paid !== true){
+        items.push({ key, day, name, amount });
+      }
+    });
+  });
+
+  // 名前昇順、同名は新しい日が上
+  items.sort((a,b)=>{
+    const n = a.name.localeCompare(b.name,'ja');
+    if (n!==0) return n;
+    return b.day.localeCompare(a.day);
+  });
+
+  // 上段：未払いリスト
+  if (!items.length){
+    box.innerHTML = `<div style="color:#64748b">（未払いはありません）</div>`;
+  }else{
+    const rows = items.map(it=>`
+      <div class="stRow" data-key="${esc(it.key)}" style="grid-template-columns: 2fr 1fr auto auto; gap:12px;">
+        <div>
+          <div style="font-weight:700">${esc(it.name)}</div>
+          <div style="font-size:12px;color:#64748b">${bizDayLabel(it.day)}</div>
+        </div>
+        <div style="text-align:right;font-weight:800">¥${it.amount.toLocaleString()}</div>
+        <input class="memo" placeholder="メモ（任意）">
+        <button class="pay stBtn sales-pill" type="button">支払済にする</button>
+      </div>
+    `).join('');
+
+    box.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <span class="pill">確定済みから自動集計</span>
+        <button id="payoutsPayAll" class="sales-pill" type="button">表示中を全て支払済に</button>
+      </div>
+      <div class="admin-st-list">${rows}</div>
+    `;
+
+    // 個別ボタン
+    box.querySelectorAll('.stRow .pay').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const row = btn.closest('.stRow');
+        const key = row?.dataset.key || '';
+        const rec = items.find(x=>x.key===key);
+        const note = (row.querySelector('.memo')?.value || '').trim();
+        if (!rec) return;
+        btn.disabled = true; btn.textContent = '更新中…';
+        await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
+        // UIから即時消す
+        row.remove();
+        btn.disabled = false; btn.textContent = '支払済にする';
+      });
+    });
+
+    // 一括
+    box.querySelector('#payoutsPayAll')?.addEventListener('click', async ()=>{
+      if (!confirm(`表示中の ${items.length} 件を支払済にします。よろしいですか？`)) return;
+      const rows = [...box.querySelectorAll('.stRow')];
+      for (const row of rows){
+        const key = row.dataset.key || '';
+        const rec = items.find(x=>x.key===key);
+        if (!rec) continue;
+        const note = (row.querySelector('.memo')?.value || '').trim();
+        await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
+        row.remove();
+      }
+      alert('更新しました');
+    });
+  }
+
+  // 下段：履歴（直近20件）
+  if (!PAYOUTS_HISTORY.length){
+    histBox.innerHTML = `<div style="color:#64748b">（履歴はまだありません）</div>`;
+  }else{
+    const lines = PAYOUTS_HISTORY.slice(0,20).map(h=>{
+      const when = h.paidAt ? h.paidAt.toLocaleString('ja-JP',{hour12:false}) : '';
+      return `
+        <div style="padding:6px 0; border-top:1px dashed #e5e7eb; display:grid; grid-template-columns: 1fr auto auto; gap:8px;">
+          <div>
+            <div><b>${esc(h.name)}</b> / ${bizDayLabel(h.day)}</div>
+            ${h.note ? `<div style="font-size:12px;color:#64748b">メモ：${esc(h.note)}</div>` : ''}
+          </div>
+          <div style="text-align:right;font-weight:800">¥${h.amount.toLocaleString()}</div>
+          <div style="font-size:12px;color:#64748b;white-space:nowrap;align-self:center">${esc(when)}</div>
+        </div>
+      `;
+    }).join('');
+    histBox.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">支払履歴</div>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px">${lines}</div>
+    `;
+  }
+}
+window.renderPayoutsPage = renderPayoutsPage;
+
+
 // 「インデックス（営業日リスト）」を描画
 function renderPayrollIndex(){
   const root = document.getElementById('payrollListBox');
@@ -1796,7 +1952,21 @@ root.querySelector('#btnAddPayer')?.addEventListener('click', openAddPicker);
               sales: Math.round(Number(preview.totals.sales||0)),
               cast:  Math.round(sumByRole(all,'cast')),
               boy:   Math.round(sumByRole(all,'boy')),
-              shop:  Math.round(Math.max(0, Number(preview.totals.sales||0) - sumByRole(all,'cast') - sumByRole(all,'boy')))
+              shop:  Math.round(Math.max(0, Number(preview.totals.sales||0) - sumByRole(all,'cast') - sumByRole(all,'boy')
+              // 確定直後：当日の entries から payouts 雛形を作成（既存があれば触らない）
+try{
+  const all = buildAllRows(); // 確定直前に使っているやつ（総支払額）
+  await Promise.all(all.map(r=>{
+    const id = `${dayKey}__${r.name}`.replace(/\//g,'／');
+    return setDoc(doc(payoutsCol, id), {
+      id, day: dayKey, name: r.name,
+      amount: Math.round(Number(r.total||0)),
+      paid: false,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  }));
+}catch(_){}
+))
             },
             // 監査用に内訳も残す
             meta: {
@@ -1871,6 +2041,36 @@ if (day) {
   renderSalesIndex(SALES_ROWS_CACHE);                 // 日一覧
 }
 
+});
+
+  // 支払状況キャッシュ
+let PAYOUTS_INDEX = {};   // id: `${day}__${name}` -> { paid, note, history[], paidAt, amount, ... }
+let PAYOUTS_HISTORY = []; // 表示用（支払済ログ）
+onSnapshot(payoutsCol, (qs)=>{
+  const next = {};
+  const hist = [];
+  qs.forEach(d=>{
+    const data = d.data() || {};
+    next[d.id] = { id:d.id, ...data };
+    if (data.paid === true) {
+      hist.push({
+        id: d.id,
+        name: data.name || '',
+        day:  data.day  || '',
+        amount: Number(data.amount||0),
+        note: data.note || '',
+        paidAt: data.paidAt?.seconds ? new Date(data.paidAt.seconds*1000) : null
+      });
+    }
+  });
+  // 新しい順
+  hist.sort((a,b)=> (b.paidAt?.getTime()||0) - (a.paidAt?.getTime()||0));
+  PAYOUTS_INDEX = next;
+  PAYOUTS_HISTORY = hist;
+  // 表示中が未払いページなら更新
+  if (location.hash.startsWith('#admin-payouts')) {
+    renderPayoutsPage();
+  }
 });
 
   // ===== 売上レコード 編集モーダル =====
@@ -3011,6 +3211,12 @@ window.addEventListener('hashchange', ()=>{
     if (day) window.renderPayrollDay && renderPayrollDay(day);
     else     window.renderPayrollIndex && renderPayrollIndex();
   }
+
+  // 追加：未払い者ページ
+if (location.hash.startsWith('#admin-payouts')) {
+  window.renderPayoutsPage && renderPayoutsPage();
+}
+
 });
 
 
