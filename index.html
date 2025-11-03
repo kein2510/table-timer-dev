@@ -1461,7 +1461,6 @@ function computePayrollForDay(dayKey, rows){
 // 1件を支払済にする
 async function markPayoutPaid({day, name, amount, note}){
   const id = `${day}__${name}`.replace(/\//g,'／');
-  // すでにあるなら更新、無いなら作成
   try{
     await setDoc(
       doc(payoutsCol, id),
@@ -1473,15 +1472,18 @@ async function markPayoutPaid({day, name, amount, note}){
         paidAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         history: arrayUnion(
-          `[${new Date().toLocaleString('ja-JP',{hour12:false})}] 支払済 ¥${Math.round(Number(amount||0)).toLocaleString()} ${note?`（${note}）`:''}`
+          `[${new Date().toLocaleString('ja-JP',{hour12:false})}] 支払済 ¥${Math.round(Number(amount||0)).toLocaleString()}${note?`（${note}）`:''}`
         )
       },
       { merge: true }
     );
+    return true;          // ★ 成功
   }catch(e){
-    alert('更新に失敗しました: ' + (e?.message||e));
+    alert('更新に失敗しました: ' + (e?.message || e));
+    return false;         // ★ 失敗
   }
 }
+
 
 // 未払い者ページを描画
 function renderPayoutsPage(){
@@ -1550,6 +1552,8 @@ function renderPayoutsPage(){
         await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
         // UIから即時消す
         row.remove();
+        const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
+        if (ok) row.remove();      // ★ 成功時のみ
         btn.disabled = false; btn.textContent = '支払済にする';
       });
     });
@@ -1564,8 +1568,9 @@ function renderPayoutsPage(){
         if (!rec) continue;
         const note = (row.querySelector('.memo')?.value || '').trim();
         await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-        row.remove();
-      }
+        const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
+        if (ok) row.remove();      // ★ 成功時のみ
+        }
       alert('更新しました');
     });
   }
