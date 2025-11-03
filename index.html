@@ -273,6 +273,20 @@ button.danger{background:#dc2626}
   background: #fff;
 }
 
+/* 総支払額セルを右寄せで横並び */
+.pr-total-cell{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  justify-content:flex-end;
+  width:100%;
+}
+.pr-total-amt{ font-weight:700; }
+
+/* 追加行の削除ボタン（少しコンパクトに） */
+.btn-extra-del{
+  padding: 6px 10px;
+}
 
 
 
@@ -1545,24 +1559,27 @@ async function renderPayrollDay(dayKey){
     <td style="padding:8px;border-bottom:1px dashed #eef2f6">${esc(r.name)}</td>
     <td style="padding:8px;border-bottom:1px dashed #eef2f6">${r.role==='cast'?'キャスト':'ボーイ'}</td>
 
-    <!-- 金額（自動・赤丸） -->
+    <!-- 金額（自動） -->
     <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right">¥${Number(r.base).toLocaleString()}</td>
 
-    <!-- 追加入力（青丸） -->
+    <!-- 追加入力（手入力のみ） -->
     <td style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;min-width:200px">
       <span class="payroll-inline">
         <input type="number" inputmode="numeric" class="pr-plus"
                value="${Number(r.plus)}" ${confirmed ? 'disabled' : ''}>
-        ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''} title="この追加行を削除">削除</button>` : ''}
       </span>
     </td>
 
-    <!-- 総支払額（オレンジ） -->
-    <td class="pr-total" style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;font-weight:700">
-      ¥${Number(r.total).toLocaleString()}
+    <!-- 総支払額（右端に削除ボタンを配置：追加行のみ表示） -->
+    <td class="pr-total" style="padding:8px;border-bottom:1px dashed #eef2f6;text-align:right;">
+      <span class="pr-total-cell">
+        <span class="pr-total-amt">¥${Number(r.total).toLocaleString()}</span>
+        ${r._extra ? `<button type="button" class="btn-extra-del" ${confirmed?'disabled':''} title="この追加行を削除">削除</button>` : ''}
+      </span>
     </td>
   </tr>
 `).join('');
+
 
 
 
@@ -1637,12 +1654,12 @@ refreshFooterSums();
 root.querySelectorAll('.pr-plus').forEach(inp=>{
   const tr = inp.closest('tr');
   const base = Number(tr?.dataset.base || 0);
-  const totalCell = tr?.querySelector('.pr-total');
+  const totalAmtSpan = tr?.querySelector('.pr-total-amt');
 
-  // 初期の合計表示を念のため整える
-  totalCell.textContent = '¥' + (base + Number(inp.value||0)).toLocaleString();
+  // 初期の合計表示
+  if (totalAmtSpan) totalAmtSpan.textContent = '¥' + (base + Number(inp.value||0)).toLocaleString();
 
-  // 入力中：値を配列に反映し、行とフッターだけ更新
+  // 入力中：値を反映して行とフッターだけ更新
   inp.addEventListener('input', ()=>{
     const name = tr?.dataset.name || '';
     const isExtra = tr?.dataset.extra === '1';
@@ -1656,19 +1673,20 @@ root.querySelectorAll('.pr-plus').forEach(inp=>{
     }
     savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
 
-    // 行の合計
-    totalCell.textContent = '¥' + (base + v).toLocaleString();
+    // 行の合計だけ更新（ボタンは消さない）
+    if (totalAmtSpan) totalAmtSpan.textContent = '¥' + (base + v).toLocaleString();
 
     // 下の合計
     refreshFooterSums();
   });
 
-  // フォーカス外れでフォーマットだけ整える
+  // フォーカス外れで正規化
   inp.addEventListener('blur', ()=>{
     const v = Math.max(0, Number(inp.value || 0));
-    inp.value = v; // 余計な 0 や空文字を正規化
+    inp.value = v;
   });
 });
+
 
 // 追加行の削除（UIだけ更新してフッター再計算）
 root.querySelectorAll('.btn-extra-del').forEach(btn=>{
