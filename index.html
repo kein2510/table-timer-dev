@@ -1652,17 +1652,6 @@ async function renderPayrollDay(dayKey){
 }
 
 
-
-  root.querySelector('#prReopen')?.addEventListener('click', async ()=>{
-    if (!confirm('確定を取り消しますか？（ドキュメントを削除）')) return;
-    try{
-      await deleteDoc(doc(payrollCol, dayKey));
-      alert('確定を取り消しました');
-    }catch(e){
-      alert('取り消しに失敗しました: ' + (e?.message || e));
-    }
-  });
-
 window.renderPayrollDay = renderPayrollDay;
 
   
