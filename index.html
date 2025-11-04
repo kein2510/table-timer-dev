@@ -717,6 +717,31 @@ button.danger{background:#dc2626}
 
   const KEY = LS_PREFIX + "admin.unlocked";
 
+  // ===== 未払いページ用：親(#pageAdmin)のスクロール制御（グローバル公開）=====
+function fitAdminPayouts(on){
+  const page = document.getElementById('pageAdmin');
+  const header = document.querySelector('header');
+  if(!page || !header) return;
+
+  if(on){
+    // ヘッダーの実測高をCSS変数へ
+    const h = Math.ceil(header.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--headerH', h + 'px');
+    // ページ全体スクロールを殺しつつ、子に高さを渡す
+    page.classList.add('payouts-fit');
+  }else{
+    page.classList.remove('payouts-fit');
+  }
+}
+// 非モジュールscript（最後のルーター）から呼べるよう window に公開
+window.fitAdminPayouts = fitAdminPayouts;
+
+// 画面サイズ変化時も反映（未払いページ表示中のみ）
+window.addEventListener('resize', ()=>{
+  if (location.hash.startsWith('#admin-payouts')) fitAdminPayouts(true);
+});
+
+
   // ===== 幹部UI：ログイン/表示コントロール（唯一の定義） =====
 
   function showAdminSub(hash) {
@@ -763,28 +788,6 @@ fitAdminPayouts(target === 'adminPayouts');
         if (el) el.style.display = 'none';
       });
     }
-
-    // —— 未払いページ用：親(#pageAdmin)に実測高さを与える（グローバル定義！）
-function fitAdminPayouts(on){
-  const page = document.getElementById('pageAdmin');
-  const header = document.querySelector('header');
-  if(!page || !header) return;
-
-  if(on){
-    // ヘッダーの実測高をCSS変数へ
-    const h = Math.ceil(header.getBoundingClientRect().height);
-    document.documentElement.style.setProperty('--headerH', h + 'px');
-    // ページ全体スクロールを殺しつつ、子に高さを渡す
-    page.classList.add('payouts-fit');
-  }else{
-    page.classList.remove('payouts-fit');
-  }
-}
-
-// 画面サイズ変化時も反映（未払いページ表示中のみ）
-window.addEventListener('resize', ()=>{
-  if (location.hash.startsWith('#admin-payouts')) fitAdminPayouts(true);
-});
 
 
   }
