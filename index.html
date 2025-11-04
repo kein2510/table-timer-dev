@@ -764,7 +764,7 @@ fitAdminPayouts(target === 'adminPayouts');
       });
     }
 
-    // —— 未払いページ用：親(#pageAdmin)に実測高さを与える
+    // —— 未払いページ用：親(#pageAdmin)に実測高さを与える（グローバル定義！）
 function fitAdminPayouts(on){
   const page = document.getElementById('pageAdmin');
   const header = document.querySelector('header');
@@ -785,6 +785,7 @@ function fitAdminPayouts(on){
 window.addEventListener('resize', ()=>{
   if (location.hash.startsWith('#admin-payouts')) fitAdminPayouts(true);
 });
+
 
   }
 
@@ -3387,9 +3388,9 @@ window.addEventListener('hashchange', ()=>{
   // 追加：未払い者ページ
 if (location.hash.startsWith('#admin-payouts')) {
   window.renderPayoutsPage && renderPayoutsPage();
-  fitAdminPayouts(true);           // ← これを追加
+  fitAdminPayouts(true);
 } else {
-  fitAdminPayouts(false);          // ← 未払いページを離れたら解除
+  fitAdminPayouts(false);
 }
 
 });
