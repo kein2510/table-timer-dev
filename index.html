@@ -296,44 +296,49 @@ button.danger{background:#dc2626}
   display:flex; align-items:center; gap:8px; margin-bottom:6px;
 }
 /* 未払いページの全体を縦フレックスにして高さ配分を決める */
-/* 未払い者ページをビューポート高にフィットさせる */
+/* 重要：親に高さを渡すための最小高リセット */
+#pageAdmin{ min-height: 0; }
+
+/* 未払い者ページは「中身だけ」スクロールさせる前提で高さは親に任せる */
 #adminPayouts{
-  display:flex;               /* JSでもflexにしてるがCSSでも明示 */
+  display:flex;
   flex-direction:column;
-  min-height: calc(100dvh - 140px); /* ヘッダー分の余白。必要なら数字を微調整 */
+  height: 100%;     /* ← JSで親(#pageAdmin)に高さを与えるので、ここは100% */
+  min-height: 0;    /* ← 子スクロールを効かせるおまじない */
 }
 
-/* 上段：未払い一覧は縦に伸びて中だけスクロール */
+/* 上段：未払い一覧（伸縮＋内側スクロール） */
 #payoutsListBox{
   flex: 1 1 auto;
-  min-height: 0;              /* これが無いと子のoverflowが効かない */
+  min-height: 0;
   display:flex;
   flex-direction:column;
 }
 
-/* 下段：履歴は高さ固定で、ページ下部に居座る */
+/* 下段：履歴（固定高さ＋独立スクロール） */
 #payoutsHistoryBox{
-  flex: 0 0 260px;            /* 固定高さ（お好みで変更） */
+  flex: 0 0 260px;    /* 固定高（好みで調整可） */
+  min-height: 0;
 }
 
-/* パネル自体もフレックス化して“中身だけ”スクロール可能に */
+/* パネル自体は列レイアウトで、中身だけスクロール */
 .payoutsPanel{
   display:flex;
   flex-direction:column;
-  min-height:0;               /* 重要：子のoverflowを有効にする */
+  min-height:0;
 }
 
-/* 実際にスクロールする領域 */
+/* 実際にスクロールする領域（上下とも独立スクロール） */
 .payoutsScroll{
   flex: 1 1 auto;
-  overflow:auto;
-  max-height:none;            /* 高さ制限を解除して親に任せる */
+  overflow: auto;
+  max-height: none;
 }
 
-/* 黒い仕切り線は出さない（念のため） */
-#adminPayouts hr,
-#adminPayouts .big-divider{
-  display: none !important;
+/* 未払いページ表示中は親ページをスクロールさせない */
+#pageAdmin.payouts-fit{
+  overflow: hidden;         /* ← ページ全体スクロールを殺す */
+  height: calc(100dvh - var(--headerH, 60px)); /* ← JSで --headerH を実測代入 */
 }
 
 
@@ -736,6 +741,8 @@ button.danger{background:#dc2626}
   // ★ 未払い者ページだけは flex、それ以外は block
   const el = document.getElementById(target);
   if (el) el.style.display = (target === 'adminPayouts') ? 'flex' : 'block';
+    // ★ 追加：親ページのスクロールON/OFFを切り替え
+fitAdminPayouts(target === 'adminPayouts');
 }
 
 
@@ -756,6 +763,29 @@ button.danger{background:#dc2626}
         if (el) el.style.display = 'none';
       });
     }
+
+    // —— 未払いページ用：親(#pageAdmin)に実測高さを与える
+function fitAdminPayouts(on){
+  const page = document.getElementById('pageAdmin');
+  const header = document.querySelector('header');
+  if(!page || !header) return;
+
+  if(on){
+    // ヘッダーの実測高をCSS変数へ
+    const h = Math.ceil(header.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--headerH', h + 'px');
+    // ページ全体スクロールを殺しつつ、子に高さを渡す
+    page.classList.add('payouts-fit');
+  }else{
+    page.classList.remove('payouts-fit');
+  }
+}
+
+// 画面サイズ変化時も反映（未払いページ表示中のみ）
+window.addEventListener('resize', ()=>{
+  if (location.hash.startsWith('#admin-payouts')) fitAdminPayouts(true);
+});
+
   }
 
 // Firestoreへ席状態を書き込む（1卓分）
@@ -3357,6 +3387,9 @@ window.addEventListener('hashchange', ()=>{
   // 追加：未払い者ページ
 if (location.hash.startsWith('#admin-payouts')) {
   window.renderPayoutsPage && renderPayoutsPage();
+  fitAdminPayouts(true);           // ← これを追加
+} else {
+  fitAdminPayouts(false);          // ← 未払いページを離れたら解除
 }
 
 });
