@@ -401,6 +401,40 @@ button.danger{background:#dc2626}
   .rosterGrid{ grid-template-columns:1fr; }
 }
 
+    /* ===== Analytics（集計） ===== */
+.anaFilter{
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+  margin-bottom:10px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
+}
+.anaFilter label{ display:inline-flex; gap:6px; align-items:center; background:#f8fafc; border:1px solid #e5e7eb; padding:6px 8px; border-radius:8px; }
+.anaFilter input[type="date"]{ border:none; background:transparent; padding:4px; }
+.anaQuick{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+.anaH3{ margin:6px 0 6px; font-size:15px; }
+.anaH4{ margin:6px 0 6px; font-size:14px; color:#475569 }
+.anaBlock{ margin-top:12px; }
+
+.metricGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.metricCard{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px; }
+.metricValue{ font-size:20px; font-weight:800; }
+.metricNote{ font-size:12px; color:#64748b; }
+
+@media(max-width:900px){ .metricGrid{ grid-template-columns:1fr 1fr; } }
+
+.anaTwoCol{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:900px){ .anaTwoCol{ grid-template-columns:1fr; } }
+
+.tableLike{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+.tHead, .tRow{ display:grid; grid-template-columns: 1fr 100px 120px; gap:8px; }
+.tHead{ background:#f8fafc; font-weight:700; }
+.tCell{ padding:8px; border-bottom:1px dashed #eef2f6; }
+.tRight{ text-align:right; }
+.barRow{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px dashed #eef2f6; }
+.barLabel{ flex:0 0 180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.barWrap{ flex:1 1 auto; background:#f1f5f9; border-radius:8px; overflow:hidden; height:14px; }
+.barFill{ height:100%; background:#cbd5e1; }
+.barVal{ flex:0 0 100px; text-align:right; }
+
+
   </style>
 </head>
 
@@ -516,6 +550,8 @@ button.danger{background:#dc2626}
       <button type="button" class="sales-pill" onclick="location.hash='#admin-sales'">売上一覧</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-payroll'">給料支払い</button>
       <button type="button" class="sales-pill" onclick="location.hash='#admin-payouts'">未払い者</button>
+      <button type="button" class="sales-pill" onclick="location.hash='#admin-analytics'">データ（集計）</button>
+
     </div>
   </div>
 
@@ -661,6 +697,64 @@ button.danger{background:#dc2626}
   </div>
 </div>
 
+  <!-- ===== データ（集計） ===== -->
+<div id="adminAnalytics" class="sales-card" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <button type="button" class="sales-pill" onclick="location.hash='#admin'">← 戻る</button>
+    <h2 style="margin:0">データ（集計）</h2>
+  </div>
+
+  <!-- 期間フィルタ -->
+  <div class="anaFilter">
+    <label>開始日 <input id="anaFrom" type="date"></label>
+    <label>終了日 <input id="anaTo" type="date"></label>
+    <button id="anaApply" type="button" class="sales-pill">適用</button>
+    <div class="anaQuick">
+      <button data-range="7"  type="button" class="sales-pill">直近7日</button>
+      <button data-range="30" type="button" class="sales-pill">直近30日</button>
+      <button data-range="90" type="button" class="sales-pill">直近90日</button>
+      <button data-range="0"  type="button" class="sales-pill">すべて</button>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div id="anaKpi" class="metricGrid"></div>
+
+  <!-- 人気商品 -->
+  <div class="anaBlock">
+    <h3 class="anaH3">よく売れている商品（数量 / 売上）</h3>
+    <div id="anaProducts"></div>
+  </div>
+
+  <!-- 個人別（キャスト/ボーイ） -->
+  <div class="anaBlock">
+    <h3 class="anaH3">個人の売上・起用率</h3>
+    <div class="anaTwoCol">
+      <div>
+        <h4 class="anaH4">キャスト</h4>
+        <div id="anaCast"></div>
+      </div>
+      <div>
+        <h4 class="anaH4">ボーイ</h4>
+        <div id="anaBoy"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 席別 -->
+  <div class="anaBlock">
+    <h3 class="anaH3">席ごとの件数 / 売上</h3>
+    <div id="anaSeats"></div>
+  </div>
+
+  <!-- 日別（2:00〜翌2:00） -->
+  <div class="anaBlock">
+    <h3 class="anaH3">日別推移（2:00〜翌2:00を1日）</h3>
+    <div id="anaDaily"></div>
+  </div>
+</div>
+
+
 
 
 
@@ -770,7 +864,7 @@ window.addEventListener('resize', ()=>{
   const h = hash || '#admin';
 
   // いったん全部隠す
-  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll','adminPayouts'].forEach(id=>{
+  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll','adminPayouts','adminAnalytics'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -784,6 +878,8 @@ window.addEventListener('resize', ()=>{
   else if (h.startsWith('#admin-sales')) target = 'adminSales';
   else if (h.startsWith('#admin-payroll')) target = 'adminPayroll';
   else if (h.startsWith('#admin-payouts')) target = 'adminPayouts';
+  else if (h.startsWith('#admin-analytics')) target = 'adminAnalytics';
+
 
   // ★ 未払い者ページだけは flex、それ以外は block
   const el = document.getElementById(target);
@@ -872,6 +968,11 @@ async function pushSeatToFS(s){
     if (sessionStorage.getItem(KEY) === '1' && location.hash.startsWith('#admin')) {
       showAdminSub(location.hash);
     }
+    // 追加：データ（集計）ページ
+if (location.hash.startsWith('#admin-analytics')) {
+  window.renderAnalytics && renderAnalytics();
+}
+
   });
 
   // URL直打ちで #admin-* のとき
@@ -2442,6 +2543,315 @@ function openSalesEditModal(rec){
     }
   });
 }
+
+  /* ========= データ（集計） ========= */
+
+// Firestore Timestamp → ms
+function tsToMs(ts){
+  if (!ts) return 0;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (typeof ts.seconds === 'number') return ts.seconds*1000;
+  if (ts instanceof Date) return ts.getTime();
+  return 0;
+}
+
+// 2:00区切りの営業日キー
+function bizKeyFromMs(ms){
+  if (!ms) return 'unknown';
+  const d = new Date(ms);
+  if (d.getHours() < 2) d.setDate(d.getDate()-1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd= String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
+// 合計/集計を算出
+function buildAnalytics(rows){
+  const prod = {};            // name -> {qty, revenue}
+  const cast = {};            // name -> {checks, revenue}
+  const boy  = {};            // name -> {checks, revenue}
+  const seat = {};            // label/id -> {checks, revenue}
+  const daily= {};            // bizKey -> {count, revenue}
+
+  let salesSum = 0;
+  let checkCount = 0;
+
+  for (const r of rows){
+    const total = Number(r.total||0);
+    salesSum += total;
+    checkCount++;
+
+    // products
+    (Array.isArray(r.rows)?r.rows:[]).forEach(it=>{
+      if (!it || !it.product) return;
+      const name = String(it.product);
+      const qty  = Number(it.qty||0);
+      const amt  = Number(it.unitPrice||0)*qty;
+      (prod[name] ||= {qty:0, revenue:0});
+      prod[name].qty     += qty;
+      prod[name].revenue += amt;
+    });
+
+    // cast
+    (Array.isArray(r.cast)?r.cast:[]).forEach(n=>{
+      const name = String(n||'').trim(); if(!name) return;
+      (cast[name] ||= {checks:0, revenue:0});
+      cast[name].checks  += 1;
+      cast[name].revenue += total * 0.7 / Math.max(1, r.cast.length); // 便宜上：配分基準
+    });
+
+    // boy
+    if (r.boy){
+      const name = String(r.boy).trim();
+      (boy[name] ||= {checks:0, revenue:0});
+      boy[name].checks  += 1;
+      boy[name].revenue += total * 0.2; // 便宜上：配分基準
+    }
+
+    // seat
+    const label = r.seatLabel || r.seatId || '';
+    if (label){
+      (seat[label] ||= {checks:0, revenue:0});
+      seat[label].checks  += 1;
+      seat[label].revenue += total;
+    }
+
+    // daily
+    const k = bizKeyFromMs(tsToMs(r.createdAt));
+    (daily[k] ||= {count:0, revenue:0});
+    daily[k].count  += 1;
+    daily[k].revenue+= total;
+  }
+
+  const avg = checkCount ? Math.round(salesSum / checkCount) : 0;
+
+  // 並び替え用
+  const objToSorted = (obj, by) => Object.entries(obj).map(([name,v])=>({name,...v}))
+    .sort((a,b)=> Number(b[by]||0) - Number(a[by]||0));
+
+  return {
+    kpi: { salesSum, checkCount, avg },
+    productsByQty: objToSorted(prod,'qty'),
+    productsByRev: objToSorted(prod,'revenue'),
+    castByRev:     objToSorted(cast,'revenue'),
+    castByUse:     objToSorted(cast,'checks'),
+    boyByRev:      objToSorted(boy,'revenue'),
+    boyByUse:      objToSorted(boy,'checks'),
+    seatByRev:     objToSorted(seat,'revenue'),
+    seatByUse:     objToSorted(seat,'checks'),
+    daily: Object.entries(daily).map(([day,v])=>({day, ...v}))
+      .sort((a,b)=> a.day < b.day ? 1 : -1)
+  };
+}
+
+// 数値 → 通貨
+const fmtYen = n => '¥' + Number(n||0).toLocaleString();
+
+// シンプルバー描画
+function barTable(list, {labelKey='name', valueKey='revenue', valueFmt=fmtYen, maxRows=20}={}){
+  if (!list || !list.length) return `<div style="color:#64748b">（データなし）</div>`;
+  const top = list.slice(0, maxRows);
+  const max = Math.max(...top.map(x=>Number(x[valueKey]||0)));
+  const pct = v => max ? Math.round(100*Number(v||0)/max) : 0;
+  return `
+    <div class="tableLike">
+      ${top.map(x=>`
+        <div class="barRow">
+          <div class="barLabel" title="${x[labelKey]}">${x[labelKey]}</div>
+          <div class="barWrap"><div class="barFill" style="width:${pct(x[valueKey])}%"></div></div>
+          <div class="barVal">${valueFmt(x[valueKey])}</div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function gridTable(list, {cols, maxRows=50}){
+  if (!list || !list.length) return `<div style="color:#64748b">（データなし）</div>`;
+  const top = list.slice(0, maxRows);
+  return `
+    <div class="tableLike">
+      <div class="tHead">
+        ${cols.map(c=>`<div class="tCell ${c.right?'tRight':''}">${c.label}</div>`).join('')}
+      </div>
+      ${top.map(x=>`
+        <div class="tRow">
+          ${cols.map(c=>{
+            const v = (typeof c.get==='function') ? c.get(x) : x[c.key];
+            return `<div class="tCell ${c.right?'tRight':''}">${v}</div>`;
+          }).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// 期間フィルタ
+function filterByRange(all){
+  const fromEl = document.getElementById('anaFrom');
+  const toEl   = document.getElementById('anaTo');
+  const from = fromEl?.value ? new Date(fromEl.value+'T00:00:00').getTime() : null;
+  const to   = toEl?.value   ? new Date(toEl.value  +'T23:59:59').getTime() : null;
+  return all.filter(r=>{
+    const t = tsToMs(r.createdAt);
+    if (from && t < from) return false;
+    if (to   && t > to)   return false;
+    return true;
+  });
+}
+
+// 初期レンダリング
+function renderAnalytics(){
+  const root = document.getElementById('adminAnalytics');
+  if (!root) return;
+
+  // 初期日付（直近30日）
+  const fromEl = document.getElementById('anaFrom');
+  const toEl   = document.getElementById('anaTo');
+  if (fromEl && !fromEl.value){
+    const toD = new Date(); const fromD = new Date(); fromD.setDate(toD.getDate()-30);
+    const fmt = d => d.toISOString().slice(0,10);
+    fromEl.value = fmt(fromD);
+    toEl.value   = fmt(toD);
+  }
+
+  // 現在の全売上 → 期間フィルタ
+  const rows = filterByRange(window.SALES_ROWS_CACHE || []);
+  const A = buildAnalytics(rows);
+
+  // KPI
+  const kpiBox = document.getElementById('anaKpi');
+  if (kpiBox){
+    kpiBox.innerHTML = `
+      <div class="metricCard">
+        <div class="metricNote">期間合計売上</div>
+        <div class="metricValue">${fmtYen(A.kpi.salesSum)}</div>
+      </div>
+      <div class="metricCard">
+        <div class="metricNote">会計件数</div>
+        <div class="metricValue">${A.kpi.checkCount.toLocaleString()} 件</div>
+      </div>
+      <div class="metricCard">
+        <div class="metricNote">平均会計額</div>
+        <div class="metricValue">${fmtYen(A.kpi.avg)}</div>
+      </div>
+      <div class="metricCard">
+        <div class="metricNote">対象期間</div>
+        <div class="metricValue">${
+          (document.getElementById('anaFrom')?.value || '—')
+        } 〜 ${(document.getElementById('anaTo')?.value || '—')}</div>
+      </div>
+    `;
+  }
+
+  // 人気商品
+  const proBox = document.getElementById('anaProducts');
+  if (proBox){
+    proBox.innerHTML = `
+      <div style="display:grid; gap:12px">
+        <div>
+          <div style="font-size:12px;color:#64748b;margin-bottom:4px">数量 Top</div>
+          ${barTable(A.productsByQty, {labelKey:'name', valueKey:'qty', valueFmt:(v)=> (Number(v||0)).toLocaleString()+' 点'})}
+        </div>
+        <div>
+          <div style="font-size:12px;color:#64748b;margin:8px 0 4px">売上 Top</div>
+          ${barTable(A.productsByRev, {labelKey:'name', valueKey:'revenue'})}
+        </div>
+      </div>
+    `;
+  }
+
+  // 個人：キャスト
+  const castBox = document.getElementById('anaCast');
+  if (castBox){
+    castBox.innerHTML = gridTable(A.castByRev, {
+      cols: [
+        {label:'名前', key:'name'},
+        {label:'起用回数', get:(x)=> `${(x.checks||0).toLocaleString()} 回`, right:true},
+        {label:'配当目安', get:(x)=> fmtYen(x.revenue||0), right:true},
+      ],
+      maxRows: 50
+    });
+  }
+  // 個人：ボーイ
+  const boyBox = document.getElementById('anaBoy');
+  if (boyBox){
+    boyBox.innerHTML = gridTable(A.boyByRev, {
+      cols: [
+        {label:'名前', key:'name'},
+        {label:'担当回数', get:(x)=> `${(x.checks||0).toLocaleString()} 回`, right:true},
+        {label:'配当目安', get:(x)=> fmtYen(x.revenue||0), right:true},
+      ],
+      maxRows: 50
+    });
+  }
+
+  // 席別
+  const seatBox = document.getElementById('anaSeats');
+  if (seatBox){
+    const tabs = `
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button id="seatTabUse" class="sales-pill">件数</button>
+        <button id="seatTabRev" class="sales-pill">売上</button>
+      </div>`;
+    const wrapId = 'seatWrap';
+    seatBox.innerHTML = tabs + `<div id="${wrapId}"></div>`;
+    const wrap = document.getElementById(wrapId);
+    const renderSeat = (mode)=>{
+      if (mode==='use'){
+        wrap.innerHTML = barTable(A.seatByUse, {labelKey:'name', valueKey:'checks', valueFmt:(v)=> (Number(v||0)).toLocaleString()+' 件'});
+      }else{
+        wrap.innerHTML = barTable(A.seatByRev, {labelKey:'name', valueKey:'revenue'});
+      }
+    };
+    renderSeat('use');
+    seatBox.querySelector('#seatTabUse')?.addEventListener('click', ()=>renderSeat('use'));
+    seatBox.querySelector('#seatTabRev')?.addEventListener('click', ()=>renderSeat('rev'));
+  }
+
+  // 日別
+  const dailyBox = document.getElementById('anaDaily');
+  if (dailyBox){
+    dailyBox.innerHTML = gridTable(A.daily, {
+      cols: [
+        {label:'営業日', key:'day'},
+        {label:'件数',   get:(x)=> `${(x.count||0).toLocaleString()} 件`, right:true},
+        {label:'売上',   get:(x)=> fmtYen(x.revenue||0), right:true},
+      ],
+      maxRows: 180
+    });
+  }
+
+  // フィルタのイベント
+  const apply = ()=> renderAnalytics();
+  document.getElementById('anaApply')?.addEventListener('click', apply);
+  document.querySelectorAll('.anaQuick button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const r = Number(b.dataset.range||0);
+      const fromEl = document.getElementById('anaFrom');
+      const toEl   = document.getElementById('anaTo');
+      const toD = new Date();
+      const fmt = d => d.toISOString().slice(0,10);
+      if (r === 0){ fromEl.value = ''; toEl.value = ''; }
+      else{
+        const fromD = new Date(); fromD.setDate(toD.getDate()-r+1);
+        fromEl.value = fmt(fromD);
+        toEl.value   = fmt(toD);
+      }
+      renderAnalytics();
+    });
+  });
+}
+
+// 売上スナップショット更新のたびに、表示中なら再描画
+// （既存の onSnapshot(salesCol, ...) の末尾に近い所に置くのが安全）
+if (!window.__ANA_WATCHED__) {
+  window.__ANA_WATCHED__ = true;
+  window.addEventListener('hashchange', ()=>{
+    if (location.hash.startsWith('#admin-analytics')) renderAnalytics();
+  });
+}
+
 
 
 
