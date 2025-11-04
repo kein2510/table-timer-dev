@@ -296,30 +296,46 @@ button.danger{background:#dc2626}
   display:flex; align-items:center; gap:8px; margin-bottom:6px;
 }
 /* 未払いページの全体を縦フレックスにして高さ配分を決める */
-/* 未払い/履歴の2段パネル */
-#adminPayouts{ /* ← display 指定はしない（JSで切替える） */ }
-
-#payoutsListBox{           /* 上段：未払い */
-  flex:1 1 auto;
-  display:flex; flex-direction:column;
+/* 未払い者ページをビューポート高にフィットさせる */
+#adminPayouts{
+  display:flex;               /* JSでもflexにしてるがCSSでも明示 */
+  flex-direction:column;
+  min-height: calc(100dvh - 140px); /* ヘッダー分の余白。必要なら数字を微調整 */
 }
 
-#payoutsHistoryBox{        /* 下段：履歴（固定高さ） */
-  flex:0 0 260px;
-  display:flex; flex-direction:column;
+/* 上段：未払い一覧は縦に伸びて中だけスクロール */
+#payoutsListBox{
+  flex: 1 1 auto;
+  min-height: 0;              /* これが無いと子のoverflowが効かない */
+  display:flex;
+  flex-direction:column;
 }
 
+/* 下段：履歴は高さ固定で、ページ下部に居座る */
+#payoutsHistoryBox{
+  flex: 0 0 260px;            /* 固定高さ（お好みで変更） */
+}
+
+/* パネル自体もフレックス化して“中身だけ”スクロール可能に */
 .payoutsPanel{
-  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
-  display:flex; flex-direction:column; min-height:0;
+  display:flex;
+  flex-direction:column;
+  min-height:0;               /* 重要：子のoverflowを有効にする */
 }
-.payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 
+/* 実際にスクロールする領域 */
 .payoutsScroll{
-  flex:1 1 auto;
+  flex: 1 1 auto;
   overflow:auto;
-  max-height:none;
+  max-height:none;            /* 高さ制限を解除して親に任せる */
 }
+
+/* 黒い仕切り線は出さない（念のため） */
+#adminPayouts hr,
+#adminPayouts .big-divider{
+  display: none !important;
+}
+
 
 /* 行表示 */
 .payoutRow{ padding:8px 0; border-top:1px dashed #e5e7eb; }
