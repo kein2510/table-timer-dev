@@ -288,14 +288,21 @@ button.danger{background:#dc2626}
   padding: 6px 10px;
 }
 
-    /* 未払い者ページの赤い仕切り線 */
-.payouts-sep{
-  border: none;
-  height: 4px;
-  background: linear-gradient(90deg, #dc2626, #ef4444);
-  border-radius: 999px;
-  margin: 16px 0;
+/* 未払い/履歴の2段パネル */
+.payoutsPanel{
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
 }
+.payoutsHead{
+  display:flex; align-items:center; gap:8px; margin-bottom:6px;
+}
+.payoutsScroll{
+  max-height:calc(var(--payoutRowH,56px)*6 + 8px); /* だいたい6行見える高さ */
+  overflow:auto; overscroll-behavior:contain;
+}
+
+/* 行の見た目を安定化（高さ測定用に余白統一） */
+.payoutRow{ padding:8px 0; border-top:1px dashed #e5e7eb; }
+
 
 
 
@@ -1501,9 +1508,8 @@ function renderPayoutsPage(){
   const histBox = document.getElementById('payoutsHistoryBox');
   if (!box || !histBox) return;
 
-  // すべての「確定済み給与」から候補を集める
-  const items = [];
-  // PAYROLL_INDEX は onSnapshot(payrollCol) で doc 全体を保持済み
+  // 1) PAYROLL_INDEX から「未払い候補」を作り、PAYOUTS_INDEX で paid 状況を参照
+  const raw = []; // {key, day, name, amount}
   Object.values(PAYROLL_INDEX||{}).forEach(({doc})=>{
     if (!doc?.entries || !Array.isArray(doc.entries)) return;
     const day = doc.day || '';
@@ -1512,100 +1518,128 @@ function renderPayoutsPage(){
       const amount = Number(e.amount||0);
       const key = `${day}__${name}`.replace(/\//g,'／');
       const paidRec = PAYOUTS_INDEX[key];
-      // paid === true なら除外、未作成 or false を「未払い」とみなす
       if (!paidRec || paidRec.paid !== true){
-        items.push({ key, day, name, amount });
+        raw.push({ key, day, name, amount });
       }
     });
   });
 
-  // 名前昇順、同名は新しい日が上
-  items.sort((a,b)=>{
-    const n = a.name.localeCompare(b.name,'ja');
-    if (n!==0) return n;
-    return b.day.localeCompare(a.day);
-  });
+  // 2) 同名を集約（複数日の未払いをまとめる）
+  //    map[name] = { name, total, keys:[{day, amount, key}, ...] }
+  const grouped = {};
+  for (const r of raw){
+    const g = (grouped[r.name] ||= { name:r.name, total:0, keys:[] });
+    g.total += Number(r.amount||0);
+    g.keys.push({ day:r.day, amount:Number(r.amount||0), key:r.key });
+  }
 
-  // 上段：未払いリスト
+  // 表示用配列（名前昇順）
+  const items = Object.values(grouped)
+    .sort((a,b)=> a.name.localeCompare(b.name,'ja'));
+
+  // 3) 上段：未払い（集約版）パネル
   if (!items.length){
-    box.innerHTML = `<div style="color:#64748b">（未払いはありません）</div>`;
-    
+    box.innerHTML = `
+      <div class="payoutsPanel">
+        <div class="payoutsHead">
+          <span class="pill">確定済みから自動集計</span>
+        </div>
+        <div style="color:#64748b">（未払いはありません）</div>
+      </div>`;
   }else{
-    const rows = items.map(it=>`
-      <div class="stRow" data-key="${esc(it.key)}" style="grid-template-columns: 2fr 1fr auto auto; gap:12px;">
+    const rowsHTML = items.map(it=>`
+      <div class="stRow payoutRow" data-name="${esc(it.name)}" style="grid-template-columns: 2fr 1fr auto auto; gap:12px;">
         <div>
           <div style="font-weight:700">${esc(it.name)}</div>
-          <div style="font-size:12px;color:#64748b">${bizDayLabel(it.day)}</div>
+          <div style="font-size:12px;color:#64748b">未払い日数：${it.keys.length} 日</div>
         </div>
-        <div style="text-align:right;font-weight:800">¥${it.amount.toLocaleString()}</div>
+        <div style="text-align:right;font-weight:800">¥${it.total.toLocaleString()}</div>
         <input class="memo" placeholder="メモ（任意）">
         <button class="pay stBtn sales-pill" type="button">支払済にする</button>
       </div>
     `).join('');
 
     box.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-        <span class="pill">確定済みから自動集計</span>
-        <button id="payoutsPayAll" class="sales-pill" type="button">表示中を全て支払済に</button>
+      <div class="payoutsPanel">
+        <div class="payoutsHead">
+          <span class="pill">確定済みから自動集計</span>
+          <button id="payoutsPayAll" class="sales-pill" type="button">表示中を全て支払済に</button>
+        </div>
+        <div id="payoutsListScroll" class="payoutsScroll admin-st-list">${rowsHTML}</div>
       </div>
-      <div class="admin-st-list">${rows}</div>
     `;
-    // 未払いリストの下に赤い仕切り線を追加
-box.insertAdjacentHTML('beforeend', '<hr class="payouts-sep">');
 
+    // 行高を計測して6行ぶんの高さを安定化
+    const first = box.querySelector('.payoutRow');
+    if (first){
+      const h = Math.ceil(first.getBoundingClientRect().height);
+      box.style.setProperty('--payoutRowH', h + 'px');
+    }
 
-    // 個別ボタン
-box.querySelectorAll('.stRow .pay').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const row = btn.closest('.stRow');
-    const key = row?.dataset.key || '';
-    const rec = items.find(x=>x.key===key);
-    const note = (row.querySelector('.memo')?.value || '').trim();
-    if (!rec) return;
+    // 個別ボタン：同名の全キーに対して paid=true
+    box.querySelectorAll('.stRow .pay').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const row  = btn.closest('.stRow');
+        const name = row?.dataset.name || '';
+        const memo = (row.querySelector('.memo')?.value || '').trim();
+        if (!name) return;
 
-    btn.disabled = true;
-    const old = btn.textContent;
-    btn.textContent = '更新中…';
+        const pack = items.find(x=>x.name===name);
+        if (!pack || !pack.keys?.length) return;
 
-    const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-    if (ok) row.remove();            // ★ 成功時だけ消す
+        btn.disabled = true;
+        const old = btn.textContent;
+        btn.textContent = '更新中…';
 
-    btn.disabled = false;
-    btn.textContent = old;
-  });
-});
+        let okAll = true;
+        for (const k of pack.keys){
+          const ok = await markPayoutPaid({ day:k.day, name, amount:k.amount, note:memo });
+          if (!ok) okAll = false;
+        }
+        if (okAll) row.remove();
 
+        btn.disabled = false;
+        btn.textContent = old;
+      });
+    });
 
-    // 一括
-box.querySelector('#payoutsPayAll')?.addEventListener('click', async ()=>{
-  if (!confirm(`表示中の ${items.length} 件を支払済にします。よろしいですか？`)) return;
+    // 一括：表示中の全“名前”に対して、それぞれの全キーを paid=true
+    box.querySelector('#payoutsPayAll')?.addEventListener('click', async ()=>{
+      if (!confirm(`表示中の ${items.length} 名ぶんを支払済にします。よろしいですか？`)) return;
 
-  const rows = [...box.querySelectorAll('.stRow')];
-  let okCount = 0;
+      const rows = [...box.querySelectorAll('.stRow')];
+      let okCount = 0;
 
-  for (const row of rows){
-    const key  = row.dataset.key || '';
-    const rec  = items.find(x=>x.key===key);
-    if (!rec) continue;
-    const note = (row.querySelector('.memo')?.value || '').trim();
+      for (const row of rows){
+        const name = row.dataset.name || '';
+        const memo = (row.querySelector('.memo')?.value || '').trim();
+        const pack = items.find(x=>x.name===name);
+        if (!pack || !pack.keys?.length) continue;
 
-    const ok = await markPayoutPaid({day:rec.day, name:rec.name, amount:rec.amount, note});
-    if (ok) { row.remove(); okCount++; }   // ★ 成功した分だけ削除
+        let okAll = true;
+        for (const k of pack.keys){
+          const ok = await markPayoutPaid({ day:k.day, name, amount:k.amount, note:memo });
+          if (!ok) okAll = false;
+        }
+        if (okAll){ row.remove(); okCount++; }
+      }
+      alert(`${okCount} 名を更新しました`);
+    });
   }
 
-  alert(`${okCount} 件を更新しました`);
-});
-
-  }
-
-  // 下段：履歴（直近20件）
-  if (!PAYOUTS_HISTORY.length){
-    histBox.innerHTML = `<div style="color:#64748b">（履歴はまだありません）</div>`;
+  // 4) 下段：履歴（最大20件表示）パネル（自前スクロール）
+  const hist = (PAYOUTS_HISTORY||[]).slice(0,20);
+  if (!hist.length){
+    histBox.innerHTML = `
+      <div class="payoutsPanel">
+        <div class="payoutsHead"><div style="font-weight:700">支払履歴</div></div>
+        <div style="color:#64748b">（履歴はまだありません）</div>
+      </div>`;
   }else{
-    const lines = PAYOUTS_HISTORY.slice(0,20).map(h=>{
+    const lines = hist.map(h=>{
       const when = h.paidAt ? h.paidAt.toLocaleString('ja-JP',{hour12:false}) : '';
       return `
-        <div style="padding:6px 0; border-top:1px dashed #e5e7eb; display:grid; grid-template-columns: 1fr auto auto; gap:8px;">
+        <div class="payoutRow" style="display:grid; grid-template-columns: 1fr auto auto; gap:8px;">
           <div>
             <div><b>${esc(h.name)}</b> / ${bizDayLabel(h.day)}</div>
             ${h.note ? `<div style="font-size:12px;color:#64748b">メモ：${esc(h.note)}</div>` : ''}
@@ -1615,12 +1649,23 @@ box.querySelector('#payoutsPayAll')?.addEventListener('click', async ()=>{
         </div>
       `;
     }).join('');
+
     histBox.innerHTML = `
-      <div style="font-weight:700;margin-bottom:6px">支払履歴</div>
-      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px">${lines}</div>
+      <div class="payoutsPanel">
+        <div class="payoutsHead"><div style="font-weight:700">支払履歴</div></div>
+        <div id="payoutsHistScroll" class="payoutsScroll">${lines}</div>
+      </div>
     `;
+
+    // 行高を計測して6行ぶんの高さを安定化
+    const firstH = histBox.querySelector('.payoutRow');
+    if (firstH){
+      const h = Math.ceil(firstH.getBoundingClientRect().height);
+      histBox.style.setProperty('--payoutRowH', h + 'px');
+    }
   }
 }
+
 window.renderPayoutsPage = renderPayoutsPage;
 
 
