@@ -295,13 +295,60 @@ button.danger{background:#dc2626}
 .payoutsHead{
   display:flex; align-items:center; gap:8px; margin-bottom:6px;
 }
-.payoutsScroll{
-  max-height:calc(var(--payoutRowH,56px)*6 + 8px); /* だいたい6行見える高さ */
-  overflow:auto; overscroll-behavior:contain;
+/* 未払いページの全体を縦フレックスにして高さ配分を決める */
+#adminPayouts{
+  display:flex !important;
+  flex-direction:column;
+  min-height:72vh;           /* 画面にそれなりの高さを確保 */
+  gap:12px;
 }
 
-/* 行の見た目を安定化（高さ測定用に余白統一） */
+/* 上段＝未払いゾーンは余った高さをすべて使う */
+#payoutsListBox{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+}
+
+/* 下段＝履歴は固定の高さ（お好みで調整） */
+#payoutsHistoryBox{
+  flex:0 0 260px;            /* ←履歴の見える高さ。220〜320pxで好み調整 */
+  display:flex;
+  flex-direction:column;
+}
+
+/* パネル内のスクロール領域はフレックスで“残り高さ”を埋める */
+#payoutsListBox .payoutsPanel,
+#payoutsHistoryBox .payoutsPanel{
+  display:flex;
+  flex-direction:column;
+  min-height:0;              /* 子のflexに高さを渡すための定番 */
+}
+
+/* ここが実際のスクロール面。max-height縛りを撤廃してflex:1に */
+#payoutsListBox .payoutsScroll{
+  flex:1 1 auto;
+  overflow:auto;
+  max-height:none !important;
+}
+#payoutsHistoryBox .payoutsScroll{
+  flex:1 1 auto;
+  overflow:auto;
+  max-height:none !important;
+}
+
+/* 既存の “6行分” 指定は無効化（狭くなる原因だった） */
+.payoutsScroll{
+  max-height:none !important;
+}
+
+/* 体裁そのまま */
+.payoutsPanel{
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
+}
+.payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 .payoutRow{ padding:8px 0; border-top:1px dashed #e5e7eb; }
+
 
 
 
