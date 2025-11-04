@@ -297,52 +297,33 @@ button.danger{background:#dc2626}
 }
 /* 未払いページの全体を縦フレックスにして高さ配分を決める */
 /* 未払い/履歴の2段パネル */
-#adminPayouts{ display:flex !important; flex-direction:column; min-height:72vh; gap:12px; }
+#adminPayouts{ /* ← display 指定はしない（JSで切替える） */ }
 
 #payoutsListBox{           /* 上段：未払い */
-  flex:1 1 auto;           /* 余った高さを全部使う */
-  display:flex; flex-direction:column;
-}
-#payoutsHistoryBox{        /* 下段：履歴（固定高さ） */
-  flex:0 0 260px;          /* ←赤線目安くらいの固定高さ。お好みなら 220〜320px に調整可 */
+  flex:1 1 auto;
   display:flex; flex-direction:column;
 }
 
-.payoutsPanel{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; display:flex; flex-direction:column; min-height:0; }
+#payoutsHistoryBox{        /* 下段：履歴（固定高さ） */
+  flex:0 0 260px;
+  display:flex; flex-direction:column;
+}
+
+.payoutsPanel{
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px;
+  display:flex; flex-direction:column; min-height:0;
+}
 .payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 
-.payoutsScroll{            /* ここが実際にスクロールする領域 */
+.payoutsScroll{
   flex:1 1 auto;
   overflow:auto;
-  max-height:none !important; /* 既存の“6行まで”などを無効化 */
+  max-height:none;
 }
 
-
-/* パネル内のスクロール領域はフレックスで“残り高さ”を埋める */
-#payoutsListBox .payoutsPanel,
-#payoutsHistoryBox .payoutsPanel{
-  display:flex;
-  flex-direction:column;
-  min-height:0;              /* 子のflexに高さを渡すための定番 */
-}
-
-/* ここが実際のスクロール面。max-height縛りを撤廃してflex:1に */
-#payoutsListBox .payoutsScroll{
-  flex:1 1 auto;
-  overflow:auto;
-  max-height:none !important;
-}
-#payoutsHistoryBox .payoutsScroll{
-  flex:1 1 auto;
-  overflow:auto;
-  max-height:none !important;
-}
-
-
-
-/* 体裁そのまま */
-
+/* 行表示 */
 .payoutRow{ padding:8px 0; border-top:1px dashed #e5e7eb; }
+
 
 
 
@@ -619,10 +600,22 @@ button.danger{background:#dc2626}
   </div>
 
   <!-- 上：未払いリスト（ここを縦いっぱい使ってスクロール） -->
-  <div id="payoutsListBox"></div>
+  <div id="payoutsListBox">
+    <div class="payoutsPanel">
+  <div class="payoutsHead">…</div>
+  <div id="payoutsListScroll" class="payoutsScroll admin-st-list">…未払い一覧…</div>
+</div>
+
+  </div>
 
   <!-- 下：履歴（固定高さ・独立スクロール） -->
-  <div id="payoutsHistoryBox" style="margin-top:12px"></div>
+  <div id="payoutsHistoryBox" style="margin-top:12px">
+    <div class="payoutsPanel">
+  <div class="payoutsHead">支払履歴</div>
+  <div id="payoutsHistScroll" class="payoutsScroll">…履歴…</div>
+</div>
+
+  </div>
 </div>
 
 
@@ -706,26 +699,29 @@ button.danger{background:#dc2626}
   // ===== 幹部UI：ログイン/表示コントロール（唯一の定義） =====
 
   function showAdminSub(hash) {
-    const h = hash || '#admin';
-    // いったん全部隠す
-    ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll','adminPayouts'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-    // どれを出すか
-    let target = 'adminHome';
-    if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
-    else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
-    else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
-    else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
-    else if (h.startsWith('#admin-sales')) target = 'adminSales';
-    else if (h.startsWith('#admin-payroll')) target = 'adminPayroll';
-    else if (h.startsWith('#admin-payouts')) target = 'adminPayouts';
+  const h = hash || '#admin';
 
+  // いったん全部隠す
+  ['adminHome','adminStaffList','adminStaffAdd','adminProdList','adminProdAdd','adminSales','adminPayroll','adminPayouts'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 
-    const el = document.getElementById(target);
-    if (el) el.style.display = 'block';
-  }
+  // どれを出すか
+  let target = 'adminHome';
+  if (h.startsWith('#admin-staff-list')) target = 'adminStaffList';
+  else if (h.startsWith('#admin-staff-add')) target = 'adminStaffAdd';
+  else if (h.startsWith('#admin-prod-list')) target = 'adminProdList';
+  else if (h.startsWith('#admin-prod-add')) target = 'adminProdAdd';
+  else if (h.startsWith('#admin-sales')) target = 'adminSales';
+  else if (h.startsWith('#admin-payroll')) target = 'adminPayroll';
+  else if (h.startsWith('#admin-payouts')) target = 'adminPayouts';
+
+  // ★ 未払い者ページだけは flex、それ以外は block
+  const el = document.getElementById(target);
+  if (el) el.style.display = (target === 'adminPayouts') ? 'flex' : 'block';
+}
+
 
   function applyState(open){
     const $locked   = document.getElementById('adminLocked');
