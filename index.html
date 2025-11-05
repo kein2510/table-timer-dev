@@ -15,7 +15,17 @@
       --staff-off-bg:#f1f5f9; --staff-off-border:#cbd5e1; --staff-off-text:#94a3b8;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
+    body{
+  margin:0;
+  color:var(--text);
+  font-family:system-ui,Segoe UI,Arial,sans-serif;
+
+  /* 画像 + 薄い暗幕の2枚重ね（文字の可読性UP） */
+  background:
+    linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
+    url('./alexandrite-haikei.png') center / cover no-repeat fixed;
+}
+
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;background:#1f1f23;color:#fff;position:sticky;top:0;z-index:5}
     header h1{margin:0;font-size:18px}
     .toolbar{display:flex;gap:8px;align-items:center}
@@ -372,6 +382,9 @@ button.danger{background:#dc2626}
 
 
 
+@media (max-width: 900px){
+  body{ background-attachment: scroll; } /* パララックスをオフ */
+}
 
 
 
