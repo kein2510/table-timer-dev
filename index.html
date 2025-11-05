@@ -2566,13 +2566,17 @@ function bizKeyFromMs(ms){
   return `${y}-${m}-${dd}`;
 }
 
-// 合計/集計を算出
+// 合計/集計を算出  ← この関数を差し替え
 function buildAnalytics(rows){
   const prod = {};            // name -> {qty, revenue}
   const cast = {};            // name -> {checks, revenue}
   const boy  = {};            // name -> {checks, revenue}
   const seat = {};            // label/id -> {checks, revenue}
   const daily= {};            // bizKey -> {count, revenue}
+
+  // ★ 追加：営業日ごとのキャスト売上（配当基準）
+  //   dailyCast[bizKey][castName] = revenue(Number)
+  const dailyCast = {};       
 
   let salesSum = 0;
   let checkCount = 0;
@@ -2581,6 +2585,8 @@ function buildAnalytics(rows){
     const total = Number(r.total||0);
     salesSum += total;
     checkCount++;
+
+    const bizKey = bizKeyFromMs(tsToMs(r.createdAt));
 
     // products
     (Array.isArray(r.rows)?r.rows:[]).forEach(it=>{
@@ -2593,20 +2599,31 @@ function buildAnalytics(rows){
       prod[name].revenue += amt;
     });
 
-    // cast
-    (Array.isArray(r.cast)?r.cast:[]).forEach(n=>{
-      const name = String(n||'').trim(); if(!name) return;
-      (cast[name] ||= {checks:0, revenue:0});
-      cast[name].checks  += 1;
-      cast[name].revenue += total * 0.7 / Math.max(1, r.cast.length); // 便宜上：配分基準
-    });
+    // cast（配分：total*0.7 を人数割り）
+    const casts = (Array.isArray(r.cast)?r.cast:[]).map(n=>String(n||'').trim()).filter(Boolean);
+    if (casts.length){
+      const per = total * 0.7 / casts.length;
 
-    // boy
+      // 全期間（既存）
+      casts.forEach(n=>{
+        (cast[n] ||= {checks:0, revenue:0});
+        cast[n].checks  += 1;
+        cast[n].revenue += per;
+      });
+
+      // ★ 日別
+      (dailyCast[bizKey] ||= {});
+      casts.forEach(n=>{
+        dailyCast[bizKey][n] = (dailyCast[bizKey][n] || 0) + per;
+      });
+    }
+
+    // boy（配分：total*0.2）
     if (r.boy){
       const name = String(r.boy).trim();
       (boy[name] ||= {checks:0, revenue:0});
       boy[name].checks  += 1;
-      boy[name].revenue += total * 0.2; // 便宜上：配分基準
+      boy[name].revenue += total * 0.2;
     }
 
     // seat
@@ -2618,15 +2635,14 @@ function buildAnalytics(rows){
     }
 
     // daily
-    const k = bizKeyFromMs(tsToMs(r.createdAt));
-    (daily[k] ||= {count:0, revenue:0});
-    daily[k].count  += 1;
-    daily[k].revenue+= total;
+    (daily[bizKey] ||= {count:0, revenue:0});
+    daily[bizKey].count  += 1;
+    daily[bizKey].revenue+= total;
   }
 
   const avg = checkCount ? Math.round(salesSum / checkCount) : 0;
 
-  // 並び替え用
+  // 並び替えユーティリティ
   const objToSorted = (obj, by) => Object.entries(obj).map(([name,v])=>({name,...v}))
     .sort((a,b)=> Number(b[by]||0) - Number(a[by]||0));
 
@@ -2641,9 +2657,13 @@ function buildAnalytics(rows){
     seatByRev:     objToSorted(seat,'revenue'),
     seatByUse:     objToSorted(seat,'checks'),
     daily: Object.entries(daily).map(([day,v])=>({day, ...v}))
-      .sort((a,b)=> a.day < b.day ? 1 : -1)
+      .sort((a,b)=> a.day < b.day ? 1 : -1),
+
+    // ★ 追加：日別キャスト売上（配当基準）
+    dailyCast
   };
 }
+
 
 // 数値 → 通貨
 const fmtYen = n => '¥' + Number(n||0).toLocaleString();
@@ -2809,7 +2829,7 @@ function renderAnalytics(){
     seatBox.querySelector('#seatTabRev')?.addEventListener('click', ()=>renderSeat('rev'));
   }
 
-  // 日別
+    // 日別
   const dailyBox = document.getElementById('anaDaily');
   if (dailyBox){
     dailyBox.innerHTML = gridTable(A.daily, {
@@ -2821,6 +2841,77 @@ function renderAnalytics(){
       maxRows: 180
     });
   }
+
+  /* ===== ここから追加：日別キャスト売上ランキング ===== */
+  (function(){
+    const root = document.getElementById('adminAnalytics');
+    if (!root) return;
+
+    // コンテナを用意
+    let blk = document.getElementById('anaDailyCast');
+    if (!blk){
+      blk = document.createElement('div');
+      blk.className = 'anaBlock';
+      blk.id = 'anaDailyCast';
+      root.appendChild(blk);
+    }
+
+    // 選択肢（営業日キー昇降）を用意
+    const dayKeys = Object.keys(A.dailyCast||{}).sort().reverse();
+    if (!dayKeys.length){
+      blk.innerHTML = `
+        <h3 class="anaH3">日別キャスト売上ランキング</h3>
+        <div style="color:#64748b">（該当データがありません）</div>
+      `;
+      return;
+    }
+
+    // 初期選択は最新日
+    const latest = dayKeys[0];
+
+    // レンダラ
+    const renderDay = (day)=>{
+      const map = (A.dailyCast||{})[day] || {};
+      const list = Object.entries(map).map(([name,rev])=>({name, revenue:Math.round(rev)}))
+        .sort((a,b)=> b.revenue - a.revenue);
+
+      const table = gridTable(list, {
+        cols: [
+          {label:'順位', get:(_,i)=> (i+1).toString()},
+          {label:'キャスト', key:'name'},
+          {label:'売上（配当基準）', get:(x)=> fmtYen(x.revenue||0), right:true}
+        ],
+        maxRows: 100
+      });
+
+      blk.querySelector('#anaDailyCastTable').innerHTML = table;
+      blk.querySelector('#anaDailyCastLabel').textContent = `${day}（2:00〜翌2:00）`;
+    };
+
+    // 初期UI
+    blk.innerHTML = `
+      <h3 class="anaH3">日別キャスト売上ランキング</h3>
+      <div class="anaFilter" style="margin-top:6px">
+        <label>営業日
+          <select id="anaDailyCastSel" style="border:none;background:transparent;padding:4px">
+            ${dayKeys.map(d=>`<option value="${d}">${d}</option>`).join('')}
+          </select>
+        </label>
+        <div style="margin-left:auto;font-size:12px;color:#64748b" id="anaDailyCastLabel"></div>
+      </div>
+      <div id="anaDailyCastTable"></div>
+    `;
+
+    // 変更イベント
+    const sel = blk.querySelector('#anaDailyCastSel');
+    sel.value = latest;
+    sel.addEventListener('change', ()=> renderDay(sel.value));
+
+    // 初期描画
+    renderDay(latest);
+  })();
+  /* ===== 追加ここまで ===== */
+
 
   // フィルタのイベント
   const apply = ()=> renderAnalytics();
