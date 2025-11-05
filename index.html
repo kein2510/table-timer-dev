@@ -2599,24 +2599,24 @@ function buildAnalytics(rows){
       prod[name].revenue += amt;
     });
 
-    // cast（配分：total*0.7 を人数割り）
-    const casts = (Array.isArray(r.cast)?r.cast:[]).map(n=>String(n||'').trim()).filter(Boolean);
-    if (casts.length){
-      const per = total * 0.7 / casts.length;
+    // cast（均等割：total を人数割り）
+const casts = (Array.isArray(r.cast)?r.cast:[]).map(n=>String(n||'').trim()).filter(Boolean);
+if (casts.length){
+  const per = total / casts.length;   // ← ここを 0.7 ではなく “全額の均等割り” に
+  // 期間合算
+  casts.forEach(n=>{
+    (cast[n] ||= {checks:0, revenue:0});
+    cast[n].checks  += 1;
+    cast[n].revenue += per;
+  });
 
-      // 全期間（既存）
-      casts.forEach(n=>{
-        (cast[n] ||= {checks:0, revenue:0});
-        cast[n].checks  += 1;
-        cast[n].revenue += per;
-      });
+  // 日別（ランキング用）
+  (dailyCast[bizKey] ||= {});
+  casts.forEach(n=>{
+    dailyCast[bizKey][n] = (dailyCast[bizKey][n] || 0) + per;
+  });
+}
 
-      // ★ 日別
-      (dailyCast[bizKey] ||= {});
-      casts.forEach(n=>{
-        dailyCast[bizKey][n] = (dailyCast[bizKey][n] || 0) + per;
-      });
-    }
 
     // boy（配分：total*0.2）
     if (r.boy){
@@ -2871,22 +2871,32 @@ function renderAnalytics(){
 
     // レンダラ
     const renderDay = (day)=>{
-      const map = (A.dailyCast||{})[day] || {};
-      const list = Object.entries(map).map(([name,rev])=>({name, revenue:Math.round(rev)}))
-        .sort((a,b)=> b.revenue - a.revenue);
+  const map = (A.dailyCast || {})[day] || {};
+  const list = Object.entries(map)
+    .map(([name,rev])=>({name, revenue:Math.round(rev)}))
+    .sort((a,b)=> b.revenue - a.revenue);
 
-      const table = gridTable(list, {
-        cols: [
-          {label:'順位', get:(_,i)=> (i+1).toString()},
-          {label:'キャスト', key:'name'},
-          {label:'売上（配当基準）', get:(x)=> fmtYen(x.revenue||0), right:true}
-        ],
-        maxRows: 100
-      });
+  const rowsHTML = list.length ? list.map((x,i)=>`
+    <div class="tRow">
+      <div class="tCell">${i+1}</div>
+      <div class="tCell">${x.name}</div>
+      <div class="tCell tRight">¥${Number(x.revenue||0).toLocaleString()}</div>
+    </div>
+  `).join('') : `<div style="color:#64748b;padding:8px">（該当データがありません）</div>`;
 
-      blk.querySelector('#anaDailyCastTable').innerHTML = table;
-      blk.querySelector('#anaDailyCastLabel').textContent = `${day}（2:00〜翌2:00）`;
-    };
+  blk.querySelector('#anaDailyCastTable').innerHTML = `
+    <div class="tableLike">
+      <div class="tHead">
+        <div class="tCell">順位</div>
+        <div class="tCell">キャスト</div>
+        <div class="tCell tRight">売上（均等割）</div>
+      </div>
+      ${rowsHTML}
+    </div>
+  `;
+  blk.querySelector('#anaDailyCastLabel').textContent = `${day}（2:00〜翌2:00）`;
+};
+
 
     // 初期UI
     blk.innerHTML = `
