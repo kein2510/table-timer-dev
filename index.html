@@ -720,6 +720,9 @@ button.danger{background:#dc2626}
   <!-- KPI -->
   <div id="anaKpi" class="metricGrid"></div>
 
+    <!-- 日別キャスト売上ランキング（ここに描画） -->
+  <div id="anaDailyCast" class="anaBlock"></div>
+
   <!-- 人気商品 -->
   <div class="anaBlock">
     <h3 class="anaH3">よく売れている商品（数量 / 売上）</h3>
@@ -2762,6 +2765,8 @@ function renderAnalytics(){
         } 〜 ${(document.getElementById('anaTo')?.value || '—')}</div>
       </div>
     `;
+    // ★ ここで呼ぶ：KPIの次にランキングを表示
+renderDailyCast(A);
   }
 
   // 人気商品
@@ -2842,84 +2847,70 @@ function renderAnalytics(){
     });
   }
 
-  /* ===== ここから追加：日別キャスト売上ランキング ===== */
-  (function(){
-    const root = document.getElementById('adminAnalytics');
-    if (!root) return;
+// 日別キャスト売上ランキング（指定のプレースホルダ #anaDailyCast に描画）
+function renderDailyCast(A){
+  const blk = document.getElementById('anaDailyCast');
+  if (!blk) return;
 
-    // コンテナを用意
-    let blk = document.getElementById('anaDailyCast');
-    if (!blk){
-      blk = document.createElement('div');
-      blk.className = 'anaBlock';
-      blk.id = 'anaDailyCast';
-      root.appendChild(blk);
-    }
-
-    // 選択肢（営業日キー昇降）を用意
-    const dayKeys = Object.keys(A.dailyCast||{}).sort().reverse();
-    if (!dayKeys.length){
-      blk.innerHTML = `
-        <h3 class="anaH3">日別キャスト売上ランキング</h3>
-        <div style="color:#64748b">（該当データがありません）</div>
-      `;
-      return;
-    }
-
-    // 初期選択は最新日
-    const latest = dayKeys[0];
-
-    // レンダラ
-    const renderDay = (day)=>{
-  const map = (A.dailyCast || {})[day] || {};
-  const list = Object.entries(map)
-    .map(([name,rev])=>({name, revenue:Math.round(rev)}))
-    .sort((a,b)=> b.revenue - a.revenue);
-
-  const rowsHTML = list.length ? list.map((x,i)=>`
-    <div class="tRow">
-      <div class="tCell">${i+1}</div>
-      <div class="tCell">${x.name}</div>
-      <div class="tCell tRight">¥${Number(x.revenue||0).toLocaleString()}</div>
-    </div>
-  `).join('') : `<div style="color:#64748b;padding:8px">（該当データがありません）</div>`;
-
-  blk.querySelector('#anaDailyCastTable').innerHTML = `
-    <div class="tableLike">
-      <div class="tHead">
-        <div class="tCell">順位</div>
-        <div class="tCell">キャスト</div>
-        <div class="tCell tRight">売上（均等割）</div>
-      </div>
-      ${rowsHTML}
-    </div>
-  `;
-  blk.querySelector('#anaDailyCastLabel').textContent = `${day}（2:00〜翌2:00）`;
-};
-
-
-    // 初期UI
+  const dayKeys = Object.keys(A.dailyCast || {}).sort().reverse();
+  if (!dayKeys.length){
     blk.innerHTML = `
       <h3 class="anaH3">日別キャスト売上ランキング</h3>
-      <div class="anaFilter" style="margin-top:6px">
-        <label>営業日
-          <select id="anaDailyCastSel" style="border:none;background:transparent;padding:4px">
-            ${dayKeys.map(d=>`<option value="${d}">${d}</option>`).join('')}
-          </select>
-        </label>
-        <div style="margin-left:auto;font-size:12px;color:#64748b" id="anaDailyCastLabel"></div>
-      </div>
-      <div id="anaDailyCastTable"></div>
+      <div style="color:#64748b">（該当データがありません）</div>
     `;
+    return;
+  }
 
-    // 変更イベント
-    const sel = blk.querySelector('#anaDailyCastSel');
-    sel.value = latest;
-    sel.addEventListener('change', ()=> renderDay(sel.value));
+  const latest = dayKeys[0];
 
-    // 初期描画
-    renderDay(latest);
-  })();
+  function renderDay(day){
+    const map = (A.dailyCast || {})[day] || {};
+    const list = Object.entries(map)
+      .map(([name,rev])=>({name, revenue:Math.round(rev)}))
+      .sort((a,b)=> b.revenue - a.revenue);
+
+    const rowsHTML = list.length ? list.map((x,i)=>`
+      <div class="tRow">
+        <div class="tCell">${i+1}</div>
+        <div class="tCell">${x.name}</div>
+        <div class="tCell tRight">¥${Number(x.revenue||0).toLocaleString()}</div>
+      </div>
+    `).join('')
+    : `<div style="color:#64748b;padding:8px">（該当データがありません）</div>`;
+
+    blk.querySelector('#anaDailyCastTable').innerHTML = `
+      <div class="tableLike">
+        <div class="tHead">
+          <div class="tCell">順位</div>
+          <div class="tCell">キャスト</div>
+          <div class="tCell tRight">売上（均等割）</div>
+        </div>
+        ${rowsHTML}
+      </div>
+    `;
+    blk.querySelector('#anaDailyCastLabel').textContent = `${day}（2:00〜翌2:00）`;
+  }
+
+  // 初期UI
+  blk.innerHTML = `
+    <h3 class="anaH3">日別キャスト売上ランキング</h3>
+    <div class="anaFilter" style="margin-top:6px">
+      <label>営業日
+        <select id="anaDailyCastSel" style="border:none;background:transparent;padding:4px">
+          ${dayKeys.map(d=>`<option value="${d}">${d}</option>`).join('')}
+        </select>
+      </label>
+      <div style="margin-left:auto;font-size:12px;color:#64748b" id="anaDailyCastLabel"></div>
+    </div>
+    <div id="anaDailyCastTable"></div>
+  `;
+
+  const sel = blk.querySelector('#anaDailyCastSel');
+  sel.value = latest;
+  sel.addEventListener('change', ()=> renderDay(sel.value));
+  renderDay(latest);
+}
+
   /* ===== 追加ここまで ===== */
 
 
