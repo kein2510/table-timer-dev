@@ -257,6 +257,8 @@
     :root{
       --bg-dark:#000;
       --text:#f5f5f5;
+      --hero-size: clamp(980px, 86vmin, 1500px); /* ←ここを好みで  */
+      --hero-posY: 46%;                           /* ←上下の見せたい位置 */
     }
     /* 黒系の放射グラデ */
     body{
@@ -275,13 +277,11 @@
     /* ② 中央の鮮明ロゴ（body::before） */
     body::before{
   content:"";
-  position:fixed; inset:0;
-  z-index:1;                 /* UIの下/上は好みで */
-  pointer-events:none;
-  background-image: url("alexandrite-haikei2.png"); /* 使いたい画像 */
-  background-position: center;
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background-image: url("alexandrite-haikei2.png");
   background-repeat: no-repeat;
-  background-size: cover;    /* ← これで全面にフィット */
+  background-position: 50% var(--hero-posY);
+  background-size: var(--hero-size) auto;  /* ← cover をやめて “固定幅” に */
   filter:
     drop-shadow(0 0 30px rgba(255, 60, 60, .25))
     drop-shadow(0 0 12px rgba(255, 200, 120, .15));
