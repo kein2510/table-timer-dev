@@ -274,14 +274,18 @@
     }
     /* ② 中央の鮮明ロゴ（body::before） */
     body::before{
-      content:"";
-      position:fixed; inset:0; z-index:2; pointer-events:none;
-      background: url("alexandrite-haikei2.png") center/contain no-repeat; /* ←背景の画像 */
-      width: min(56vmin, 560px); aspect-ratio:1/1; margin:auto;
-      left:0; right:0; top:0; bottom:0;
-      filter: drop-shadow(0 0 30px rgba(255, 60, 60, .25))
-              drop-shadow(0 0 12px rgba(255, 200, 120, .15));
-    }
+  content:"";
+  position:fixed; inset:0;
+  z-index:2;                 /* UIの下/上は好みで */
+  pointer-events:none;
+  background-image: url("alexandrite-haikei2.png"); /* 使いたい画像 */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;    /* ← これで全面にフィット */
+  filter:
+    drop-shadow(0 0 30px rgba(255, 60, 60, .25))
+    drop-shadow(0 0 12px rgba(255, 200, 120, .15));
+}
     /* ③ 上からのライト＋四隅デカール＆ノイズ（任意） */
     body::after{
       content:"";
