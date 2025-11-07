@@ -255,54 +255,59 @@
 
     /* ===== ALEXANDRITE 背景強化（ここから） ===== */
     :root{
-      --bg-dark:#000;
-      --text:#f5f5f5;
-      --hero-size: clamp(980px, 86vmin, 1500px); /* ←ここを好みで  */
-      --hero-posY: 46%;                           /* ←上下の見せたい位置 */
-    }
-    /* 黒系の放射グラデ */
-    body{
-      background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
-      background-attachment: fixed;
-    }
-    /* ① ぼかし背景ロゴ（html::before） */
-    html::before{
-      content:"";
-      position:fixed; inset:0; z-index:0; pointer-events:none;
-      background: url("alexandrite-logo.png") center/64vmin no-repeat; /* ←ロゴのパスを変更 */
-      filter: blur(30px) brightness(.55) saturate(1.2);
-      opacity:.45;
-      transform: translateZ(0);
-    }
-    /* ② 中央の鮮明ロゴ（body::before） */
-    body::before{
+  --bg-dark:#000;
+  --text:#f5f5f5;
+  --headerH: 60px;            /* ヘッダー高さ（必要なら調整） */
+  --hero-posY: 46%;           /* 見せたい縦位置の微調整 */
+}
+
+/* 黒系の放射グラデ（そのまま） */
+body{
+  background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
+  background-attachment: fixed;
+}
+
+/* ① ぼかし背景ロゴ：ヘッダーの“下から”全面に */
+html::before{
   content:"";
-  position:fixed; inset:0; z-index:1; pointer-events:none;
+  position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
+  z-index:0; pointer-events:none;
+  background: url("alexandrite-logo.png") center/64vmin no-repeat;
+  filter: blur(30px) brightness(.55) saturate(1.2);
+  opacity:.45;
+  transform: translateZ(0);
+}
+
+/* ② 中央の鮮明ロゴ：ヘッダーの下から“cover”で全面 */
+body::before{
+  content:"";
+  position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
+  z-index:1; pointer-events:none;
   background-image: url("alexandrite-haikei2.png");
   background-repeat: no-repeat;
   background-position: 50% var(--hero-posY);
-  background-size: var(--hero-size) auto;  /* ← cover をやめて “固定幅” に */
+  background-size: cover;   /* ← 画面（ヘッダーを除く領域）いっぱいにフィット */
   filter:
     drop-shadow(0 0 30px rgba(255, 60, 60, .25))
     drop-shadow(0 0 12px rgba(255, 200, 120, .15));
 }
-    /* ③ 上からのライト＋四隅デカール＆ノイズ（任意） */
-    body::after{
-      content:"";
-      position:fixed; inset:0; z-index:1; pointer-events:none;
-      background:
-        
-        /* ライト */
-        linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%);
-      opacity:.18;
-      mix-blend-mode:screen;
-      animation: alex-shimmer 10s ease-in-out infinite;
-    }
-    /* 既存UIは前面へ */
-    #app, main, .container { position:relative; z-index:3; }
 
-    @keyframes alex-shimmer{ 0%,100%{opacity:.14} 50%{opacity:.22} }
-    @media (prefers-reduced-motion: reduce){ body::after{ animation:none } }
+/* ③ 上からのライト：同じくヘッダーの下から */
+body::after{
+  content:"";
+  position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
+  z-index:1; pointer-events:none;
+  background: linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%);
+  opacity:.18;
+  mix-blend-mode:screen;
+  animation: alex-shimmer 10s ease-in-out infinite;
+}
+
+#app, main, .container { position:relative; z-index:3; }
+
+@keyframes alex-shimmer{ 0%,100%{opacity:.14} 50%{opacity:.22} }
+@media (prefers-reduced-motion: reduce){ body::after{ animation:none } }
+
     /* ===== ALEXANDRITE 背景強化（ここまで） ===== */
   </style>
 </head>
