@@ -189,6 +189,7 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   display:flex; flex-direction:column; gap:4px;
   transition:transform .05s, box-shadow .1s, background .2s;
   box-shadow:0 1px 0 rgba(0,0,0,.22);
+  border:2px dashed var(--accent-vip) !important;
 }
 .seat:hover{ transform:translateY(-1px); }
 .seat.red{  border-color:var(--accent-red); }
@@ -204,9 +205,30 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .meta{ font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere; }
 
 /* VIP row（白UI準拠で横並びする場合） */
-.vipRow{ position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2; }
-.vipRow .vipSeat{ position:relative; } /* 行の中では相対配置 */
+.vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
+.vipRow .vipSeat{ position:relative; min-height:88px; } /* 行の中では相対配置 */
 .vipSeat .timer{ font-size:22px; }
+.vipSeat.small{min-width:84px; min-height:64px; padding:8px 10px; border-radius:12px;}
+
+/* === Roster / 控室（白UI同寸・色だけダーク） === */
+.rosterHead{ justify-content:space-between; }
+.rosterGrid{
+  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;
+}
+.rosterCol{ display:flex; flex-direction:column; gap:6px; }
+
+.rosterHead{
+  font-size:12px; color:var(--text-muted); font-weight:700;
+  display:flex; align-items:center; gap:8px;
+}
+.rosterSearch{
+  padding:6px 8px; border:1px solid var(--field-bd); border-radius:8px; min-width:140px;
+  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:13px;
+}
+@media(max-width:900px){
+  .rosterGrid{ grid-template-columns:1fr; }
+}
+
 
 /* =========================
    BACKSTAGE / CHIPS / MODAL / PICKER
@@ -297,6 +319,19 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 #seatSalesList::-webkit-scrollbar, #salesLines::-webkit-scrollbar{ width:10px; }
 #seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
+/* classでもidでも動くように両対応 */
+.seatSales.show,
+#seatSales.show{
+  display:flex; flex-direction:column; max-height:72vh;
+}
+
+/* 売上タブが show の時は、同じ親内の後続セクションを非表示に */
+.seatSales.show ~ *,
+#seatSales.show ~ *{
+  display:none !important;
+}
+
+
 /* =========================
    ADMIN / FORMS
    ========================= */
@@ -342,6 +377,51 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 
 #payoutsHistScroll::-webkit-scrollbar-thumb,
 .payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
+
+/* 共通：白っぽいカード系を黒ガラスへ（売上一覧・日別明細・給料支払い・集計） */
+.salesListWrap,
+.salesDayWrap,
+.payrollWrap,
+.payrollDayWrap,
+.analyticsWrap,
+.analyticsCard,
+.dayBox,
+.listBox,
+.panelBox{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  border:1px solid var(--panel-bd) !important;
+  color: var(--text-strong) !important;
+  border-radius:12px;
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+}
+
+/* 行・明細部分の区切りをダーク向けに */
+.salesRow, .payRow, .anaRow, .tRow, .barRow{
+  border-bottom:1px dashed var(--bd-dash) !important;
+}
+
+/* 「編集/削除」などのボタンが白地ならチップ風に統一 */
+button, .btn, .chipBtn{
+  background:rgb(var(--chip-rgb)/var(--chip-a));
+  color:var(--text-strong);
+  border:1px solid var(--chip-bd);
+}
+button:hover, .btn:hover{ filter:brightness(1.05); }
+
+/* 金額や合計のゴースト文字が薄すぎる時 */
+.muted, .sumGhost, .noteGhost{ color:var(--text-muted) !important; }
+
+/* 売上一覧テーブル風ブロック（既存を強化） */
+.tableLike{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  border:1px solid var(--panel-bd) !important;
+  color: var(--text-strong) !important;
+}
+.tHead{ background:#ffffff10 !important; }
+.barWrap{ background:#1f2937 !important; }  /* 棒グラフの器 */
+.barFill{ background:#cbd5e1 !important; }  /* 棒 */
+
 
 /* =========================
    ANALYTICS / TABLES
