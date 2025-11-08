@@ -1,372 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALEXANDRITE【DEV】</title>
-  <link rel="icon" href="data:," />
-<style>
-/* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass Theme, merged)
-   - レイアウト/寸法/挙動: 白UIそのまま
-   - 配色/質感: 黒トークンによるダークガラス
-   - 置換手順: 既存<style>をこれで丸ごと置換
-   ========================================================= */
-
-/* ====== THEME TOKENS（ここを触れば全体の色が変わる） ====== */
-:root{
-  /* === Text === */
-  --text-strong: #f3f4f6;    /* 主テキスト（明） */
-  --text-muted:  #cbd5e1;    /* 補助テキスト */
-  --text-weak:   #94a3b8;    /* さらに弱い */
-
-  /* === Panel (大パネル：黒ガラス) === */
-  --panel-rgb:   12 12 14;   /* panel 背景のRGB（スペース区切り） */
-  --panel-a:     .78;        /* panel 透明度（0.70–0.90） */
-  --panel-blur:  6px;        /* ガラス感（0で無効） */
-  --panel-bd:    rgba(255,255,255,.09);  /* panel 枠線 */
-
-  /* === Card (席カード/小ブロック) === */
-  --card-rgb:    18 18 22;
-  --card-a:      .86;
-  --card-bd:     rgba(255,255,255,.12);
-
-  /* === Field (入力系) === */
-  --field-rgb:   24 24 28;
-  --field-a:     .92;
-  --field-bd:    rgba(255,255,255,.16);
-  --ph-color:    #9aa4b2;
-
-  /* === Chip/Badge === */
-  --chip-rgb:    26 26 30;
-  --chip-a:      .88;
-  --chip-bd:     rgba(255,255,255,.12);
-
-  /* === 状態色 / アクセント === */
-  --accent-red:  #e74c3c;
-  --accent-blue: #2e86de;
-  --accent-vip:  #9b59b6;
-  --state-ok:    #22c55e;
-  --state-warn:  #f59e0b;
-  --state-danger:#ef4444;
-  --state-empty: #374151;
-  --shine-gold:  #ffdd57;
-
-  /* 状態時の背景（ダーク向け薄色） */
-  --bg-ok:       #16a34a1a;
-  --bg-warn:     #f59e0b1a;
-  --bg-danger:   #ef44441a;
-
-  /* === 背景/レイアウト === */
-  --bg-dark:   #000;       /* ページ最終背景 */
-  --headerH:   60px;       /* ヘッダー高さ */
-  --hero-posY: 30%;        /* 中央ロゴの縦位置 */
-
-  /* === 罫線 === */
-  --bd-light: rgba(255,255,255,.08);
-  --bd-dash : rgba(255,255,255,.10);
-}
-
-/* =========================
-   BASE（背景・文字）
-   ========================= */
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  color:var(--text-strong);
-  font-family:system-ui, Segoe UI, Arial, sans-serif;
-  overflow-x:hidden; position:relative;
-
-  /* 黒系の放射グラデーション */
-  background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
-  background-attachment: fixed;
-}
-/* 背景ロゴ/トップライト（装飾。UI非干渉） */
-html::before{
-  content:""; position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
-  z-index:0; pointer-events:none;
-  background:url("alexandrite-logo.png") center/64vmin no-repeat;
-  filter:blur(30px) brightness(.55) saturate(1.2);
-  opacity:.45; transform:translateZ(0);
-}
-body::before{
-  content:""; position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
-  z-index:1; pointer-events:none;
-  background-image:url("alexandrite-haikei2.png");
-  background-repeat:no-repeat;
-  background-position:50% var(--hero-posY);
-  background-size:cover;
-  filter: drop-shadow(0 0 30px rgba(255,60,60,.25))
-          drop-shadow(0 0 12px rgba(255,200,120,.15));
-}
-body::after{
-  content:""; position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
-  z-index:1; pointer-events:none;
-  background:linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%);
-  opacity:.18; mix-blend-mode:screen;
-}
-@media (max-width:900px){ body{ background-attachment:scroll; } }
-
-/* =========================
-   HEADER / TABS（白UIと同寸）
-   ========================= */
-header{
-  display:flex; gap:12px; align-items:center; justify-content:space-between;
-  padding:10px 14px; background:#1f1f23; color:#fff; position:sticky; top:0; z-index:5;
-}
-header h1{ margin:0; font-size:18px; line-height:1; }
-.toolbar{ display:flex; gap:8px; align-items:center; }
-.toolbar input{
-  padding:8px; border-radius:8px; min-width:220px;
-  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
-  border:1px solid var(--field-bd); outline:none;
-}
-.toolbar input::placeholder{ color:var(--ph-color); }
-.now{ opacity:.85; }
-
-.top-tabs{ display:inline-flex; gap:.5rem; margin-left:1rem; }
-.top-tabs .tab{
-  padding:.35rem .8rem; border-radius:999px; text-decoration:none;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong)!important;
-  border:1px solid var(--chip-bd);
-}
-.top-tabs .tab.active{ box-shadow:0 1px 4px #0006; font-weight:700; }
-
-/* =========================
-   LAYOUT（白UIの骨格を踏襲）
-   ========================= */
-main{ padding:12px; display:block; position:relative; z-index:3; }
-.page{ display:none; }
-#pageTimer{ display:block; }
-
-.brand{ display:flex; align-items:center; gap:10px; }
-.brand .brand-mark{
-  height:34px; width:34px; object-fit:contain; border-radius:50%;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
-}
-
-/* =========================
-   PANELS（floor/解析/モーダル/ピッカー/凡例）
-   ========================= */
-.floor,
-.backstage,
-.anaFilter,
-.payoutsPanel,
-.tableLike,
-.pickerPanel,
-.modal,
-.legend{
-  background: rgb(var(--panel-rgb) / var(--panel-a));
-  color: var(--text-strong);
-  backdrop-filter: blur(var(--panel-blur));
-  -webkit-backdrop-filter: blur(var(--panel-blur));
-  border:1px solid var(--panel-bd);
-  box-shadow:0 8px 24px rgba(0,0,0,.18);
-}
-.floor{
-  position:relative; border-radius:12px; overflow:hidden; padding:4px; min-height:750px;
-}
-.legend{
-  position:absolute; left:8px; top:8px; display:flex; gap:10px; flex-wrap:wrap;
-  font-size:12px; border-radius:8px; padding:6px;
-}
-.dot{ width:10px; height:10px; border-radius:50%; display:inline-block; border:1px solid #999; }
-.dot.ok{ background:var(--state-ok); } .dot.warn{ background:var(--state-warn); }
-.dot.danger{ background:var(--state-danger); } .dot.empty{ background:var(--state-empty); }
-
-/* =========================
-   SEATS（絶対配置＝白UIと一致）
-   ========================= */
-.seat,
-.vipSeat{
-  position:absolute;                          /* ← レイアウト要。必須 */
-  background: rgb(var(--card-rgb) / var(--card-a));
-  color: var(--text-strong);
-  border:2px solid var(--card-bd);
-  border-radius:10px;
-  padding:6px; min-height:64px; min-width:80px; cursor:pointer;
-  display:flex; flex-direction:column; gap:4px;
-  transition:transform .05s, box-shadow .1s, background .2s;
-  box-shadow:0 1px 0 rgba(0,0,0,.22);
-  border:2px dashed var(--accent-vip) !important;
-}
-.seat:hover{ transform:translateY(-1px); }
-.seat.red{  border-color:var(--accent-red); }
-.seat.blue{ border-color:var(--accent-blue); }
-.seat.active{  background:var(--bg-ok); }
-.seat.warn{    background:var(--bg-warn); }
-.seat.danger{  background:var(--bg-danger); }
-.seat.highlight{ box-shadow:0 0 0 3px var(--shine-gold) inset; }
-
-.line1{ display:flex; justify-content:space-between; align-items:center; font-weight:700; }
-.line1 .endAt{ font-weight:700; font-size:18px; opacity:.9; margin-left:10px; white-space:nowrap; }
-.timer{ font-size:18px; font-weight:800; }
-.meta{ font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere; }
-
-/* VIP row（白UI準拠で横並びする場合） */
-.vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
-.vipRow .vipSeat{ position:relative; min-height:88px; } /* 行の中では相対配置 */
-.vipSeat .timer{ font-size:22px; }
-.vipSeat.small{min-width:84px; min-height:64px; padding:8px 10px; border-radius:12px;}
-
-/* === Roster / 控室（白UI同寸・色だけダーク） === */
-.rosterHead{ justify-content:space-between; }
-.rosterGrid{
-  display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;
-}
-.rosterCol{ display:flex; flex-direction:column; gap:6px; }
-
-.rosterHead{
-  font-size:12px; color:var(--text-muted); font-weight:700;
-  display:flex; align-items:center; gap:8px;
-}
-.rosterSearch{
-  padding:6px 8px; border:1px solid var(--field-bd); border-radius:8px; min-width:140px;
-  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:13px;
-}
-@media(max-width:900px){
-  .rosterGrid{ grid-template-columns:1fr; }
-}
-
-
-/* =========================
-   BACKSTAGE / CHIPS / MODAL / PICKER
-   ========================= */
-.backstage{ border-radius:12px; padding:10px; margin-top:12px; }
-.backstage h2{ margin:0 0 8px; font-size:16px; }
-.legend-staff{ font-size:12px; opacity:.85; display:flex; gap:12px; align-items:center; }
-.dotS{ width:10px; height:10px; border-radius:50%; display:inline-block; }
-.dotS.on{ background:#34d399; } .dotS.busy{ background:#f59e0b; } .dotS.off{ background:#9ca3af; }
-
-.roster{ display:flex; flex-wrap:wrap; gap:8px; }
-.staffChip{
-  padding:6px 10px; border-radius:999px; cursor:pointer; font-size:14px;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
-  border:1px solid var(--chip-bd);
-}
-.staffChip.on{   box-shadow:0 0 0 1px #0e3d49 inset; }
-.staffChip.busy{ box-shadow:0 0 0 1px #3a2706 inset; }
-.staffChip.off{  opacity:.9; }
-.staffChip.selected{ box-shadow:0 0 0 2px #fff2 inset; font-weight:700; }
-.staffSectionTitle{ flex-basis:100%; margin-top:6px; font-size:12px; color:var(--text-muted); }
-
-.modalWrap{ position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:9; }
-.modal{
-  border-radius:14px; padding:16px; min-width:300px; max-width:92vw; box-shadow:0 20px 60px #0006;
-  background: rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
-}
-.modal h3{ margin:0 0 10px; }
-.row{ display:flex; gap:8px; margin:8px 0; }
-.row input{
-  flex:1; padding:10px; border-radius:8px; outline:none;
-  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
-  border:1px solid var(--field-bd);
-}
-.btns{ display:flex; flex-wrap:wrap; gap:8px; }
-button{ border:none; border-radius:10px; padding:10px 14px; cursor:pointer; background:#111; color:#fff; }
-button.secondary{ background:#2b2f36; color:#fff; }
-button.danger{ background:#dc2626; }
-.chips button{ background:rgb(var(--chip-rgb)/var(--chip-a)); border:1px solid var(--chip-bd); color:var(--text-strong); }
-.label{ font-weight:700; padding:6px 10px; border-radius:999px; font-size:12px; line-height:1; align-self:center; white-space:nowrap; }
-.label-extend{ color:var(--accent-vip); border:1px solid var(--accent-vip); background:#f7ecff10; }
-
-.pickerField{
-  border:1px solid var(--field-bd); background:rgb(var(--field-rgb)/var(--field-a));
-  color:var(--text-strong); border-radius:12px; padding:8px; min-height:46px;
-  display:flex; gap:6px; align-items:center; flex-wrap:wrap; cursor:pointer;
-}
-.pickerField.empty{ color:var(--text-weak); }
-.pill{
-  padding:4px 10px; border-radius:999px; font-size:12px;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
-  border:1px solid var(--chip-bd);
-}
-.pickerWrap{ position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:10; }
-.pickerPanel{
-  border-radius:14px; padding:14px; max-width:92vw; max-height:80vh; overflow:auto;
-  background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
-  box-shadow:0 20px 60px #0006;
-}
-
-/* =========================
-   SALES / LISTS / TABLE（色だけ暗色化）
-   ========================= */
-.extBadge{
-  display:inline-block; margin-left:8px; padding:2px 6px; border-radius:999px;
-  border:1px solid #6b7280; color:var(--text-strong); background:#ffffff12;
-  font-size:12px; line-height:1; opacity:.95;
-}
-.sales-pill, .sales-row .sales-pill{ color:var(--text-strong)!important; }
-button.sales-pill{
-  background:rgb(var(--chip-rgb)/var(--chip-a))!important;
-  color:var(--text-strong)!important; border:1px solid var(--chip-bd)!important;
-}
-button.sales-pill:hover{ background:#1c1f24 !important; }
-
-.salesTabHead{ display:flex; gap:8px; margin:8px 0 4px; }
-.salesTabBtn{
-  padding:6px 10px; border-radius:999px; cursor:pointer;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
-  border:1px solid var(--chip-bd);
-}
-.salesTabBtn.active{ background:#111; color:#fff; }
-
-#seatSales{ display:none; }
-#seatSales.show{ display:flex; flex-direction:column; max-height:72vh; }
-#seatSalesList{ flex:1 1 auto; overflow:auto; overscroll-behavior:contain; max-height:calc(var(--rowH,48px)*8 + 8px); }
-#salesLines{   max-height:calc(var(--rowH,48px)*8 + 8px); overflow:auto; overscroll-behavior:contain; }
-#seatSalesList::-webkit-scrollbar, #salesLines::-webkit-scrollbar{ width:10px; }
-#seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
-
-/* classでもidでも動くように両対応 */
-.seatSales.show,
-#seatSales.show{
-  display:flex; flex-direction:column; max-height:72vh;
-}
-
-/* 売上タブが show の時は、同じ親内の後続セクションを非表示に */
-.seatSales.show ~ *,
-#seatSales.show ~ *{
-  display:none !important;
-}
-
-
-/* =========================
-   ADMIN / FORMS
-   ========================= */
-.admin-st-list{ display:grid; gap:12px; }
-.stRow{
-  display:grid; grid-template-columns: 2fr 1fr auto auto; gap:16px; align-items:center;
-  padding:8px 0; border-top:1px dashed var(--bd-dash);
-}
-.stRow input, .stRow select{
-  padding:12px; border-radius:12px; width:100%; font-size:14px;
-  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
-  border:1px solid var(--field-bd);
-}
-.stRow input[disabled], .stRow select[disabled]{ background:#1b1f24; color:#a6b0bf; opacity:.9; }
-.stBtn{ white-space:nowrap; }
-
-.pdRowAdd{ display:grid; grid-template-columns: 2fr 1fr auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed var(--bd-dash); }
-.pdRowAdd input{ padding:12px; border:1px solid var(--field-bd); border-radius:12px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%; }
-
-.pdRowList{ display:grid; grid-template-columns: 2fr 1fr auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed var(--bd-dash); }
-.pdRowList input{ padding:12px; border:1px solid var(--field-bd); border-radius:12px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%; }
-
-/* =========================
-   給料支払い／未払い（黒ガラス統一）
-   ========================= */
-.payoutsPanel{
-  background:rgb(var(--panel-rgb)/var(--panel-a));
-  border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong);
-}
+========================= */
+.payoutsPanel{ background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong); }
 .payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--text-muted); }
+
 
 #pageAdmin{ min-height:0; }
 #adminPayouts{ display:flex; flex-direction:column; height:100%; min-height:0; }
 #payoutsListBox{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
 #payoutsHistoryBox{ flex:0 0 260px; min-height:0; }
+
 
 .payoutsPanel{ display:flex; flex-direction:column; min-height:0; }
 .payoutsScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
@@ -375,10 +17,14 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 #payoutsHistScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
 .payoutRow{ padding:8px 0; border-top:1px dashed var(--bd-dash); }
 
+
 #payoutsHistScroll::-webkit-scrollbar-thumb,
 .payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
-/* 共通：白っぽいカード系を黒ガラスへ（売上一覧・日別明細・給料支払い・集計） */
+
+/* =========================
+Analytics（集計） – グリッド/棒グラフ/テーブルの位置と配色
+========================= */
 .salesListWrap,
 .salesDayWrap,
 .payrollWrap,
@@ -387,73 +33,49 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .analyticsCard,
 .dayBox,
 .listBox,
-.panelBox{
-  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  border:1px solid var(--panel-bd) !important;
-  color: var(--text-strong) !important;
-  border-radius:12px;
-  backdrop-filter: blur(var(--panel-blur));
-  -webkit-backdrop-filter: blur(var(--panel-blur));
-}
-
-/* 行・明細部分の区切りをダーク向けに */
-.salesRow, .payRow, .anaRow, .tRow, .barRow{
-  border-bottom:1px dashed var(--bd-dash) !important;
-}
-
-/* 「編集/削除」などのボタンが白地ならチップ風に統一 */
-button, .btn, .chipBtn{
-  background:rgb(var(--chip-rgb)/var(--chip-a));
-  color:var(--text-strong);
-  border:1px solid var(--chip-bd);
-}
-button:hover, .btn:hover{ filter:brightness(1.05); }
-
-/* 金額や合計のゴースト文字が薄すぎる時 */
-.muted, .sumGhost, .noteGhost{ color:var(--text-muted) !important; }
-
-/* 売上一覧テーブル風ブロック（既存を強化） */
-.tableLike{
-  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  border:1px solid var(--panel-bd) !important;
-  color: var(--text-strong) !important;
-}
-.tHead{ background:#ffffff10 !important; }
-.barWrap{ background:#1f2937 !important; }  /* 棒グラフの器 */
-.barFill{ background:#cbd5e1 !important; }  /* 棒 */
+.panelBox,
+.tableLike{ background: rgb(var(--panel-rgb)/var(--panel-a)) !important; border:1px solid var(--panel-bd) !important; color: var(--text-strong) !important; border-radius:12px; backdrop-filter: blur(var(--panel-blur)); -webkit-backdrop-filter: blur(var(--panel-blur)); }
 
 
-/* =========================
-   ANALYTICS / TABLES
-   ========================= */
-.anaFilter{
-  display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;
-  background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
-  border-radius:12px; padding:10px; color:var(--text-strong);
-}
-.anaFilter label{
-  display:inline-flex; gap:6px; align-items:center;
-  background:#0f1216; border:1px solid var(--bd-light); padding:6px 8px; border-radius:8px; color:var(--text-strong);
-}
+.anaFilter{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong); }
+.anaFilter label{ display:inline-flex; gap:6px; align-items:center; background:#0f1216; border:1px solid var(--bd-light); padding:6px 8px; border-radius:8px; color:var(--text-strong); }
 .anaFilter input[type="date"]{ border:none; background:transparent; padding:4px; color:var(--text-strong); }
-
 .anaQuick{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
 .anaH3{ margin:6px 0 6px; font-size:15px; }
 .anaH4{ margin:6px 0 6px; font-size:14px; color:var(--text-muted); }
 .anaBlock{ margin-top:12px; }
+
 
 .metricGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
 .metricCard{ border:1px solid var(--panel-bd); border-radius:12px; padding:12px; background:rgb(var(--panel-rgb)/.60); }
 .metricValue{ font-size:20px; font-weight:800; }
 @media(max-width:900px){ .metricGrid{ grid-template-columns:1fr 1fr; } }
 
+
+.anaTwoCol{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:900px){ .anaTwoCol{ grid-template-columns:1fr; } }
+
+
+.tHead, .tRow{ display:grid; grid-template-columns: 1fr 100px 120px; gap:8px; }
+.tHead{ background:#ffffff10 !important; font-weight:700; }
+.tCell{ padding:8px; border-bottom:1px dashed var(--bd-dash); }
+.tRight{ text-align:right; }
+
+
+.barRow{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px dashed var(--bd-dash); }
+.barLabel{ flex:0 0 180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.barWrap{ flex:1 1 auto; background:#1f2937 !important; border-radius:8px; overflow:hidden; height:14px; }
+.barFill{ height:100%; background:#cbd5e1 !important; }
+.barVal{ flex:0 0 100px; text-align:right; }
+
+
 /* =========================
-   MOBILE
-   ========================= */
+MOBILE
+========================= */
 @media(max-width:900px){
-  .toolbar input{ min-width:160px; }
-  .seat{ min-width:72px; min-height:60px; }
-  .sales-grid{ grid-template-columns:1fr; }
+.toolbar input{ min-width:160px; }
+.seat{ min-width:72px; min-height:60px; }
+.sales-grid{ grid-template-columns:1fr; }
 }
 </style>
 </head>
