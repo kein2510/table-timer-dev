@@ -61,6 +61,11 @@
     .floor{
       position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
       overflow:hidden;padding:4px;min-height:750px;
+      background: rgba(255,255,255,var(--panel-a)) !important;
+      backdrop-filter: blur(var(--panel-blur));
+      -webkit-backdrop-filter: blur(var(--panel-blur));
+      border-color: rgba(255,255,255,.35);
+      box-shadow: 0 8px 24px rgba(0,0,0,.15);
     }
     .legend{position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;opacity:.9;background:#fff9;border-radius:8px;padding:6px}
     .dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
@@ -208,6 +213,32 @@
     #payoutsHistScroll { flex: 1 1 auto; overflow: auto; max-height: none; }
     .payoutRow{ padding:8px 0; border-top:1px dashed #e5e7eb; }
 
+    /* 下部の控室や分析カード等も同じ雰囲気に（任意） */
+.backstage,
+.anaFilter,
+.payoutsPanel,
+.tableLike,
+.pickerPanel,
+.modal,
+.legend{
+  background: rgba(255,255,255,var(--panel-a));
+  backdrop-filter: blur(var(--panel-blur));
+  -webkit-backdrop-filter: blur(var(--panel-blur));
+  border-color: rgba(255,255,255,.35);
+}
+
+    /* 席カードは今の読みやすさ維持：うっすらだけ透かす（強ければ .95 へ） */
+.seat,
+.vipSeat{
+  background: rgba(255,255,255,.92);
+}
+
+    /* スクロール時に背景がより見えるよう、内側影を弱めたい場合（任意） */
+.floor .seat,
+.floor .vipSeat{
+  box-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+
     @media (max-width: 900px){
       body{ background-attachment: scroll; } /* パララックスをオフ */
     }
@@ -259,6 +290,8 @@
   --text:#f5f5f5;
   --headerH: 60px;            /* ヘッダー高さ（必要なら調整） */
   --hero-posY: 30%;           /* 見せたい縦位置の微調整 */
+  --panel-a: .82;            /* 白パネルの透明度（0.70〜0.90あたりで調整） */
+  --panel-blur: 3px;         /* ふわっと感。不要なら 0 に */
 }
 
 /* 黒系の放射グラデ（そのまま） */
