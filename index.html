@@ -401,6 +401,145 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
   .sales-grid{ grid-template-columns:1fr; }
 }
 
+    /* =========================================================
+   ALEXANDRITE Dark Glass – FORCE OVERRIDE PACK
+   既存の白UIを確実に黒ガラスへ置換（読み込み順負け対策）
+   ※ このブロックは必ず CSS の一番最後に置く
+   ========================================================= */
+
+/* ========== トークン（再掲：ここだけで配色管理） ========== */
+:root{
+  --text-strong:#f3f4f6; --text-muted:#cbd5e1; --text-weak:#94a3b8;
+  --panel-rgb:12 12 14; --panel-a:.78; --panel-blur:6px; --panel-bd:rgba(255,255,255,.09);
+  --card-rgb:18 18 22;  --card-a:.86; --card-bd:rgba(255,255,255,.12);
+  --field-rgb:24 24 28; --field-a:.92; --field-bd:rgba(255,255,255,.16); --ph-color:#9aa4b2;
+  --chip-rgb:26 26 30;  --chip-a:.88; --chip-bd:rgba(255,255,255,.12);
+
+  --accent-red:#e74c3c; --accent-blue:#2e86de; --accent-vip:#9b59b6;
+  --state-ok:#22c55e; --state-warn:#f59e0b; --state-danger:#ef4444; --state-empty:#374151;
+  --shine-gold:#ffdd57;
+
+  --bg-ok:#16a34a1a; --bg-warn:#f59e0b1a; --bg-danger:#ef44441a;
+
+  --bg-dark:#000; --headerH:60px; --hero-posY:30%;
+  --bd-light:rgba(255,255,255,.08); --bd-dash:rgba(255,255,255,.10);
+}
+
+/* ========== 背景（装飾） ========== */
+body{
+  color:var(--text-strong) !important;
+  background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%) !important;
+  background-attachment: fixed !important;
+}
+@media (max-width:900px){ body{ background-attachment:scroll !important; } }
+
+html::before{
+  content:""; position:fixed; inset:var(--headerH) 0 0 0;
+  background:url("alexandrite-logo.png") center/64vmin no-repeat;
+  filter:blur(30px) brightness(.55) saturate(1.2); opacity:.45; pointer-events:none; z-index:0;
+}
+body::before{
+  content:""; position:fixed; inset:var(--headerH) 0 0 0; pointer-events:none; z-index:1;
+  background:url("alexandrite-haikei2.png") no-repeat 50% var(--hero-posY)/cover;
+  filter:drop-shadow(0 0 30px rgba(255,60,60,.25)) drop-shadow(0 0 12px rgba(255,200,120,.15));
+}
+body::after{
+  content:""; position:fixed; inset:var(--headerH) 0 0 0; pointer-events:none; z-index:1;
+  background:linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%); opacity:.18; mix-blend-mode:screen;
+}
+
+/* ========== ヘッダー / タブ（完ぺきUIのまま色だけ暗色） ========== */
+header{ background:#1f1f23 !important; color:#fff !important; }
+.toolbar input{
+  background:rgb(var(--field-rgb)/var(--field-a)) !important;
+  border:1px solid var(--field-bd) !important; color:var(--text-strong) !important;
+}
+.toolbar input::placeholder{ color:var(--ph-color) !important; }
+.top-tabs .tab{
+  background:rgb(var(--chip-rgb)/var(--chip-a)) !important; color:var(--text-strong) !important;
+  border:1px solid var(--chip-bd) !important;
+}
+.top-tabs .tab.active{ box-shadow:0 1px 4px #0006 !important; }
+
+/* ========== 大パネル（floor/解析/モーダル等） ========== */
+.floor,
+.backstage,
+.anaFilter,
+.payoutsPanel,
+.tableLike,
+.pickerPanel,
+.modal,
+.legend{
+  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color:var(--text-strong) !important;
+  backdrop-filter:blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter:blur(var(--panel-blur)) !important;
+  border:1px solid var(--panel-bd) !important;
+  box-shadow:0 8px 24px rgba(0,0,0,.18) !important;
+}
+.legend{ border-radius:8px !important; }
+.dot{ border:1px solid #999 !important; }
+.dot.ok{ background:var(--state-ok) !important; }
+.dot.warn{ background:var(--state-warn) !important; }
+.dot.danger{ background:var(--state-danger) !important; }
+.dot.empty{ background:var(--state-empty) !important; }
+
+/* ========== 席カード / VIP ========== */
+.seat,
+.vipSeat{
+  background:rgb(var(--card-rgb)/var(--card-a)) !important;
+  color:var(--text-strong) !important;
+  border:2px solid var(--card-bd) !important;
+  box-shadow:0 1px 0 rgba(0,0,0,.22) !important;
+  border-radius:10px !important;
+}
+.seat.red{ border-color:var(--accent-red) !important; }
+.seat.blue{ border-color:var(--accent-blue) !important; }
+.seat.active{ background:var(--bg-ok) !important; }
+.seat.warn{ background:var(--bg-warn) !important; }
+.seat.danger{ background:var(--bg-danger) !important; }
+.seat.highlight{ box-shadow:0 0 0 3px var(--shine-gold) inset !important; }
+.vipSeat{ border:2px dashed var(--accent-vip) !important; }
+
+/* ========== モーダル / 入力 / ピッカー / チップ ========== */
+.modal{
+  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  border:1px solid var(--panel-bd) !important;
+}
+.row input, .stRow input, .stRow select, .pdRowAdd input, .pdRowList input,
+.pickerField, input, select, textarea{
+  background:rgb(var(--field-rgb)/var(--field-a)) !important;
+  color:var(--text-strong) !important;
+  border:1px solid var(--field-bd) !important;
+}
+.pickerField.empty{ color:var(--text-weak) !important; }
+.pill, .staffChip, .sales-pill, .prodChip, .label{
+  background:rgb(var(--chip-rgb)/var(--chip-a)) !important;
+  color:var(--text-strong) !important;
+  border:1px solid var(--chip-bd) !important;
+}
+
+/* ========== 解析/表 ========== */
+.tableLike{ overflow:hidden !important; }
+.tHead{ background:#ffffff08 !important; font-weight:700 !important; }
+.tCell{ border-bottom:1px dashed var(--bd-dash) !important; }
+.barRow{ border-bottom:1px dashed var(--bd-dash) !important; }
+.barWrap{ background:#1f2937 !important; }
+.barFill{ background:#cbd5e1 !important; }
+
+/* ========== 給料支払い（未払い/履歴 含む） ========== */
+#adminPayouts, #payoutsListBox, #payoutsHistoryBox{ min-height:0 !important; }
+.payoutsPanel{ display:flex !important; flex-direction:column !important; }
+.payoutsHead{ color:var(--text-muted) !important; }
+.payoutRow{ border-top:1px dashed var(--bd-dash) !important; }
+#payoutsHistScroll::-webkit-scrollbar-thumb,
+.payoutsScroll::-webkit-scrollbar-thumb{ background:#374151 !important; border-radius:8px !important; }
+
+/* ========== 細部 ========== */
+.extBadge{ background:#ffffff12 !important; color:var(--text-strong) !important; border:1px solid #6b7280 !important; }
+button.sales-pill:hover{ background:#1c1f24 !important; }
+
+
 
 
 
