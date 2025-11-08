@@ -1,83 +1,100 @@
 <!DOCTYPE html>
-========================= */
-.payoutsPanel{ background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong); }
-.payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--text-muted); }
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ALEXANDRITE【DEV】</title>
+<link rel="icon" href="data:," />
+<style>
+/* =========================================================
+ALEXANDRITE – Perfect UI (Dark Glass Theme, merged)
+- レイアウト/寸法/挙動: 白UIそのまま（座席=絶対配置）
+- 配色/質感: 黒トークンによるダークガラス
+- 置換手順: 既存<style>をこれで丸ごと置換
+- 重要修正点:
+1) .seat に強制していた紫の点線ボーダーを撤去 → VIP系のみ点線
+2) VIP 行(.vipRow) と 超VIP 行(.ultraRow) を白UIと同じ位置・寸法で再定義
+3) 「データ(集計)」の各ブロック/グラフ領域のスタイル再装着
+4) 黒文字化していたUI（pill/ボタン/入力）の文字色を統一
+========================================================= */
 
 
-#pageAdmin{ min-height:0; }
-#adminPayouts{ display:flex; flex-direction:column; height:100%; min-height:0; }
-#payoutsListBox{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
-#payoutsHistoryBox{ flex:0 0 260px; min-height:0; }
+/* ====== THEME TOKENS（ここを触れば全体の色が変わる） ====== */
+:root{
+/* === Text === */
+--text-strong: #f3f4f6; /* 主テキスト（明） */
+--text-muted: #cbd5e1; /* 補助テキスト */
+--text-weak: #94a3b8; /* さらに弱い */
 
 
-.payoutsPanel{ display:flex; flex-direction:column; min-height:0; }
-.payoutsScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
-#pageAdmin.payouts-fit{ overflow:hidden; height:calc(100dvh - var(--headerH)); }
-#payoutsListBox > .payoutsPanel, #payoutsHistoryBox > .payoutsPanel{ height:100%; display:flex; flex-direction:column; }
-#payoutsHistScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
-.payoutRow{ padding:8px 0; border-top:1px dashed var(--bd-dash); }
+/* === Panel (大パネル：黒ガラス) === */
+--panel-rgb: 12 12 14; /* panel 背景のRGB（スペース区切り） */
+--panel-a: .78; /* panel 透明度（0.70–0.90） */
+--panel-blur: 6px; /* ガラス感（0で無効） */
+--panel-bd: rgba(255,255,255,.09); /* panel 枠線 */
 
 
-#payoutsHistScroll::-webkit-scrollbar-thumb,
-.payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
+/* === Card (席カード/小ブロック) === */
+--card-rgb: 18 18 22;
+--card-a: .86;
+--card-bd: rgba(255,255,255,.12);
 
 
-/* =========================
-Analytics（集計） – グリッド/棒グラフ/テーブルの位置と配色
-========================= */
-.salesListWrap,
-.salesDayWrap,
-.payrollWrap,
-.payrollDayWrap,
-.analyticsWrap,
-.analyticsCard,
-.dayBox,
-.listBox,
-.panelBox,
-.tableLike{ background: rgb(var(--panel-rgb)/var(--panel-a)) !important; border:1px solid var(--panel-bd) !important; color: var(--text-strong) !important; border-radius:12px; backdrop-filter: blur(var(--panel-blur)); -webkit-backdrop-filter: blur(var(--panel-blur)); }
+/* === Field (入力系) === */
+--field-rgb: 24 24 28;
+--field-a: .92;
+--field-bd: rgba(255,255,255,.16);
+--ph-color: #9aa4b2;
 
 
-.anaFilter{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong); }
-.anaFilter label{ display:inline-flex; gap:6px; align-items:center; background:#0f1216; border:1px solid var(--bd-light); padding:6px 8px; border-radius:8px; color:var(--text-strong); }
-.anaFilter input[type="date"]{ border:none; background:transparent; padding:4px; color:var(--text-strong); }
-.anaQuick{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
-.anaH3{ margin:6px 0 6px; font-size:15px; }
-.anaH4{ margin:6px 0 6px; font-size:14px; color:var(--text-muted); }
-.anaBlock{ margin-top:12px; }
+/* === Chip/Badge === */
+--chip-rgb: 26 26 30;
+--chip-a: .88;
+--chip-bd: rgba(255,255,255,.12);
 
 
-.metricGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-.metricCard{ border:1px solid var(--panel-bd); border-radius:12px; padding:12px; background:rgb(var(--panel-rgb)/.60); }
-.metricValue{ font-size:20px; font-weight:800; }
-@media(max-width:900px){ .metricGrid{ grid-template-columns:1fr 1fr; } }
+/* === 状態色 / アクセント === */
+--accent-red: #e74c3c;
+--accent-blue: #2e86de;
+--accent-vip: #9b59b6; /* VIP/超VIP の枠色 */
+--state-ok: #22c55e;
+--state-warn: #f59e0b;
+--state-danger:#ef4444;
+--state-empty: #374151;
+--shine-gold: #ffdd57;
 
 
-.anaTwoCol{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-@media(max-width:900px){ .anaTwoCol{ grid-template-columns:1fr; } }
+/* 状態時の背景（ダーク向け薄色） */
+--bg-ok: #16a34a1a;
+--bg-warn: #f59e0b1a;
+--bg-danger: #ef44441a;
 
 
-.tHead, .tRow{ display:grid; grid-template-columns: 1fr 100px 120px; gap:8px; }
-.tHead{ background:#ffffff10 !important; font-weight:700; }
-.tCell{ padding:8px; border-bottom:1px dashed var(--bd-dash); }
-.tRight{ text-align:right; }
+/* === 背景/レイアウト === */
+--bg-dark: #000; /* ページ最終背景 */
+--headerH: 60px; /* ヘッダー高さ */
+--hero-posY: 30%; /* 中央ロゴの縦位置 */
 
 
-.barRow{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px dashed var(--bd-dash); }
-.barLabel{ flex:0 0 180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.barWrap{ flex:1 1 auto; background:#1f2937 !important; border-radius:8px; overflow:hidden; height:14px; }
-.barFill{ height:100%; background:#cbd5e1 !important; }
-.barVal{ flex:0 0 100px; text-align:right; }
-
-
-/* =========================
-MOBILE
-========================= */
-@media(max-width:900px){
-.toolbar input{ min-width:160px; }
-.seat{ min-width:72px; min-height:60px; }
-.sales-grid{ grid-template-columns:1fr; }
+/* === 罫線 === */
+--bd-light: rgba(255,255,255,.08);
+--bd-dash : rgba(255,255,255,.10);
 }
-</style>
+
+
+/* =========================
+BASE（背景・文字）
+========================= */
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+margin:0; color:var(--text-strong);
+font-family:system-ui, Segoe UI, Arial, sans-serif;
+overflow-x:hidden; position:relative;
+background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
+background-attachment: fixed;
+}
+/* 背景ロゴ/トップライト（装飾。UI非干渉） */
 </head>
   
 
