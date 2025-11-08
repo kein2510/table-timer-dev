@@ -38,6 +38,13 @@
 /* =========================
    THEME TOKENS（ここだけ直せばOK）
    ========================= */
+/* =========================================================
+   ALEXANDRITE – Perfect UI (Dark Glass) 全面適用CSS
+   - レイアウト/寸法/挙動は「完ぺきなUI」と同一
+   - ここから下は配色と質感のみ黒基調へ再マッピング
+   ========================================================= */
+
+/* ====== あなたの指定トークン：そのまま残します ====== */
 :root{
   /* === Text === */
   --text-strong: #f3f4f6;    /* 主テキスト（明） */
@@ -92,28 +99,31 @@
 }
 
 /* =========================
-   BASE
+   BASE（背景・文字）
    ========================= */
-*{ box-sizing:border-box; }
+*{ box-sizing: border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
   color:var(--text-strong);
   font-family:system-ui, Segoe UI, Arial, sans-serif;
-  overflow-x:hidden; position:relative;
+  overflow-x:hidden;
+  position:relative;
 
   /* 黒系の放射グラデーション */
   background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
   background-attachment: fixed;
 }
 
-/* ===== 背景ロゴ＆トップライト（装飾のみ） ===== */
+/* =========================
+   背景ロゴ＆上部ライト（装飾のみ / UIに干渉なし）
+   ========================= */
 html::before{
   content:"";
   position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
   z-index:0; pointer-events:none;
   background:url("alexandrite-logo.png") center/64vmin no-repeat;
-  filter:blur(30px) brightness(.55) saturate(1.2);
+  filter: blur(30px) brightness(.55) saturate(1.2);
   opacity:.45; transform:translateZ(0);
 }
 body::before{
@@ -135,10 +145,12 @@ body::after{
   background:linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%);
   opacity:.18; mix-blend-mode:screen;
 }
-@media (max-width:900px){ body{ background-attachment:scroll; } }
+@media (max-width:900px){
+  body{ background-attachment:scroll; }
+}
 
 /* =========================
-   HEADER / TABS（完ぺきUI 準拠）
+   ヘッダー／タブ（寸法・配置は完ぺきUI準拠）
    ========================= */
 header{
   display:flex; gap:12px; align-items:center; justify-content:space-between;
@@ -147,21 +159,23 @@ header{
 header h1{ margin:0; font-size:18px; line-height:1; }
 .toolbar{ display:flex; gap:8px; align-items:center; }
 .toolbar input{
-  padding:8px; border-radius:8px; border:1px solid var(--field-bd);
-  min-width:220px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
+  padding:8px; border-radius:8px; min-width:220px;
+  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
+  border:1px solid var(--field-bd); outline:none;
 }
 .toolbar input::placeholder{ color:var(--ph-color); }
 .now{ opacity:.85; }
 
 .top-tabs{ display:inline-flex; gap:.5rem; margin-left:1rem; }
 .top-tabs .tab{
-  padding:.35rem .8rem; border:1px solid var(--chip-bd); border-radius:999px;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong)!important; text-decoration:none;
+  padding:.35rem .8rem; border-radius:999px; text-decoration:none;
+  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong)!important;
+  border:1px solid var(--chip-bd);
 }
 .top-tabs .tab.active{ box-shadow:0 1px 4px #0006; font-weight:700; }
 
 /* =========================
-   LAYOUT
+   レイアウト骨格
    ========================= */
 main{ padding:12px; display:block; position:relative; z-index:3; }
 .page{ display:none; }
@@ -174,7 +188,7 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 }
 
 /* =========================
-   PANELS（大パネル：floor/解析/モーダル等）
+   大パネル（floor/解析/ピッカー/モーダル/凡例）
    ========================= */
 .floor,
 .backstage,
@@ -191,6 +205,7 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   border:1px solid var(--panel-bd);
   box-shadow:0 8px 24px rgba(0,0,0,.18);
 }
+
 .floor{
   position:relative; border-radius:12px; overflow:hidden; padding:4px; min-height:750px;
 }
@@ -203,7 +218,7 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .dot.danger{ background:var(--state-danger); } .dot.empty{ background:var(--state-empty); }
 
 /* =========================
-   SEATS / VIP（カード系）
+   席カード（VIP/ノーマル） ※配置・サイズは完ぺきUI同等
    ========================= */
 .seat,
 .vipSeat{
@@ -217,11 +232,11 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   box-shadow:0 1px 0 rgba(0,0,0,.22);
 }
 .seat:hover{ transform:translateY(-1px); }
-.seat.red{ border-color:var(--accent-red); }
+.seat.red{  border-color:var(--accent-red); }
 .seat.blue{ border-color:var(--accent-blue); }
-.seat.active{ background:var(--bg-ok); }
-.seat.warn{ background:var(--bg-warn); }
-.seat.danger{ background:var(--bg-danger); }
+.seat.active{  background:var(--bg-ok); }
+.seat.warn{    background:var(--bg-warn); }
+.seat.danger{  background:var(--bg-danger); }
 .seat.highlight{ box-shadow:0 0 0 3px var(--shine-gold) inset; }
 
 .line1{ display:flex; justify-content:space-between; align-items:center; font-weight:700; }
@@ -229,13 +244,13 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .timer{ font-size:18px; font-weight:800; }
 .meta{ font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere; }
 
-/* VIP row 配置は従来通り */
+/* VIP 横並び（完ぺきUIの位置・間隔） */
 .vipRow{ position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2; }
 .vipSeat{ border:2px dashed var(--accent-vip); }
 .vipSeat .timer{ font-size:22px; }
 
 /* =========================
-   BACKSTAGE / CHIPS / MODAL / PICKER
+   バックステージ／タグ／モーダル／ピッカー
    ========================= */
 .backstage{ border-radius:12px; padding:10px; margin-top:12px; }
 .backstage h2{ margin:0 0 8px; font-size:16px; }
@@ -243,13 +258,15 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .dotS{ width:10px; height:10px; border-radius:50%; display:inline-block; }
 .dotS.on{ background:#34d399; } .dotS.busy{ background:#f59e0b; } .dotS.off{ background:#9ca3af; }
 .roster{ display:flex; flex-wrap:wrap; gap:8px; }
+
 .staffChip{
-  padding:6px 10px; border-radius:999px; border:1px solid var(--chip-bd);
-  background:rgb(var(--chip-rgb)/var(--chip-a)); cursor:pointer; font-size:14px; color:var(--text-strong);
+  padding:6px 10px; border-radius:999px;
+  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
+  border:1px solid var(--chip-bd); cursor:pointer; font-size:14px;
 }
-.staffChip.on{ box-shadow:0 0 0 1px #0e3d49 inset; }
+.staffChip.on{   box-shadow:0 0 0 1px #0e3d49 inset; }
 .staffChip.busy{ box-shadow:0 0 0 1px #3a2706 inset; }
-.staffChip.off{ opacity:.9; }
+.staffChip.off{  opacity:.9; }
 .staffChip.selected{ box-shadow:0 0 0 2px #fff2 inset; font-weight:700; }
 .staffSectionTitle{ flex-basis:100%; margin-top:6px; font-size:12px; color:var(--text-muted); }
 
@@ -257,13 +274,14 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .modal{
   border-radius:14px; padding:16px; min-width:300px; max-width:92vw; box-shadow:0 20px 60px #0006;
   background: rgb(var(--panel-rgb)/var(--panel-a));
-  border: 1px solid var(--panel-bd);
+  border:1px solid var(--panel-bd);
 }
 .modal h3{ margin:0 0 10px 0; }
 .row{ display:flex; gap:8px; margin:8px 0; }
 .row input{
-  flex:1; padding:10px; border-radius:8px; border:1px solid var(--field-bd);
+  flex:1; padding:10px; border-radius:8px;
   background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
+  border:1px solid var(--field-bd); outline:none;
 }
 .btns{ display:flex; flex-wrap:wrap; gap:8px; }
 button{ border:none; border-radius:10px; padding:10px 14px; cursor:pointer; background:#111; color:#fff; }
@@ -280,44 +298,49 @@ button.danger{ background:#dc2626; }
 }
 .pickerField.empty{ color:var(--text-weak); }
 .pill{
-  padding:4px 10px; border-radius:999px; border:1px solid var(--chip-bd);
-  background:rgb(var(--chip-rgb)/var(--chip-a)); font-size:12px; color:var(--text-strong);
+  padding:4px 10px; border-radius:999px;
+  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
+  border:1px solid var(--chip-bd); font-size:12px;
 }
 .pickerWrap{ position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:10; }
 .pickerPanel{
   border-radius:14px; padding:14px; max-width:92vw; max-height:80vh; overflow:auto;
-  box-shadow:0 20px 60px #0006; background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
+  background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
+  box-shadow:0 20px 60px #0006;
 }
 
 /* =========================
-   SALES / LISTS / TABLE（配色のみ暗色化）
+   売上UI／リスト／テーブル（色のみ暗色化）
    ========================= */
 .extBadge{
   display:inline-block; margin-left:8px; padding:2px 6px; border-radius:999px;
-  border:1px solid #6b7280; color:var(--text-strong); background:#ffffff12; font-size:12px; line-height:1; opacity:.95;
+  border:1px solid #6b7280; color:var(--text-strong); background:#ffffff12;
+  font-size:12px; line-height:1; opacity:.95;
 }
 .sales-pill, .sales-row .sales-pill{ color:var(--text-strong)!important; }
 button.sales-pill{
-  background:rgb(var(--chip-rgb)/var(--chip-a))!important; color:var(--text-strong)!important; border:1px solid var(--chip-bd)!important;
+  background:rgb(var(--chip-rgb)/var(--chip-a))!important;
+  color:var(--text-strong)!important; border:1px solid var(--chip-bd)!important;
 }
 button.sales-pill:hover{ background:#1c1f24 !important; }
 
 .salesTabHead{ display:flex; gap:8px; margin:8px 0 4px; }
 .salesTabBtn{
-  padding:6px 10px; border-radius:999px; border:1px solid var(--chip-bd);
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong); cursor:pointer;
+  padding:6px 10px; border-radius:999px; cursor:pointer;
+  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
+  border:1px solid var(--chip-bd);
 }
 .salesTabBtn.active{ background:#111; color:#fff; }
 
 #seatSales{ display:none; }
 #seatSales.show{ display:flex; flex-direction:column; max-height:72vh; }
 #seatSalesList{ flex:1 1 auto; overflow:auto; overscroll-behavior:contain; max-height:calc(var(--rowH,48px)*8 + 8px); }
-#salesLines{ max-height:calc(var(--rowH,48px)*8 + 8px); overflow:auto; overscroll-behavior:contain; }
+#salesLines{   max-height:calc(var(--rowH,48px)*8 + 8px); overflow:auto; overscroll-behavior:contain; }
 #seatSalesList::-webkit-scrollbar, #salesLines::-webkit-scrollbar{ width:10px; }
 #seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
 /* =========================
-   ADMIN / FORMS
+   管理フォーム
    ========================= */
 .admin-st-list{ display:grid; gap:12px; }
 .stRow{
@@ -325,8 +348,9 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
   padding:8px 0; border-top:1px dashed var(--bd-dash);
 }
 .stRow input, .stRow select{
-  padding:12px; border:1px solid var(--field-bd); border-radius:12px;
-  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%;
+  padding:12px; border-radius:12px; width:100%; font-size:14px;
+  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
+  border:1px solid var(--field-bd);
 }
 .stRow input[disabled], .stRow select[disabled]{ background:#1b1f24; color:#a6b0bf; opacity:.9; }
 .stBtn{ white-space:nowrap; }
@@ -338,9 +362,13 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .pdRowList input{ padding:12px; border:1px solid var(--field-bd); border-radius:12px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%; }
 
 /* =========================
-   PAYROLL（給料支払い／未払い）- 黒ガラス統一
+   給料支払い／未払い（黒ガラス統一）
    ========================= */
-.payoutsPanel{ background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; }
+.payoutsPanel{
+  background:rgb(var(--panel-rgb)/var(--panel-a));
+  border:1px solid var(--panel-bd); border-radius:12px; padding:10px;
+  color:var(--text-strong);
+}
 .payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--text-muted); }
 
 #pageAdmin{ min-height:0; }
@@ -351,8 +379,7 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .payoutsPanel{ display:flex; flex-direction:column; min-height:0; }
 .payoutsScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
 #pageAdmin.payouts-fit{ overflow:hidden; height:calc(100dvh - var(--headerH)); }
-#payoutsListBox, #payoutsHistoryBox { min-height:0; }
-#payoutsListBox > .payoutsPanel, #payoutsHistoryBox > .payoutsPanel { height:100%; display:flex; flex-direction:column; }
+#payoutsListBox > .payoutsPanel, #payoutsHistoryBox > .payoutsPanel{ height:100%; display:flex; flex-direction:column; }
 #payoutsHistScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
 .payoutRow{ padding:8px 0; border-top:1px dashed var(--bd-dash); }
 
@@ -360,17 +387,19 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
 /* =========================
-   ANALYTICS / TABLES
+   テーブル／可視化（暗色）
    ========================= */
 .anaFilter{
   display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;
-  background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong);
+  background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
+  border-radius:12px; padding:10px; color:var(--text-strong);
 }
 .anaFilter label{
   display:inline-flex; gap:6px; align-items:center;
   background:#0f1216; border:1px solid var(--bd-light); padding:6px 8px; border-radius:8px; color:var(--text-strong);
 }
 .anaFilter input[type="date"]{ border:none; background:transparent; padding:4px; color:var(--text-strong); }
+
 .anaQuick{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
 .anaH3{ margin:6px 0 6px; font-size:15px; }
 .anaH4{ margin:6px 0 6px; font-size:14px; color:var(--text-muted); }
@@ -393,152 +422,13 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .barVal{ flex:0 0 100px; text-align:right; }
 
 /* =========================
-   MOBILE 調整
+   モバイル微調整（レイアウト値は完ぺきUIと同じ）
    ========================= */
 @media(max-width:900px){
   .toolbar input{ min-width:160px; }
   .seat{ min-width:72px; min-height:60px; }
   .sales-grid{ grid-template-columns:1fr; }
 }
-
-    /* =========================================================
-   ALEXANDRITE Dark Glass – FORCE OVERRIDE PACK
-   既存の白UIを確実に黒ガラスへ置換（読み込み順負け対策）
-   ※ このブロックは必ず CSS の一番最後に置く
-   ========================================================= */
-
-/* ========== トークン（再掲：ここだけで配色管理） ========== */
-:root{
-  --text-strong:#f3f4f6; --text-muted:#cbd5e1; --text-weak:#94a3b8;
-  --panel-rgb:12 12 14; --panel-a:.78; --panel-blur:6px; --panel-bd:rgba(255,255,255,.09);
-  --card-rgb:18 18 22;  --card-a:.86; --card-bd:rgba(255,255,255,.12);
-  --field-rgb:24 24 28; --field-a:.92; --field-bd:rgba(255,255,255,.16); --ph-color:#9aa4b2;
-  --chip-rgb:26 26 30;  --chip-a:.88; --chip-bd:rgba(255,255,255,.12);
-
-  --accent-red:#e74c3c; --accent-blue:#2e86de; --accent-vip:#9b59b6;
-  --state-ok:#22c55e; --state-warn:#f59e0b; --state-danger:#ef4444; --state-empty:#374151;
-  --shine-gold:#ffdd57;
-
-  --bg-ok:#16a34a1a; --bg-warn:#f59e0b1a; --bg-danger:#ef44441a;
-
-  --bg-dark:#000; --headerH:60px; --hero-posY:30%;
-  --bd-light:rgba(255,255,255,.08); --bd-dash:rgba(255,255,255,.10);
-}
-
-/* ========== 背景（装飾） ========== */
-body{
-  color:var(--text-strong) !important;
-  background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%) !important;
-  background-attachment: fixed !important;
-}
-@media (max-width:900px){ body{ background-attachment:scroll !important; } }
-
-html::before{
-  content:""; position:fixed; inset:var(--headerH) 0 0 0;
-  background:url("alexandrite-logo.png") center/64vmin no-repeat;
-  filter:blur(30px) brightness(.55) saturate(1.2); opacity:.45; pointer-events:none; z-index:0;
-}
-body::before{
-  content:""; position:fixed; inset:var(--headerH) 0 0 0; pointer-events:none; z-index:1;
-  background:url("alexandrite-haikei2.png") no-repeat 50% var(--hero-posY)/cover;
-  filter:drop-shadow(0 0 30px rgba(255,60,60,.25)) drop-shadow(0 0 12px rgba(255,200,120,.15));
-}
-body::after{
-  content:""; position:fixed; inset:var(--headerH) 0 0 0; pointer-events:none; z-index:1;
-  background:linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%); opacity:.18; mix-blend-mode:screen;
-}
-
-/* ========== ヘッダー / タブ（完ぺきUIのまま色だけ暗色） ========== */
-header{ background:#1f1f23 !important; color:#fff !important; }
-.toolbar input{
-  background:rgb(var(--field-rgb)/var(--field-a)) !important;
-  border:1px solid var(--field-bd) !important; color:var(--text-strong) !important;
-}
-.toolbar input::placeholder{ color:var(--ph-color) !important; }
-.top-tabs .tab{
-  background:rgb(var(--chip-rgb)/var(--chip-a)) !important; color:var(--text-strong) !important;
-  border:1px solid var(--chip-bd) !important;
-}
-.top-tabs .tab.active{ box-shadow:0 1px 4px #0006 !important; }
-
-/* ========== 大パネル（floor/解析/モーダル等） ========== */
-.floor,
-.backstage,
-.anaFilter,
-.payoutsPanel,
-.tableLike,
-.pickerPanel,
-.modal,
-.legend{
-  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  color:var(--text-strong) !important;
-  backdrop-filter:blur(var(--panel-blur)) !important;
-  -webkit-backdrop-filter:blur(var(--panel-blur)) !important;
-  border:1px solid var(--panel-bd) !important;
-  box-shadow:0 8px 24px rgba(0,0,0,.18) !important;
-}
-.legend{ border-radius:8px !important; }
-.dot{ border:1px solid #999 !important; }
-.dot.ok{ background:var(--state-ok) !important; }
-.dot.warn{ background:var(--state-warn) !important; }
-.dot.danger{ background:var(--state-danger) !important; }
-.dot.empty{ background:var(--state-empty) !important; }
-
-/* ========== 席カード / VIP ========== */
-.seat,
-.vipSeat{
-  background:rgb(var(--card-rgb)/var(--card-a)) !important;
-  color:var(--text-strong) !important;
-  border:2px solid var(--card-bd) !important;
-  box-shadow:0 1px 0 rgba(0,0,0,.22) !important;
-  border-radius:10px !important;
-}
-.seat.red{ border-color:var(--accent-red) !important; }
-.seat.blue{ border-color:var(--accent-blue) !important; }
-.seat.active{ background:var(--bg-ok) !important; }
-.seat.warn{ background:var(--bg-warn) !important; }
-.seat.danger{ background:var(--bg-danger) !important; }
-.seat.highlight{ box-shadow:0 0 0 3px var(--shine-gold) inset !important; }
-.vipSeat{ border:2px dashed var(--accent-vip) !important; }
-
-/* ========== モーダル / 入力 / ピッカー / チップ ========== */
-.modal{
-  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  border:1px solid var(--panel-bd) !important;
-}
-.row input, .stRow input, .stRow select, .pdRowAdd input, .pdRowList input,
-.pickerField, input, select, textarea{
-  background:rgb(var(--field-rgb)/var(--field-a)) !important;
-  color:var(--text-strong) !important;
-  border:1px solid var(--field-bd) !important;
-}
-.pickerField.empty{ color:var(--text-weak) !important; }
-.pill, .staffChip, .sales-pill, .prodChip, .label{
-  background:rgb(var(--chip-rgb)/var(--chip-a)) !important;
-  color:var(--text-strong) !important;
-  border:1px solid var(--chip-bd) !important;
-}
-
-/* ========== 解析/表 ========== */
-.tableLike{ overflow:hidden !important; }
-.tHead{ background:#ffffff08 !important; font-weight:700 !important; }
-.tCell{ border-bottom:1px dashed var(--bd-dash) !important; }
-.barRow{ border-bottom:1px dashed var(--bd-dash) !important; }
-.barWrap{ background:#1f2937 !important; }
-.barFill{ background:#cbd5e1 !important; }
-
-/* ========== 給料支払い（未払い/履歴 含む） ========== */
-#adminPayouts, #payoutsListBox, #payoutsHistoryBox{ min-height:0 !important; }
-.payoutsPanel{ display:flex !important; flex-direction:column !important; }
-.payoutsHead{ color:var(--text-muted) !important; }
-.payoutRow{ border-top:1px dashed var(--bd-dash) !important; }
-#payoutsHistScroll::-webkit-scrollbar-thumb,
-.payoutsScroll::-webkit-scrollbar-thumb{ background:#374151 !important; border-radius:8px !important; }
-
-/* ========== 細部 ========== */
-.extBadge{ background:#ffffff12 !important; color:var(--text-strong) !important; border:1px solid #6b7280 !important; }
-button.sales-pill:hover{ background:#1c1f24 !important; }
-
 
 
 
