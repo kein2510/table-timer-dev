@@ -20,56 +20,96 @@
    ※ レイアウト変更なし／色は従来どおり
    ========================================================= */
 
-:root{
-  --bg:#f4f6f8; --panel:#0f0f0f; --text:#111;
-  --red:#e74c3c; --blue:#2e86de; --vip:#9b59b6;
-  --ok:#e7ffe7; --warn:#fff3cd; --danger:#ffe0e0; --gold:#ffdd57;
-  --staff-on-bg:#e6f4ea; --staff-on-border:#34a853; --staff-on-text:#0b6630;
-  --staff-busy-bg:#fff3cd; --staff-busy-border:#f59e0b; --staff-busy-text:#7a4e00;
-  --staff-off-bg:#f1f5f9; --staff-off-border:#cbd5e1; --staff-off-text:#94a3b8;
+/* =========================================================
+   ALEXANDRITE – Perfect UI (Dark Glass Theme)
+   - レイアウト/寸法/挙動は“完ぺきUI”そのまま
+   - 色設計だけ黒基調トークンで再マッピング
+   ========================================================= */
 
-  /* 背景強化トークン（位置だけ調整したい時に） */
+/* =========================
+   THEME TOKENS（ここだけ直せばOK）
+   ========================= */
+:root{
+  /* Text */
+  --text-strong: #f3f4f6;   /* 白っぽい本文色 */
+  --text-muted:  #cbd5e1;   /* 補助テキスト */
+  --text-weak:   #94a3b8;
+
+  /* Panel (大パネル：背景が透ける黒ガラス) */
+  --panel-rgb:   12 12 14;  /* R G B（スペース区切り） */
+  --panel-a:     .78;       /* 透明度（0.70–0.90） */
+  --panel-blur:  6px;       /* ガラス感。不要なら 0 */
+  --panel-bd:    rgba(255,255,255,.09);
+
+  /* Card (席カード/小ブロック) */
+  --card-rgb:    18 18 22;
+  --card-a:      .86;
+  --card-bd:     rgba(255,255,255,.12);
+
+  /* Field (入力系) */
+  --field-rgb:   24 24 28;
+  --field-a:     .92;
+  --field-bd:    rgba(255,255,255,.16);
+  --ph-color:    #9aa4b2;
+
+  /* Chip/Badge */
+  --chip-rgb:    26 26 30;
+  --chip-a:      .88;
+  --chip-bd:     rgba(255,255,255,.12);
+
+  /* 背景やヘッダー関連 */
   --bg-dark:#000;
-  --headerH: 60px;
-  --hero-posY: 30%;
-  --panel-a: .82;      /* 白パネルの透明度（0.70〜0.90） */
-  --panel-blur: 3px;   /* ふわっと感。不要なら 0 */
+  --headerH: 60px;     /* ヘッダー高さ */
+  --hero-posY: 30%;    /* 中央ロゴの縦位置 */
+
+  /* 固有色（そのまま） */
+  --red:#e74c3c; --blue:#2e86de; --vip:#9b59b6;
+  --ok:#16a34a1a;      /* 状態背景はダーク向けに淡く */
+  --warn:#f59e0b1a;
+  --danger:#ef44441a;
+  --gold:#ffdd57;
+
+  /* 既存UIのライト境界色置換 */
+  --bd-light: rgba(255,255,255,.08);
+  --bd-dash : rgba(255,255,255,.10);
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
+/* =========================
+   BASE
+   ========================= */
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
 body{
   margin:0;
-  color:var(--text);
-  font-family:system-ui,Segoe UI,Arial,sans-serif;
-  overflow-x:hidden;
-  position:relative;
+  color:var(--text-strong);
+  font-family:system-ui, Segoe UI, Arial, sans-serif;
+  overflow-x:hidden; position:relative;
 
   /* 黒系の放射グラデ */
   background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
   background-attachment: fixed;
 }
 
-/* ===== ヒーロー背景（ロゴ＋上部ライト／UIには触らない） ===== */
+/* ===== 背景ロゴ＆トップライト（装飾のみ／UIに干渉なし） ===== */
 html::before{
   content:"";
   position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
   z-index:0; pointer-events:none;
   background: url("alexandrite-logo.png") center/64vmin no-repeat;
   filter: blur(30px) brightness(.55) saturate(1.2);
-  opacity:.45; transform: translateZ(0);
+  opacity:.45; transform:translateZ(0);
 }
 body::before{
   content:"";
   position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
   z-index:1; pointer-events:none;
   background-image: url("alexandrite-haikei2.png");
-  background-repeat: no-repeat;
-  background-position: 50% var(--hero-posY);
-  background-size: cover;
+  background-repeat:no-repeat;
+  background-position:50% var(--hero-posY);
+  background-size:cover;
   filter:
-    drop-shadow(0 0 30px rgba(255, 60, 60, .25))
-    drop-shadow(0 0 12px rgba(255, 200, 120, .15));
+    drop-shadow(0 0 30px rgba(255,60,60,.25))
+    drop-shadow(0 0 12px rgba(255,200,120,.15));
 }
 body::after{
   content:"";
@@ -78,202 +118,256 @@ body::after{
   background: linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%);
   opacity:.18; mix-blend-mode:screen;
 }
-@media (prefers-reduced-motion: reduce){ body::after{ animation:none } }
-@media (max-width:900px){ body{ background-attachment: scroll; } }
+@media (max-width:900px){ body{ background-attachment:scroll; } }
 
-/* ====== ヘッダー／タブ（従来どおり） ====== */
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;background:#1f1f23;color:#fff;position:sticky;top:0;z-index:5}
+/* =========================
+   HEADER / TABS（寸法は完ぺきUIのまま）
+   ========================= */
+header{
+  display:flex;gap:12px;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:#1f1f23;color:#fff;position:sticky;top:0;z-index:5
+}
 header h1{margin:0;font-size:18px;line-height:1}
 .toolbar{display:flex;gap:8px;align-items:center}
-.toolbar input{padding:8px;border-radius:8px;border:1px solid #ccc;min-width:220px}
+.toolbar input{
+  padding:8px;border-radius:8px;border:1px solid var(--field-bd);
+  min-width:220px;background:rgb(var(--field-rgb)/var(--field-a));color:var(--text-strong)
+}
+.toolbar input::placeholder{ color:var(--ph-color); }
 .now{opacity:.85}
 
 .top-tabs{display:inline-flex;gap:.5rem;margin-left:1rem}
-.top-tabs .tab{padding:.35rem .8rem;border:1px solid #ddd;border-radius:999px;background:#fff;color:#111!important;text-decoration:none}
-.top-tabs .tab.active{box-shadow:0 1px 4px #0001;font-weight:700}
+.top-tabs .tab{
+  padding:.35rem .8rem;border:1px solid var(--chip-bd);border-radius:999px;
+  background:rgb(var(--chip-rgb)/var(--chip-a));color:var(--text-strong)!important;text-decoration:none
+}
+.top-tabs .tab.active{ box-shadow:0 1px 4px #0006; font-weight:700; }
 
-main{padding:12px;display:block; position:relative; z-index:3;}
+main{padding:12px;display:block;position:relative;z-index:3}
 .page{display:none}
 #pageTimer{display:block}
 
 .brand{display:flex;align-items:center;gap:10px}
 .brand .brand-mark{height:34px;width:34px;object-fit:contain;border-radius:50%;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
 
-/* ====== Floor / VIP / Roster（従来の白いパネル感を維持） ====== */
-.floor{
-  position:relative;background:var(--panel);border:1px solid #ddd;border-radius:12px;
-  overflow:hidden;padding:4px;min-height:750px;
-  background: rgba(255,255,255,var(--panel-a)) !important;
+/* =========================
+   PANELS（大パネル：floor/解析/モーダル等）
+   ========================= */
+.floor,
+.backstage,
+.anaFilter,
+.payoutsPanel,
+.tableLike,
+.pickerPanel,
+.modal,
+.legend{
+  background: rgb(var(--panel-rgb) / var(--panel-a));
+  color: var(--text-strong);
   backdrop-filter: blur(var(--panel-blur));
   -webkit-backdrop-filter: blur(var(--panel-blur));
-  border-color: rgba(255,255,255,.35);
-  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  border:1px solid var(--panel-bd);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
 }
-.legend{position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;opacity:.9;background:#fff9;border-radius:8px;padding:6px}
-.dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
-.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.danger{background:var(--danger)} .dot.empty{background:#eee}
 
-.seat{
-  position:absolute;background:#0f0f0f;border:2px solid #bbb;border-radius:10px;
-  padding:6px;min-height:64px;min-width:80px;cursor:pointer;
-  display:flex;flex-direction:column;gap:4px;transition:transform .05s, box-shadow .1s, background .2s;
-  box-shadow:0 1px 0 #0001;
+.floor{
+  position:relative;border-radius:12px;overflow:hidden;padding:4px;min-height:750px;
 }
-.seat:hover{transform:translateY(-1px)}
-.seat.red{border-color:var(--red)} .seat.blue{border-color:var(--blue)}
-.seat.active{background:var(--ok)} .seat.warn{background:var(--warn)} .seat.danger{background:var(--danger)}
-.seat.highlight{box-shadow:0 0 0 3px var(--gold) inset}
+.legend{
+  position:absolute;left:8px;top:8px;display:flex;gap:10px;flex-wrap:wrap;
+  font-size:12px;border-radius:8px;padding:6px
+}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid #999}
+.dot.ok{background:#22c55e} .dot.warn{background:#f59e0b} .dot.danger{background:#ef4444} .dot.empty{background:#374151}
+
+/* =========================
+   SEATS / VIP（カード：小ブロック）
+   ========================= */
+.seat,
+.vipSeat{
+  background: rgb(var(--card-rgb) / var(--card-a));
+  color: var(--text-strong);
+  border:2px solid var(--card-bd);
+  border-radius:10px;
+  padding:6px;min-height:64px;min-width:80px;cursor:pointer;
+  display:flex;flex-direction:column;gap:4px;
+  transition:transform .05s, box-shadow .1s, background .2s;
+  box-shadow:0 1px 0 rgba(0,0,0,.22);
+}
+.seat:hover{ transform:translateY(-1px) }
+.seat.red{ border-color:var(--red) } .seat.blue{ border-color:var(--blue) }
+.seat.active{ background: var(--ok) }
+.seat.warn{ background: var(--warn) }
+.seat.danger{ background: var(--danger) }
+.seat.highlight{ box-shadow:0 0 0 3px var(--gold) inset }
+
 .line1{display:flex;justify-content:space-between;align-items:center;font-weight:700}
-.line1 .endAt{font-weight:700;font-size:18px;opacity:.8;margin-left:10px;white-space:nowrap}
+.line1 .endAt{font-weight:700;font-size:18px;opacity:.9;margin-left:10px;white-space:nowrap}
 .timer{font-size:18px;font-weight:800}
 .meta{font-size:18px;line-height:1.25;opacity:.95;overflow-wrap:anywhere}
 
-.vipRow{position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2;}
-.vipSeat{
-  background:#0f0f0f;border:2px dashed var(--vip);border-radius:12px;
-  padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px;
-}
-.vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
-.vipSeat .timer{font-size:22px}
+.vipRow{position:absolute;left:15%;right:15%;bottom:7%;display:flex;gap:12px;z-index:2}
+.vipSeat{ border:2px dashed var(--vip) }
+.vipSeat .timer{ font-size:22px }
 
-/* ===== Backstage / Chips / Modal / Picker（従来どおり） ===== */
-.backstage{background:var(--panel);border:1px solid #ddd;border-radius:12px;padding:10px;margin-top:12px}
+/* =========================
+   BACKSTAGE / CHIPS / MODAL / PICKER
+   ========================= */
+.backstage{border-radius:12px;padding:10px;margin-top:12px}
 .backstage h2{margin:0 0 8px;font-size:16px}
-.legend-staff{font-size:12px;opacity:.8;display:flex;gap:12px;align-items:center}
+.legend-staff{font-size:12px;opacity:.85;display:flex;gap:12px;align-items:center}
 .dotS{width:10px;height:10px;border-radius:50%;display:inline-block}
-.dotS.on{background:#145768} .dotS.busy{background:#6b480a} .dotS.off{background:#9ca3af}
+.dotS.on{background:#34d399} .dotS.busy{background:#f59e0b} .dotS.off{background:#9ca3af}
 .roster{display:flex;flex-wrap:wrap;gap:8px}
-.staffChip{padding:6px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-size:14px}
-.staffChip.on{background:var(--staff-on-bg);border:1px solid var(--staff-on-border);color:var(--staff-on-text);box-shadow:0 0 0 1px #0e3d49 inset}
-.staffChip.busy{background:var(--staff-busy-bg);border:1px solid var(--staff-busy-border);color:var(--staff-busy-text);box-shadow:0 0 0 1px #3a2706 inset}
-.staffChip.off{background:var(--staff-off-bg);border:1px solid var(--staff-off-border);color:var(--staff-off-text)}
-.staffChip.selected{box-shadow:0 0 0 2px #111 inset;font-weight:700}
-.staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:#475569}
+.staffChip{
+  padding:6px 10px;border-radius:999px;border:1px solid var(--chip-bd);
+  background:rgb(var(--chip-rgb)/var(--chip-a));cursor:pointer;font-size:14px;color:var(--text-strong)
+}
+.staffChip.on{ box-shadow:0 0 0 1px #0e3d49 inset }
+.staffChip.busy{ box-shadow:0 0 0 1px #3a2706 inset }
+.staffChip.off{ opacity:.9 }
+
+.staffChip.selected{ box-shadow:0 0 0 2px #fff2 inset; font-weight:700 }
+.staffSectionTitle{flex-basis:100%;margin-top:6px;font-size:12px;color:var(--text-muted)}
 
 .modalWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:9}
-.modal{background:#fff;border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
+.modal{border-radius:14px;padding:16px;min-width:300px;max-width:92vw;box-shadow:0 20px 60px #0006}
 .modal h3{margin:0 0 10px 0}
 .row{display:flex;gap:8px;margin:8px 0}
-.row input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+.row input{
+  flex:1;padding:10px;border-radius:8px;border:1px solid var(--field-bd);
+  background:rgb(var(--field-rgb)/var(--field-a));color:var(--text-strong)
+}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;background:#111;color:#fff}
-button.secondary{background:#e5e7eb;color:#111}
+button.secondary{background:#2b2f36;color:#fff}
 button.danger{background:#dc2626}
+.chips button{background:rgb(var(--chip-rgb)/var(--chip-a));border:1px solid var(--chip-bd);color:var(--text-strong)}
+.label{font-weight:700;padding:6px 10px;border-radius:999px;font-size:12px;line-height:1;align-self:center;white-space:nowrap}
+.label-extend{color:var(--vip);border:1px solid var(--vip);background:#f7ecff10}
 
-/* ピッカー */
-.pickerField{border:1px solid #dcdfe3;background:#f9fafb;border-radius:12px;padding:8px;min-height:46px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;cursor:pointer}
-.pickerField.empty{color:#94a3b8}
-.pill{padding:4px 10px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;font-size:12px}
+.pickerField{
+  border:1px solid var(--field-bd); background:rgb(var(--field-rgb)/var(--field-a));
+  color:var(--text-strong); border-radius:12px; padding:8px; min-height:46px;
+  display:flex; gap:6px; align-items:center; flex-wrap:wrap; cursor:pointer
+}
+.pickerField.empty{ color:var(--text-weak) }
+.pill{ padding:4px 10px; border-radius:999px; border:1px solid var(--chip-bd); background:rgb(var(--chip-rgb)/var(--chip-a)); font-size:12px; color:var(--text-strong) }
 .pickerWrap{position:fixed;inset:0;background:#0008;display:none;place-items:center;z-index:10}
-.pickerPanel{background:#fff;border-radius:14px;padding:14px;max-width:92vw;max-height:80vh;overflow:auto;box-shadow:0 20px 60px #0006}
-.pickerHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
-.pickerBtns{display:flex;gap:8px;flex-wrap:wrap}
+.pickerPanel{
+  border-radius:14px; padding:14px; max-width:92vw; max-height:80vh; overflow:auto;
+  box-shadow:0 20px 60px #0006
+}
 
-/* バッジ・売上セクションの白UI維持 */
-.extBadge{ display:inline-block;margin-left:8px;padding:2px 6px;border-radius:999px;border:1px solid #6b7280;font-size:12px;line-height:1;opacity:.85;background:#fff; }
-.sales-pill{ color:#111 !important; }
-.sales-row .sales-pill{ color:#111 !important; }
-button.sales-pill{ background:#fff !important; color:#111 !important; border:1px solid #cbd5e1 !important; }
-button.sales-pill:hover{ background:#f8fafc !important; }
+/* =========================
+   SALES / LISTS / TABLE（寸法維持＋色だけ暗色化）
+   ========================= */
+.extBadge{
+  display:inline-block;margin-left:8px;padding:2px 6px;border-radius:999px;
+  border:1px solid #6b7280;color:var(--text-strong);background:#ffffff12;font-size:12px;line-height:1;opacity:.95
+}
+.sales-pill, .sales-row .sales-pill{ color:var(--text-strong)!important }
+button.sales-pill{
+  background:rgb(var(--chip-rgb)/var(--chip-a))!important;color:var(--text-strong)!important;border:1px solid var(--chip-bd)!important
+}
+button.sales-pill:hover{ background:#1c1f24 !important; }
 
-/* 売上タブ（白） */
 .salesTabHead{ display:flex; gap:8px; margin:8px 0 4px; }
-.salesTabBtn{ padding:6px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#fff; color:#111; cursor:pointer; }
+.salesTabBtn{
+  padding:6px 10px; border-radius:999px; border:1px solid var(--chip-bd);
+  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong); cursor:pointer
+}
 .salesTabBtn.active{ background:#111; color:#fff; }
 
-/* スクロール関連（UI寸法は不変） */
-#seatSales { display: none; }
-#seatSales.show { display: flex; flex-direction: column; max-height: 72vh; }
+#seatSales{ display:none; }
+#seatSales.show{ display:flex; flex-direction:column; max-height:72vh; }
 #seatSalesList{ flex:1 1 auto; overflow:auto; overscroll-behavior:contain; max-height:calc(var(--rowH,48px)*8 + 8px); }
 #salesLines{ max-height:calc(var(--rowH,48px)*8 + 8px); overflow:auto; overscroll-behavior:contain; }
 #seatSalesList::-webkit-scrollbar, #salesLines::-webkit-scrollbar{ width:10px; }
-#seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:8px; }
+#seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
-/* 管理系フォーム（白） */
+/* =========================
+   ADMIN / FORMS（寸法維持）
+   ========================= */
 .admin-st-list{ display:grid; gap:12px; }
-.stRow{ display:grid; grid-template-columns: 2fr 1fr auto auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed #e5e7eb; }
-.stRow input, .stRow select{ padding:12px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-size:14px; width:100%; }
-.stRow input[disabled], .stRow select[disabled]{ background:#f8fafc; color:#475569; opacity:.9; }
+.stRow{
+  display:grid; grid-template-columns: 2fr 1fr auto auto; gap:16px; align-items:center;
+  padding:8px 0; border-top:1px dashed var(--bd-dash);
+}
+.stRow input, .stRow select{
+  padding:12px; border:1px solid var(--field-bd); border-radius:12px;
+  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%;
+}
+.stRow input[disabled], .stRow select[disabled]{ background:#1b1f24; color:#a6b0bf; opacity:.9; }
 .stBtn{ white-space:nowrap; }
 
-/* 商品リスト等（白） */
-.pdRowAdd{ display:grid; grid-template-columns: 2fr 1fr auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed #e5e7eb; }
-.pdRowAdd input{ padding:12px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-size:14px; width:100%; }
-.pdRowList{ display:grid; grid-template-columns: 2fr 1fr auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed #e5e7eb; }
-.pdRowList input{ padding:12px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-size:14px; width:100%; }
+.pdRowAdd{ display:grid; grid-template-columns: 2fr 1fr auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed var(--bd-dash); }
+.pdRowAdd input{ padding:12px; border:1px solid var(--field-bd); border-radius:12px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%; }
 
-/* ===== 給料支払い／未払い（白いUIのまま＝色変更なし） ===== */
-.payoutsPanel{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
-.payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-#pageAdmin{ min-height: 0; }
-#adminPayouts{ display:flex; flex-direction:column; height: 100%; min-height: 0; }
-#payoutsListBox{ flex: 1 1 auto; min-height: 0; display:flex; flex-direction:column; }
-#payoutsHistoryBox{ flex: 0 0 260px; min-height: 0; }
+.pdRowList{ display:grid; grid-template-columns: 2fr 1fr auto; gap:16px; align-items:center; padding:8px 0; border-top:1px dashed var(--bd-dash); }
+.pdRowList input{ padding:12px; border:1px solid var(--field-bd); border-radius:12px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); font-size:14px; width:100%; }
+
+/* =========================
+   PAYROLL（給料支払い／未払い）- 黒ガラス版
+   ========================= */
+.payoutsPanel{ background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; }
+.payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--text-muted); }
+#pageAdmin{ min-height:0; }
+#adminPayouts{ display:flex; flex-direction:column; height:100%; min-height:0; }
+#payoutsListBox{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+#payoutsHistoryBox{ flex:0 0 260px; min-height:0; }
 .payoutsPanel{ display:flex; flex-direction:column; min-height:0; }
-.payoutsScroll{ flex: 1 1 auto; overflow: auto; max-height: none; }
-#pageAdmin.payouts-fit{ overflow: hidden; height: calc(100dvh - var(--headerH, 60px)); }
-#payoutsListBox, #payoutsHistoryBox { min-height: 0; }
-#payoutsListBox > .payoutsPanel, #payoutsHistoryBox > .payoutsPanel { height: 100%; display: flex; flex-direction: column; }
-#payoutsHistScroll { flex: 1 1 auto; overflow: auto; max-height: none; }
-.payoutRow{ padding:8px 0; border-top:1px dashed #e5e7eb; }
+.payoutsScroll{ flex:1 1 auto; overflow:auto; max-height:none; }
+#pageAdmin.payouts-fit{ overflow:hidden; height:calc(100dvh - var(--headerH)); }
+#payoutsListBox, #payoutsHistoryBox { min-height:0; }
+#payoutsListBox > .payoutsPanel, #payoutsHistoryBox > .payoutsPanel { height:100%; display:flex; flex-direction:column; }
+#payoutsHistScroll { flex:1 1 auto; overflow:auto; max-height:none; }
+.payoutRow{ padding:8px 0; border-top:1px dashed var(--bd-dash); }
+#payoutsHistScroll::-webkit-scrollbar-thumb,
+.payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
-/* 解析カード／表（白） */
-.anaFilter{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px; }
-.anaFilter label{ display:inline-flex; gap:6px; align-items:center; background:#f8fafc; border:1px solid #e5e7eb; padding:6px 8px; border-radius:8px; }
-.anaFilter input[type="date"]{ border:none; background:transparent; padding:4px; }
+/* =========================
+   ANALYTICS / TABLES（暗色化）
+   ========================= */
+.anaFilter{
+  display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;
+  background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong);
+}
+.anaFilter label{
+  display:inline-flex; gap:6px; align-items:center;
+  background:#0f1216; border:1px solid var(--bd-light); padding:6px 8px; border-radius:8px; color:var(--text-strong);
+}
+.anaFilter input[type="date"]{ border:none; background:transparent; padding:4px; color:var(--text-strong); }
+
 .anaQuick{ display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
 .anaH3{ margin:6px 0 6px; font-size:15px; }
-.anaH4{ margin:6px 0 6px; font-size:14px; color:#475569 }
+.anaH4{ margin:6px 0 6px; font-size:14px; color:var(--text-muted) }
 .anaBlock{ margin-top:12px; }
 
 .metricGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-.metricCard{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px; }
+.metricCard{ border:1px solid var(--panel-bd); border-radius:12px; padding:12px; background:rgb(var(--panel-rgb)/.60); }
 .metricValue{ font-size:20px; font-weight:800; }
-.metricNote{ font-size:12px; color:#64748b; }
 @media(max-width:900px){ .metricGrid{ grid-template-columns:1fr 1fr; } }
 
-.anaTwoCol{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-@media(max-width:900px){ .anaTwoCol{ grid-template-columns:1fr; } }
-
-.tableLike{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+.tableLike{ background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; overflow:hidden; }
 .tHead, .tRow{ display:grid; grid-template-columns: 1fr 100px 120px; gap:8px; }
-.tHead{ background:#f8fafc; font-weight:700; }
-.tCell{ padding:8px; border-bottom:1px dashed #eef2f6; }
+.tHead{ background:#ffffff08; font-weight:700; }
+.tCell{ padding:8px; border-bottom:1px dashed var(--bd-dash); }
 .tRight{ text-align:right; }
-.barRow{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px dashed #eef2f6; }
+.barRow{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px dashed var(--bd-dash); }
 .barLabel{ flex:0 0 180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.barWrap{ flex:1 1 auto; background:#f1f5f9; border-radius:8px; overflow:hidden; height:14px; }
+.barWrap{ flex:1 1 auto; background:#1f2937; border-radius:8px; overflow:hidden; height:14px; }
 .barFill{ height:100%; background:#cbd5e1; }
 .barVal{ flex:0 0 100px; text-align:right; }
 
-/* ===== モバイル微調整 ===== */
+/* =========================
+   MOBILE 微調整（寸法は既存準拠）
+   ========================= */
 @media(max-width:900px){
   .toolbar input{min-width:160px}
   .seat{min-width:72px;min-height:60px}
   .sales-grid{grid-template-columns:1fr}
 }
 
-/* =========================================================
-   OPTION: Payroll を“黒い半透明ガラス”にしたいときだけ有効化
-   （↑「色は変えない」場合はこのブロックはコメントのまま）
-   ========================================================= */
-/*
-:root{
-  --pay-glass-rgb:12 12 14; --pay-glass-a:.78; --pay-glass-bd:rgba(255,255,255,.10); --pay-glass-blur:6px;
-}
-#adminPayouts .payoutsPanel,
-#payoutsListBox .payoutsPanel,
-#payoutsHistoryBox .payoutsPanel,
-[id*="unpaid"], [class*="unpaid"], [class*="payroll"], [class*="payout"]{
-  background: rgb(var(--pay-glass-rgb)/var(--pay-glass-a)) !important;
-  color:#f3f4f6 !important;
-  border-color: var(--pay-glass-bd) !important;
-  backdrop-filter: blur(var(--pay-glass-blur)); -webkit-backdrop-filter: blur(var(--pay-glass-blur));
-}
-#adminPayouts .payoutRow{ border-top:1px dashed rgba(255,255,255,.10); }
-#payoutsHistScroll::-webkit-scrollbar-thumb,
-.payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; }
-*/
 
 
 
