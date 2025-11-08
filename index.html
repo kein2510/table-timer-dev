@@ -5,46 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ALEXANDRITE【DEV】</title>
   <link rel="icon" href="data:," />
-  <style>
+<style>
 /* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass Theme)
-   - レイアウト/寸法/挙動は“完ぺきUI”そのまま
-   - 色設計だけ黒基調トークンで再マッピング
+   ALEXANDRITE – Perfect UI (Dark Glass Theme, merged)
+   - レイアウト/寸法/挙動: 白UIそのまま
+   - 配色/質感: 黒トークンによるダークガラス
+   - 置換手順: 既存<style>をこれで丸ごと置換
    ========================================================= */
 
-/* =========================
-   THEME TOKENS（ここだけ直せばOK）
-   ========================= */
-/* =========================================================
-   ALEXANDRITE – Perfect UI (white base, original layout)
-   ※ レイアウト変更なし／色は従来どおり
-   ========================================================= */
-
-/* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass Theme)
-   - レイアウト/寸法/挙動は“完ぺきUI”そのまま
-   - 色設計だけ黒基調トークンで再マッピング
-   ========================================================= */
-
-/* =========================
-   THEME TOKENS（ここだけ直せばOK）
-   ========================= */
-/* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass Theme)
-   - レイアウト/寸法/挙動は“完ぺきUI”そのまま
-   - 配色は黒基調。色は :root で一括管理
-   ========================================================= */
-
-/* =========================
-   THEME TOKENS（ここだけ直せばOK）
-   ========================= */
-/* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass) 全面適用CSS
-   - レイアウト/寸法/挙動は「完ぺきなUI」と同一
-   - ここから下は配色と質感のみ黒基調へ再マッピング
-   ========================================================= */
-
-/* ====== あなたの指定トークン：そのまま残します ====== */
+/* ====== THEME TOKENS（ここを触れば全体の色が変わる） ====== */
 :root{
   /* === Text === */
   --text-strong: #f3f4f6;    /* 主テキスト（明） */
@@ -83,17 +52,17 @@
   --state-empty: #374151;
   --shine-gold:  #ffdd57;
 
-  /* 席の状態時の背景（ダーク向け薄色） */
+  /* 状態時の背景（ダーク向け薄色） */
   --bg-ok:       #16a34a1a;
   --bg-warn:     #f59e0b1a;
   --bg-danger:   #ef44441a;
 
   /* === 背景/レイアウト === */
-  --bg-dark:   #000;     /* ページ全体の最終背景 */
-  --headerH:   60px;     /* ヘッダー高さ */
-  --hero-posY: 30%;      /* 中央ロゴの縦位置 */
+  --bg-dark:   #000;       /* ページ最終背景 */
+  --headerH:   60px;       /* ヘッダー高さ */
+  --hero-posY: 30%;        /* 中央ロゴの縦位置 */
 
-  /* === 罫線・ダッシュ === */
+  /* === 罫線 === */
   --bd-light: rgba(255,255,255,.08);
   --bd-dash : rgba(255,255,255,.10);
 }
@@ -101,56 +70,46 @@
 /* =========================
    BASE（背景・文字）
    ========================= */
-*{ box-sizing: border-box; }
+*{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
   color:var(--text-strong);
   font-family:system-ui, Segoe UI, Arial, sans-serif;
-  overflow-x:hidden;
-  position:relative;
+  overflow-x:hidden; position:relative;
 
   /* 黒系の放射グラデーション */
   background: radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
   background-attachment: fixed;
 }
-
-/* =========================
-   背景ロゴ＆上部ライト（装飾のみ / UIに干渉なし）
-   ========================= */
+/* 背景ロゴ/トップライト（装飾。UI非干渉） */
 html::before{
-  content:"";
-  position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
+  content:""; position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
   z-index:0; pointer-events:none;
   background:url("alexandrite-logo.png") center/64vmin no-repeat;
-  filter: blur(30px) brightness(.55) saturate(1.2);
+  filter:blur(30px) brightness(.55) saturate(1.2);
   opacity:.45; transform:translateZ(0);
 }
 body::before{
-  content:"";
-  position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
+  content:""; position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
   z-index:1; pointer-events:none;
   background-image:url("alexandrite-haikei2.png");
   background-repeat:no-repeat;
   background-position:50% var(--hero-posY);
   background-size:cover;
-  filter:
-    drop-shadow(0 0 30px rgba(255,60,60,.25))
-    drop-shadow(0 0 12px rgba(255,200,120,.15));
+  filter: drop-shadow(0 0 30px rgba(255,60,60,.25))
+          drop-shadow(0 0 12px rgba(255,200,120,.15));
 }
 body::after{
-  content:"";
-  position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
+  content:""; position:fixed; left:0; right:0; bottom:0; top:var(--headerH);
   z-index:1; pointer-events:none;
   background:linear-gradient(to bottom, rgba(255,255,255,.10), rgba(0,0,0,.75) 60%);
   opacity:.18; mix-blend-mode:screen;
 }
-@media (max-width:900px){
-  body{ background-attachment:scroll; }
-}
+@media (max-width:900px){ body{ background-attachment:scroll; } }
 
 /* =========================
-   ヘッダー／タブ（寸法・配置は完ぺきUI準拠）
+   HEADER / TABS（白UIと同寸）
    ========================= */
 header{
   display:flex; gap:12px; align-items:center; justify-content:space-between;
@@ -175,7 +134,7 @@ header h1{ margin:0; font-size:18px; line-height:1; }
 .top-tabs .tab.active{ box-shadow:0 1px 4px #0006; font-weight:700; }
 
 /* =========================
-   レイアウト骨格
+   LAYOUT（白UIの骨格を踏襲）
    ========================= */
 main{ padding:12px; display:block; position:relative; z-index:3; }
 .page{ display:none; }
@@ -188,7 +147,7 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 }
 
 /* =========================
-   大パネル（floor/解析/ピッカー/モーダル/凡例）
+   PANELS（floor/解析/モーダル/ピッカー/凡例）
    ========================= */
 .floor,
 .backstage,
@@ -205,7 +164,6 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   border:1px solid var(--panel-bd);
   box-shadow:0 8px 24px rgba(0,0,0,.18);
 }
-
 .floor{
   position:relative; border-radius:12px; overflow:hidden; padding:4px; min-height:750px;
 }
@@ -218,24 +176,19 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .dot.danger{ background:var(--state-danger); } .dot.empty{ background:var(--state-empty); }
 
 /* =========================
-   席カード（VIP/ノーマル） ※配置・サイズは完ぺきUI同等
+   SEATS（絶対配置＝白UIと一致）
    ========================= */
 .seat,
 .vipSeat{
-  position: absolute;        /* ← これが抜けてた！！ */
+  position:absolute;                          /* ← レイアウト要。必須 */
   background: rgb(var(--card-rgb) / var(--card-a));
   color: var(--text-strong);
-  border: 2px solid var(--card-bd);
-  border-radius: 10px;
-  padding: 6px;
-  min-height: 64px;
-  min-width: 80px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: transform .05s, box-shadow .1s, background .2s;
-  box-shadow: 0 1px 0 rgba(0,0,0,.22);
+  border:2px solid var(--card-bd);
+  border-radius:10px;
+  padding:6px; min-height:64px; min-width:80px; cursor:pointer;
+  display:flex; flex-direction:column; gap:4px;
+  transition:transform .05s, box-shadow .1s, background .2s;
+  box-shadow:0 1px 0 rgba(0,0,0,.22);
 }
 .seat:hover{ transform:translateY(-1px); }
 .seat.red{  border-color:var(--accent-red); }
@@ -250,25 +203,25 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .timer{ font-size:18px; font-weight:800; }
 .meta{ font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere; }
 
-/* VIP 横並び（完ぺきUIの位置・間隔） */
-.vipRow { position: absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2; }
-.vipRow .vipSeat { position: relative; } /* vipRow内で並べる時だけ相対配置に */
+/* VIP row（白UI準拠で横並びする場合） */
+.vipRow{ position:absolute; left:15%; right:15%; bottom:7%; display:flex; gap:12px; z-index:2; }
+.vipRow .vipSeat{ position:relative; } /* 行の中では相対配置 */
 .vipSeat .timer{ font-size:22px; }
 
 /* =========================
-   バックステージ／タグ／モーダル／ピッカー
+   BACKSTAGE / CHIPS / MODAL / PICKER
    ========================= */
 .backstage{ border-radius:12px; padding:10px; margin-top:12px; }
 .backstage h2{ margin:0 0 8px; font-size:16px; }
 .legend-staff{ font-size:12px; opacity:.85; display:flex; gap:12px; align-items:center; }
 .dotS{ width:10px; height:10px; border-radius:50%; display:inline-block; }
 .dotS.on{ background:#34d399; } .dotS.busy{ background:#f59e0b; } .dotS.off{ background:#9ca3af; }
-.roster{ display:flex; flex-wrap:wrap; gap:8px; }
 
+.roster{ display:flex; flex-wrap:wrap; gap:8px; }
 .staffChip{
-  padding:6px 10px; border-radius:999px;
+  padding:6px 10px; border-radius:999px; cursor:pointer; font-size:14px;
   background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
-  border:1px solid var(--chip-bd); cursor:pointer; font-size:14px;
+  border:1px solid var(--chip-bd);
 }
 .staffChip.on{   box-shadow:0 0 0 1px #0e3d49 inset; }
 .staffChip.busy{ box-shadow:0 0 0 1px #3a2706 inset; }
@@ -279,15 +232,14 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 .modalWrap{ position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:9; }
 .modal{
   border-radius:14px; padding:16px; min-width:300px; max-width:92vw; box-shadow:0 20px 60px #0006;
-  background: rgb(var(--panel-rgb)/var(--panel-a));
-  border:1px solid var(--panel-bd);
+  background: rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd);
 }
-.modal h3{ margin:0 0 10px 0; }
+.modal h3{ margin:0 0 10px; }
 .row{ display:flex; gap:8px; margin:8px 0; }
 .row input{
-  flex:1; padding:10px; border-radius:8px;
+  flex:1; padding:10px; border-radius:8px; outline:none;
   background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);
-  border:1px solid var(--field-bd); outline:none;
+  border:1px solid var(--field-bd);
 }
 .btns{ display:flex; flex-wrap:wrap; gap:8px; }
 button{ border:none; border-radius:10px; padding:10px 14px; cursor:pointer; background:#111; color:#fff; }
@@ -304,9 +256,9 @@ button.danger{ background:#dc2626; }
 }
 .pickerField.empty{ color:var(--text-weak); }
 .pill{
-  padding:4px 10px; border-radius:999px;
+  padding:4px 10px; border-radius:999px; font-size:12px;
   background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
-  border:1px solid var(--chip-bd); font-size:12px;
+  border:1px solid var(--chip-bd);
 }
 .pickerWrap{ position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:10; }
 .pickerPanel{
@@ -316,7 +268,7 @@ button.danger{ background:#dc2626; }
 }
 
 /* =========================
-   売上UI／リスト／テーブル（色のみ暗色化）
+   SALES / LISTS / TABLE（色だけ暗色化）
    ========================= */
 .extBadge{
   display:inline-block; margin-left:8px; padding:2px 6px; border-radius:999px;
@@ -346,7 +298,7 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 #seatSalesList::-webkit-scrollbar-thumb, #salesLines::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
 /* =========================
-   管理フォーム
+   ADMIN / FORMS
    ========================= */
 .admin-st-list{ display:grid; gap:12px; }
 .stRow{
@@ -372,8 +324,7 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
    ========================= */
 .payoutsPanel{
   background:rgb(var(--panel-rgb)/var(--panel-a));
-  border:1px solid var(--panel-bd); border-radius:12px; padding:10px;
-  color:var(--text-strong);
+  border:1px solid var(--panel-bd); border-radius:12px; padding:10px; color:var(--text-strong);
 }
 .payoutsHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; color:var(--text-muted); }
 
@@ -393,7 +344,7 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .payoutsScroll::-webkit-scrollbar-thumb{ background:#374151; border-radius:8px; }
 
 /* =========================
-   テーブル／可視化（暗色）
+   ANALYTICS / TABLES
    ========================= */
 .anaFilter{
   display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px;
@@ -416,34 +367,17 @@ button.sales-pill:hover{ background:#1c1f24 !important; }
 .metricValue{ font-size:20px; font-weight:800; }
 @media(max-width:900px){ .metricGrid{ grid-template-columns:1fr 1fr; } }
 
-.tableLike{ background:rgb(var(--panel-rgb)/var(--panel-a)); border:1px solid var(--panel-bd); border-radius:12px; overflow:hidden; }
-.tHead, .tRow{ display:grid; grid-template-columns: 1fr 100px 120px; gap:8px; }
-.tHead{ background:#ffffff08; font-weight:700; }
-.tCell{ padding:8px; border-bottom:1px dashed var(--bd-dash); }
-.tRight{ text-align:right; }
-.barRow{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px dashed var(--bd-dash); }
-.barLabel{ flex:0 0 180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.barWrap{ flex:1 1 auto; background:#1f2937; border-radius:8px; overflow:hidden; height:14px; }
-.barFill{ height:100%; background:#cbd5e1; }
-.barVal{ flex:0 0 100px; text-align:right; }
-
 /* =========================
-   モバイル微調整（レイアウト値は完ぺきUIと同じ）
+   MOBILE
    ========================= */
 @media(max-width:900px){
   .toolbar input{ min-width:160px; }
   .seat{ min-width:72px; min-height:60px; }
   .sales-grid{ grid-template-columns:1fr; }
 }
-
-
-
-
-
-
-    /* ===== ALEXANDRITE 背景強化（ここまで） ===== */
-  </style>
+</style>
 </head>
+  
 
 <!--
   <!DOCTYPE html>
