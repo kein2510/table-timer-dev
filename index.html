@@ -410,6 +410,101 @@ button.sales-pill:hover{ filter:brightness(1.05); }
   .sales-grid{ grid-template-columns:1fr; }
 }
 
+/* =========================
+   ▼ レイアウト修正（1枚目の配置に合わせる）
+   ========================= */
+/* VIPは“座席(.seat)”の絶対配置だけを使う：自動の横並びを無効化 */
+.vipRow{
+  position: static !important;
+  display: contents !important;  /* コンテナのレイアウト効果を消す */
+}
+/* 通常VIPは .seat を使う（点線化しない） */
+.vipRow .vipSeat{
+  position: absolute !important;
+  border: 2px solid var(--card-bd) !important;
+}
+
+/* 超VIPは下部に横3並び（1→3） */
+.ultraRow{
+  position: absolute !important;
+  left: 16px; right: 16px; bottom: 16px;
+  display: flex !important;
+  gap: 12px;
+  z-index: 2;
+}
+.ultraRow .vipSeat{
+  position: relative !important;     /* 行内でのフレックス配置 */
+  min-height: 76px;
+  padding: 10px 12px;
+  border: 2px dashed var(--accent-vip) !important;
+  border-radius: 12px;
+  flex: 1 1 0;                        /* 3等分 */
+}
+
+/* =========================
+   ▼ 控室（2カラム＆検索ボックス統一）
+   ========================= */
+.backstage .rosterGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+.backstage .rosterHead{
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:12px; color:var(--text-muted);
+}
+.backstage .rosterSearch{
+  padding:8px; border-radius:8px; min-width:160px;
+  background: rgb(var(--field-rgb)/var(--field-a));
+  color: var(--text-strong);
+  border: 1px solid var(--field-bd);
+  outline: none;
+}
+@media (max-width:900px){
+  .backstage .rosterGrid{ grid-template-columns:1fr; }
+}
+
+/* =========================
+   ▼ 売上一覧／給料支払いなど白パネルを黒ガラス化
+   （元の白背景と競合するので !important で強制）
+   ========================= */
+/* 共通“白パネル”っぽいものを吸収して統一 */
+.salesListWrap, .salesDayWrap, .dayBox, .listBox, .panelBox,
+.payrollWrap, .payrollDayWrap, .payoutsPanel, .analyticsCard,
+.tableLike, .anaFilter,
+#pageSales .dayBox, #pageSales .listBox,
+#pagePayroll .dayBox, #pagePayroll .listBox {
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  border: 1px solid var(--panel-bd) !important;
+  color: var(--text-strong) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
+}
+
+/* 行ヘッダー・表頭の薄い反転（白UIの視認性維持） */
+.tHead{ background:#ffffff10 !important; color:var(--text-strong) !important; }
+
+/* まだ白く残る“div一括パネル”への最後の網掛け */
+main > section, main > .panel, main .panel {
+  background: rgb(var(--panel-rgb)/var(--panel-a));
+  border: 1px solid var(--panel-bd);
+  color: var(--text-strong);
+  border-radius: 12px;
+}
+/* 既存で白背景＋薄グレー枠が直書きされている場合の強制上書き */
+*[style*="background: #fff"], *[style*="background:#fff"]{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border-color: var(--panel-bd) !important;
+}
+
+/* =========================
+   ▼ 細部：控室チップ・スクロール等は現状維持
+   ========================= */
+
+
 
 
 </style>
