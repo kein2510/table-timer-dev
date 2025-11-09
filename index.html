@@ -70,6 +70,11 @@
   /* === 罫線 === */
   --bd-light: rgba(255,255,255,.08);
   --bd-dash : rgba(255,255,255,.10);
+
+  /* タイトルの共通トークン（色は既存を使用） */
+  --heading-size: 20px;
+  --heading-weight: 800;
+  --subheading-size: 14px;
 }
 
 /* =========================
@@ -320,6 +325,97 @@ button.sales-pill:hover{ filter:brightness(1.05); }
 .seatSales.show ~ *,
 #seatSales.show ~ *{ display:none !important; }
 
+.page h2, .salesTitle, .payrollTitle, .payoutsHeadTitle{
+  color: var(--text-strong);
+  font-size: var(--heading-size);
+  font-weight: var(--heading-weight);
+  letter-spacing: .02em;
+  margin: 8px 0 10px;
+}
+
+.page h3, .sectionTitle-sub{
+  color: var(--text-muted);
+  font-size: var(--subheading-size);
+  font-weight: 700;
+  margin: 6px 0;
+}
+
+/* ==== 給料支払い：日別ビューのテーブル・入力の暗色スキン ==== */
+.payoutsPanel table,
+.payoutsPanel thead,
+.payoutsPanel tbody,
+.payoutsPanel tr,
+.payoutsPanel th,
+.payoutsPanel td{
+  background: transparent !important;
+  color: var(--text-strong) !important;
+  border-color: var(--bd-dash) !important;
+}
+
+/* ヘッダー帯は薄反転 */
+.payoutsPanel thead th{
+  background: #ffffff10 !important;
+  font-weight: 700;
+}
+
+/* 行の区切り（破線で軽く） */
+.payoutsPanel tr{
+  border-bottom: 1px dashed var(--bd-dash);
+}
+
+/* 金額入力などのフィールドを統一 */
+.payoutsPanel input[type="text"],
+.payoutsPanel input[type="number"],
+.payoutsPanel input[type="search"],
+.payoutsPanel input[type="tel"]{
+  background: rgb(var(--field-rgb)/var(--field-a)) !important;
+  color: var(--text-strong) !important;
+  border: 1px solid var(--field-bd) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  outline: none;
+}
+
+/* 右寄せが欲しい金額セル */
+.payoutsPanel .tRight,
+.payoutsPanel td.amount,
+.payoutsPanel input[type="number"]{
+  text-align: right;
+}
+
+/* 集計行（最下段）の帯をわずかに強調 */
+.payoutsPanel .summaryRow td{
+  background: #ffffff08 !important;
+  font-weight: 800;
+}
+
+/* ==== パネル残白の最終キャッチ ==== */
+#pageSales .salesListWrap,
+#pageSales .salesDayWrap,
+#pagePayroll .payrollWrap,
+#pagePayroll .payrollDayWrap,
+#pagePayroll .payoutsPanel,
+#pageAdmin .tableLike{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  border: 1px solid var(--panel-bd) !important;
+  color: var(--text-strong) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
+}
+
+/* 中のカード/行が個別に白指定されている場合の強制上書き */
+#pageSales *[style*="background: #fff"],
+#pageSales *[style*="background:#fff"],
+#pagePayroll *[style*="background: #fff"],
+#pagePayroll *[style*="background:#fff"]{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border-color: var(--panel-bd) !important;
+}
+
+
+
 /* =========================
    ADMIN / FORMS
    ========================= */
@@ -420,21 +516,44 @@ button.sales-pill:hover{ filter:brightness(1.05); }
   position: static !important;
   display: contents !important; /* 子(.seat / .vipSeat)の絶対配置を邪魔しない */
   inset: auto !important;       /* 念のため以前の指定を無効化 */
+  position: absolute !important;
+  left: 16px !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  display: flex !important;
+  gap: 12px !important;
+  z-index: 2 !important;
 }
 
 /* 各席はすべて絶対配置のまま（HTMLの left/top をそのまま使う） */
 .vipRow .vipSeat,
 .ultraRow .vipSeat{
   position: absolute !important;
+  position: relative !important;
+  flex: 1 1 0 !important;       /* 3等分 */
+  min-height: 96px;             /* お好みで高さ、白UIと同等感 */
+  padding: 10px 12px;
+  border: 2px dashed var(--accent-vip) !important;
+  border-radius: 12px;
+}
+
+/* 通常VIPは display:contents のままで “座席の絶対配置” を尊重する */
+.vipRow{
+  position: static !important;
+  display: contents !important;
+  inset: auto !important;
 }
 
 /* 境界線の見た目だけ分ける（位置には影響しない） */
 .vipRow .vipSeat{
   border: 2px solid var(--card-bd) !important;     /* 通常VIP＝実線 */
+  position: absolute !important;                 /* ここは絶対配置のまま */
+}
 }
 .ultraRow .vipSeat{
   border: 2px dashed var(--accent-vip) !important; /* 超VIP＝点線(紫) */
   border-radius: 12px;
+
 }
 
 
