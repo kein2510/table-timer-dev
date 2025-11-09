@@ -165,9 +165,22 @@ main{padding:12px; position:relative; z-index:3;}
 
 /* 超VIP：最下段に3分割で横並び */
 .ultraRow{
-  position:absolute; left:24px; right:24px; bottom:24px; display:flex; gap:16px; z-index:2;
+  position: absolute !important;    /* 画面下に固定 */
+  left: 15% !important;             /* 白UIと同じ幅感：左右15%余白 */
+  right: 15% !important;
+  bottom: 7% !important;            /* 白UIと同じ下余白 */
+  display: flex !important;
+  gap: 12px !important;
+  z-index: 2 !important;
 }
-.ultraRow .vipSeat{flex:1 1 0; min-height:120px; padding:12px 14px;}
+.ultraRow .vipSeat{
+  position: relative !important;
+  flex: 1 1 0 !important;           /* 3等分 */
+  min-height: 100px !important;     /* 白UIと同等の高さ感 */
+  padding: 10px !important;
+  border: 2px dashed var(--accent-vip) !important;   /* 超VIP＝点線(紫) */
+  border-radius: 12px !important;
+}
 
 /* ====== 控室 ====== */
 .backstage{border-radius:12px; padding:10px; margin-top:12px;}
@@ -255,10 +268,50 @@ button.sales-pill:hover{filter:brightness(1.05);}
 .payoutsPanel .summaryRow td{background:#ffffff08!important; font-weight:800;}
 
 /* 売上一覧／給料支払い—白パネル吸収（強制ダーク化） */
-#pageSales .salesListWrap,#pageSales .salesDayWrap,#pagePayroll .payrollWrap,#pagePayroll .payrollDayWrap,#pagePayroll .payoutsPanel,#pageAdmin .tableLike{
-  background:rgb(var(--panel-rgb)/var(--panel-a))!important; border:1px solid var(--panel-bd)!important; color:var(--text-strong)!important; border-radius:12px!important; backdrop-filter:blur(var(--panel-blur))!important; -webkit-backdrop-filter:blur(var(--panel-blur))!important;
+#pageSales .salesListWrap,
+#pageSales .salesDayWrap,
+#pagePayroll .payrollWrap,
+#pagePayroll .payrollDayWrap > *{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border: 1px solid var(--panel-bd) !important;
+  border-radius: 12px !important;
 }
-#pageSales .tHead,#pagePayroll .tHead,#pageSales .dayBox .head,#pagePayroll .dayBox .head{background:#ffffff10!important; color:var(--text-strong)!important; font-weight:700!important;}
+#pagePayroll .payoutsPanel,
+#pageAdmin .tableLike{
+  background:rgb(var(--panel-rgb)/var(--panel-a))!important; 
+  border:1px solid var(--panel-bd)!important; 
+  color:var(--text-strong)!important; 
+  border-radius:12px!important; 
+  backdrop-filter:blur(var(--panel-blur))!important; 
+  -webkit-backdrop-filter:blur(var(--panel-blur))!important;
+  
+/* 内側に置かれた“行要素（row/item/lineなど）”が白を指定しても透過で受ける */
+#pageSales .salesListWrap *[class*="row"],
+#pageSales .salesDayWrap  *[class*="row"],
+#pageSales .salesListWrap *[class*="item"],
+#pageSales .salesDayWrap  *[class*="item"],
+#pageSales .salesDayWrap  *[class*="line"],
+#pagePayroll .payrollWrap *[class*="row"],
+#pagePayroll .payrollDayWrap *[class*="row"],
+#pagePayroll .payrollDayWrap *[class*="item"],
+#pagePayroll .payrollDayWrap *[class*="line"]{
+  background: transparent !important;
+  color: var(--text-strong) !important;
+  border-color: var(--panel-bd) !important;
+}
+/* セクション全体の文字色を白に固定（念押し） */
+#pageSales, #pagePayroll{
+  color: var(--text-strong) !important;
+}
+
+}
+#pageSales .tHead,#pagePayroll .tHead,
+#pageSales .dayBox .head,#pagePayroll .dayBox .head,
+#pageSales thead th, #pagePayroll thead th{
+  background: #ffffff10 !important;
+  color: var(--text-strong) !important;
+  font-weight: 700 !important;
 #pageSales .tRow,#pagePayroll .tRow{border-bottom:1px dashed var(--bd-dash)!important;}
 #pageSales input,#pageSales select,#pageSales textarea,#pagePayroll input,#pagePayroll select,#pagePayroll textarea{
   background:rgb(var(--field-rgb)/var(--field-a))!important; color:var(--text-strong)!important; border:1px solid var(--field-bd)!important; border-radius:8px!important;
