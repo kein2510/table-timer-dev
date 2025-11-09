@@ -620,6 +620,79 @@ main > section, main > .panel, main .panel {
    ▼ 細部：控室チップ・スクロール等は現状維持
    ========================= */
 
+/* =========================================================
+   ▼ Patch: 超VIPの最下段3分割／白パネル&文字色の取りこぼし修正
+   ========================================================= */
+
+/* 1) まず seat と vipSeat の position を分離（事故の元を解消） */
+.seat{ position:absolute !important; }
+.vipSeat{ position:relative !important; }  /* ← 子を相対配置に戻す */
+
+/* 2) 通常VIPの枠は実線、超VIPは点線（トークン名の打ち間違いも修正） */
+.vipRow .vipSeat{ border:2px solid var(--card-bd) !important; }
+.ultraRow .vipSeat{ border:2px dashed var(--accent-vip) !important; }
+
+/* 3) 超VIPを“下端に横3分割”で固定配置（白UIと同じ見た目） */
+.ultraRow{
+  position:absolute !important;
+  left:24px !important; right:24px !important; bottom:24px !important;
+  display:flex !important; gap:16px !important; z-index:2 !important;
+}
+.ultraRow .vipSeat{
+  flex:1 1 0 !important;
+  min-height:120px !important;
+  padding:12px 14px !important;
+  border-radius:12px !important;
+}
+
+/* 4) vipRow は流し込みをやめ、既存の座標指定を邪魔しない */
+.vipRow{
+  position:static !important;
+  display:contents !important;   /* ← 子の absolute 座標を尊重 */
+  inset:auto !important;
+}
+
+/* 5) 売上一覧／給料支払いの白帯＆黒文字化抜けを強制吸収 */
+#pageSales, #pagePayroll{ color:var(--text-strong) !important; }
+#pageSales .dayBox, #pageSales .listBox, #pageSales .panelBox,
+#pagePayroll .dayBox, #pagePayroll .listBox, #pagePayroll .panelBox,
+#pagePayroll .payoutsPanel, #pageSales .tableLike, #pagePayroll .tableLike{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  border:1px solid var(--panel-bd) !important;
+  color:var(--text-strong) !important;
+  border-radius:12px !important;
+  backdrop-filter: blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
+}
+/* 行ヘッダー（白っぽく残る帯） */
+#pageSales .tHead, #pagePayroll .tHead,
+#pageSales .dayBox .head, #pagePayroll .dayBox .head,
+.payoutsPanel thead th{
+  background:#ffffff10 !important;
+  color:var(--text-strong) !important;
+  font-weight:700 !important;
+}
+/* 行・罫線を暗色へ */
+#pageSales .tRow, #pagePayroll .tRow, .payoutsPanel tr{
+  border-bottom:1px dashed var(--bd-dash) !important;
+}
+/* 入力欄の白戻り対策 */
+#pageSales input, #pageSales select, #pageSales textarea,
+#pagePayroll input, #pagePayroll select, #pagePayroll textarea{
+  background:rgb(var(--field-rgb)/var(--field-a)) !important;
+  color:var(--text-strong) !important;
+  border:1px solid var(--field-bd) !important;
+  border-radius:8px !important;
+}
+/* 直書き style=background:#fff を最終上書き */
+#pageSales *[style*="background: #fff"], #pageSales *[style*="background:#fff"],
+#pagePayroll *[style*="background: #fff"], #pagePayroll *[style*="background:#fff"]{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border-color: var(--panel-bd) !important;
+}
+
+
 
 
 
