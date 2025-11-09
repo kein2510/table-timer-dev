@@ -411,35 +411,32 @@ button.sales-pill:hover{ filter:brightness(1.05); }
 }
 
 /* =========================
-   ▼ レイアウト修正（1枚目の配置に合わせる）
+   ▼ レイアウト修正（白UIの絶対配置をそのまま使う）
    ========================= */
-/* VIPは“座席(.seat)”の絶対配置だけを使う：自動の横並びを無効化 */
-.vipRow{
+
+/* コンテナ（VIP行/超VIP行）は“流れに影響しない”器にする */
+.vipRow,
+.ultraRow{
   position: static !important;
-  display: contents !important;  /* コンテナのレイアウト効果を消す */
-}
-/* 通常VIPは .seat を使う（点線化しない） */
-.vipRow .vipSeat{
-  position: absolute !important;
-  border: 2px solid var(--card-bd) !important;
+  display: contents !important; /* 子(.seat / .vipSeat)の絶対配置を邪魔しない */
+  inset: auto !important;       /* 念のため以前の指定を無効化 */
 }
 
-/* 超VIPは下部に横3並び（1→3） */
-.ultraRow{
+/* 各席はすべて絶対配置のまま（HTMLの left/top をそのまま使う） */
+.vipRow .vipSeat,
+.ultraRow .vipSeat{
   position: absolute !important;
-  left: 16px; right: 16px; bottom: 16px;
-  display: flex !important;
-  gap: 12px;
-  z-index: 2;
+}
+
+/* 境界線の見た目だけ分ける（位置には影響しない） */
+.vipRow .vipSeat{
+  border: 2px solid var(--card-bd) !important;     /* 通常VIP＝実線 */
 }
 .ultraRow .vipSeat{
-  position: relative !important;     /* 行内でのフレックス配置 */
-  min-height: 76px;
-  padding: 10px 12px;
-  border: 2px dashed var(--accent-vip) !important;
+  border: 2px dashed var(--accent-vip) !important; /* 超VIP＝点線(紫) */
   border-radius: 12px;
-  flex: 1 1 0;                        /* 3等分 */
 }
+
 
 /* =========================
    ▼ 控室（2カラム＆検索ボックス統一）
