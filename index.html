@@ -210,12 +210,14 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   position:absolute; left:15%; right:15%; bottom:7%;
   display:flex; gap:12px; z-index:2;
 }
-.vipRow .vipSeat{ position:relative; min-height:88px; }
+.vipRow .vipSeat{ position:relative; border:2px dashed var(--vip);border-radius:12px;
+      padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px; }
+.vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
 .vipSeat .timer{ font-size:22px; }
 
 /* ★ 超VIP 行（左下に 1→3 で横並び） */
 .ultraRow{
-  position:absolute; left:16px; bottom:16px; display:flex; gap:30px; z-index:2;
+  position:absolute; left:16px; bottom:16px; display:flex; gap:12px; z-index:2;
 }
 .ultraRow .vipSeat{ position:relative; min-width:84px; min-height:64px; padding:8px 10px; border-radius:12px; }
 
