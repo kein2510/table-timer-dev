@@ -360,6 +360,125 @@ button.secondary{background:#2b2f36; color:#fff;} button.danger{background:#dc26
   .toolbar input{min-width:160px;}
   .seat{min-width:72px; min-height:60px;}
 }
+
+/* ===============================
+   HOTFIX 1) 影響範囲の暴走停止
+   - タイマー以外のページは「白UI」に戻す
+   - ダーク化は #pageTimer / #pageSales / #pagePayroll のみ許可
+   =============================== */
+
+/* いったん全ページのダーク強制をオフ（保険） */
+.page, body, .panelBox, .tableLike, .analyticsWrap, .analyticsCard {
+  background: initial !important;
+  color: initial !important;
+  border-color: initial !important;
+  backdrop-filter: none !important;
+}
+
+/* ===============================
+   HOTFIX 2) タイマー（座席）だけは黒ガラスを維持
+   =============================== */
+#pageTimer .floor,
+#pageTimer .backstage,
+#pageTimer .legend,
+#pageTimer .pickerPanel,
+#pageTimer .modal {
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border: 1px solid var(--panel-bd) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
+}
+#pageTimer .seat,
+#pageTimer .vipSeat {
+  background: rgb(var(--card-rgb)/var(--card-a)) !important;
+  color: var(--text-strong) !important;
+  border: 2px solid var(--card-bd) !important;
+}
+
+/* ★ 超VIPの正しい位置（白UI準拠：左右15%・下7%・3分割） */
+#pageTimer .ultraRow{
+  position: absolute !important;
+  left: 15% !important;
+  right: 15% !important;
+  bottom: 7% !important;
+  display: flex !important;
+  gap: 12px !important;
+  z-index: 2 !important;
+}
+#pageTimer .ultraRow .vipSeat{
+  position: relative !important;
+  flex: 1 1 0 !important;
+  min-height: 100px !important;
+  padding: 10px !important;
+  border: 2px dashed var(--accent-vip) !important;
+  border-radius: 12px !important;
+}
+
+/* ===============================
+   HOTFIX 3) 売上一覧／給料支払いのみダーク統一
+   - コンテナを黒ガラス化
+   - 内部の白指定を吸収
+   =============================== */
+#pageSales .salesListWrap,
+#pageSales .salesDayWrap,
+#pagePayroll .payrollWrap,
+#pagePayroll .payrollDayWrap,
+#pagePayroll .payoutsPanel{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border: 1px solid var(--panel-bd) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
+}
+
+/* 行・セル・ヘッダー帯 */
+#pageSales .tHead, #pagePayroll .tHead,
+#pageSales .dayBox .head, #pagePayroll .dayBox .head,
+#pageSales thead th, #pagePayroll thead th{
+  background:#ffffff10 !important;
+  color:var(--text-strong) !important;
+  font-weight:700 !important;
+}
+#pageSales .tRow, #pagePayroll .tRow{ border-bottom:1px dashed var(--bd-dash) !important; }
+
+/* 入力欄の白戻り対策 */
+#pageSales input, #pageSales select, #pageSales textarea,
+#pagePayroll input, #pagePayroll select, #pagePayroll textarea{
+  background: rgb(var(--field-rgb)/var(--field-a)) !important;
+  color: var(--text-strong) !important;
+  border: 1px solid var(--field-bd) !important;
+  border-radius: 8px !important;
+}
+
+/* inline style="background:#fff" を強制吸収 */
+#pageSales *[style*="background: #fff"],
+#pageSales *[style*="background:#fff"],
+#pagePayroll *[style*="background: #fff"],
+#pagePayroll *[style*="background:#fff"]{
+  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color: var(--text-strong) !important;
+  border-color: var(--panel-bd) !important;
+}
+
+/* ===============================
+   HOTFIX 4) 従業員管理 / 商品管理 / 未払い者 / データ(集計)
+   - 白UIに戻す（ここには一切ダークを掛けない）
+   =============================== */
+#pageStaff *,        /* 従業員管理 */
+#pageProducts *,     /* 商品管理 */
+#pageUnpaid *,       /* 未払い者 */
+#pageAnalytics *     /* データ(集計) */
+{
+  background: initial !important;
+  color: initial !important;
+  border-color: initial !important;
+  backdrop-filter: none !important;
+}
+
+
 </style>
 
 
