@@ -7,60 +7,77 @@
   <link rel="icon" href="data:," />
 <style>
 /* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass Theme, clean & scoped)
-   - 超VIP: 画面下に3分割（白UIと同配置）※強制固定
-   - 売上一覧 / 給料支払いだけダーク化（スコープ限定）
-   - 従業員管理 / 商品管理 / 未払い者 / データ(集計) は白系に復帰
+   ALEXANDRITE – Clean Scoped UI (final)
+   - Dark:  #pageTimer, #pageSales, #pagePayroll
+   - Light: #pageStaff, #pageProducts, #pageUnpaid, #pageAnalytics
    ========================================================= */
 
-/* ====== THEME TOKENS ====== */
+/* ===============================
+   1) THEME TOKENS（色の定義：ここだけで色を管理）
+   -------------------------------
+   使い所の目安：
+   - --text-strong / muted / weak …… 文字色（強/中/弱）
+   - --panel-*  …… 黒ガラスのパネル下地（Timer/Sales/Payroll）
+   - --card-*   …… 席カードなど小ブロックの下地（Timer）
+   - --field-*  …… 入力欄（Timer/Sales/Payroll のフォーム）
+   - --chip-*   …… タブ・チップ等の小部品（暗色）
+   - --light-*  …… 白UI用の下地・境界（Staff/Products/Unpaid/Analytics）
+   - 状態色 …… 席の状態背景・枠など
+   =============================== */
 :root{
   /* Text */
-  --text-strong:#f3f4f6;   /* 主テキスト（明） */
-  --text-muted:#cbd5e1;    /* 補助テキスト */
-  --text-weak:#94a3b8;     /* さらに弱い */
+  --text-strong:#f3f4f6;
+  --text-muted:#cbd5e1;
+  --text-weak:#94a3b8;
 
-  /* Panel (大パネル：黒ガラス) */
-  --panel-rgb:12 12 14;    /* 背景のRGB（スペース区切り） */
-  --panel-a:.78;           /* 透明度（0.70–0.90） */
-  --panel-blur:6px;        /* ガラス感（0で無効） */
-  --panel-bd:rgba(255,255,255,.09); /* 枠線 */
+  /* Dark Panel (黒ガラス) */
+  --panel-rgb:12 12 14;
+  --panel-a:.78;
+  --panel-blur:6px;
+  --panel-bd:rgba(255,255,255,.09);
 
-  /* Card (席カード/小ブロック) */
+  /* Dark Card (小ブロック/席カード) */
   --card-rgb:18 18 22;
   --card-a:.86;
   --card-bd:rgba(255,255,255,.12);
 
-  /* Field (入力系) */
+  /* Dark Field (入力欄) */
   --field-rgb:24 24 28;
   --field-a:.92;
   --field-bd:rgba(255,255,255,.16);
   --ph-color:#9aa4b2;
 
-  /* Chip/Badge */
+  /* Dark Chip/Badge */
   --chip-rgb:26 26 30;
   --chip-a:.88;
   --chip-bd:rgba(255,255,255,.12);
 
+  /* Light UI（白ページ用） */
+  --light-text:#111;
+  --light-muted:#475569;
+  --light-panel:#fff;
+  --light-bd:#e5e7eb;
+  --light-field:#f9fafb;
+
   /* 状態色 / アクセント */
   --accent-red:#e74c3c;
   --accent-blue:#2e86de;
-  --accent-vip:#9b59b6;   /* VIP/超VIP の枠色 */
+  --accent-vip:#9b59b6;
   --state-ok:#22c55e;
   --state-warn:#f59e0b;
   --state-danger:#ef4444;
   --state-empty:#374151;
   --shine-gold:#ffdd57;
 
-  /* 状態時の背景（ダーク向け薄色） */
+  /* 状態時の背景（薄色） */
   --bg-ok:#16a34a1a;
   --bg-warn:#f59e0b1a;
   --bg-danger:#ef44441a;
 
   /* 背景/レイアウト */
-  --bg-dark:#000;       /* ページ最終背景 */
-  --headerH:60px;       /* ヘッダー高さ */
-  --hero-posY:30%;      /* 中央ロゴの縦位置 */
+  --bg-dark:#000;
+  --headerH:60px;
+  --hero-posY:30%;
 
   /* 罫線 */
   --bd-light:rgba(255,255,255,.08);
@@ -72,7 +89,9 @@
   --subheading-size:14px;
 }
 
-/* ====== BASE ====== */
+/* ===============================
+   2) BASE（共通の土台：見た目は変えない）
+   =============================== */
 *{box-sizing:border-box;}
 html,body{height:100%;}
 body{
@@ -82,7 +101,7 @@ body{
   background:radial-gradient(circle at 50% 45%, #1a1a1a 0%, #0f0f0f 55%, var(--bg-dark) 100%);
   background-attachment:fixed;
 }
-/* 背景装飾 */
+/* 背景装飾（共通） */
 html::before{
   content:""; position:fixed; inset:var(--headerH) 0 0 0; z-index:0; pointer-events:none;
   background:url("alexandrite-logo.png") center/64vmin no-repeat;
@@ -100,7 +119,7 @@ body::after{
 }
 @media (max-width:900px){ body{ background-attachment:scroll; } }
 
-/* ====== HEADER / TABS ====== */
+/* Header / Tabs（共通） */
 header{
   display:flex; gap:12px; align-items:center; justify-content:space-between;
   padding:10px 14px; background:#1f1f23; color:#fff; position:sticky; top:0; z-index:5;
@@ -120,121 +139,73 @@ header h1{margin:0; font-size:18px; line-height:1;}
   background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong)!important; border:1px solid var(--chip-bd);
 }
 .top-tabs .tab.active{box-shadow:0 1px 4px #0006; font-weight:700;}
-
-/* ====== LAYOUT ====== */
 main{padding:12px; position:relative; z-index:3;}
-.page{display:none;} #pageTimer{display:block;}
-.brand{display:flex; align-items:center; gap:10px;}
-.brand .brand-mark{height:34px; width:34px; object-fit:contain; border-radius:50%; filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
+.page{display:none;} /* 各ページの表示制御はJS側 */
 
-/* ====== PANELS（共通ベース） ====== */
-.floor,.backstage,.anaFilter,.payoutsPanel,.tableLike,.pickerPanel,.modal,.legend{
-  background:rgb(var(--panel-rgb)/var(--panel-a)); color:var(--text-strong);
+/* ===============================
+   3) TIMER（座席）＝ Dark Glass を適用
+   =============================== */
+#pageTimer{display:block;} /* 既定表示ページなら */
+#pageTimer .floor,
+#pageTimer .backstage,
+#pageTimer .anaFilter,
+#pageTimer .tableLike,
+#pageTimer .pickerPanel,
+#pageTimer .modal,
+#pageTimer .legend{
+  background:rgb(var(--panel-rgb)/var(--panel-a));
+  color:var(--text-strong);
+  border:1px solid var(--panel-bd);
+  border-radius:12px;
   backdrop-filter:blur(var(--panel-blur)); -webkit-backdrop-filter:blur(var(--panel-blur));
-  border:1px solid var(--panel-bd); box-shadow:0 8px 24px rgba(0,0,0,.18);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
 }
-.floor{position:relative; border-radius:12px; overflow:hidden; padding:4px; min-height:750px;}
-.legend{position:absolute; left:8px; top:8px; display:flex; gap:10px; flex-wrap:wrap; font-size:12px; border-radius:8px; padding:6px;}
-.dot{width:10px; height:10px; border-radius:50%; display:inline-block; border:1px solid #999;}
-.dot.ok{background:var(--state-ok);} .dot.warn{background:var(--state-warn);}
-.dot.danger{background:var(--state-danger);} .dot.empty{background:var(--state-empty);}
+#pageTimer .floor{position:relative; overflow:hidden; padding:4px; min-height:750px;}
+#pageTimer .legend{position:absolute; left:8px; top:8px; display:flex; gap:10px; flex-wrap:wrap; font-size:12px; padding:6px;}
+#pageTimer .dot{width:10px; height:10px; border-radius:50%; display:inline-block; border:1px solid #999;}
+#pageTimer .dot.ok{background:var(--state-ok);} 
+#pageTimer .dot.warn{background:var(--state-warn);}
+#pageTimer .dot.danger{background:var(--state-danger);} 
+#pageTimer .dot.empty{background:var(--state-empty);}
 
-/* ====== SEATS ====== */
-.seat{ /* 通常席（白UI通り） */
+/* 座席カード */
+#pageTimer .seat{
   position:absolute; background:rgb(var(--card-rgb)/var(--card-a)); color:var(--text-strong);
   border:2px solid var(--card-bd); border-radius:10px; padding:6px; min-height:64px; min-width:80px; cursor:pointer;
   display:flex; flex-direction:column; gap:4px; transition:transform .05s, box-shadow .1s, background .2s; box-shadow:0 1px 0 rgba(0,0,0,.22);
 }
-.vipSeat{ /* VIP/超VIP 基本 */
+#pageTimer .vipSeat{
   position:relative; background:rgb(var(--card-rgb)/var(--card-a)); color:var(--text-strong);
   border:2px solid var(--card-bd); border-radius:12px; padding:10px; min-height:96px; display:flex; flex-direction:column; gap:6px;
 }
-.vipRow .vipSeat{ border:2px solid var(--card-bd); }      /* 通常VIP＝実線 */
-.ultraRow .vipSeat{ border:2px dashed var(--accent-vip); }/* 超VIP＝点線 */
+#pageTimer .vipRow .vipSeat{ border:2px solid var(--card-bd); }
+#pageTimer .ultraRow .vipSeat{ border:2px dashed var(--accent-vip); }
 
-.seat:hover{transform:translateY(-1px);}
-.seat.red{border-color:var(--accent-red);} .seat.blue{border-color:var(--accent-blue);}
-.seat.active{background:var(--bg-ok);} .seat.warn{background:var(--bg-warn);} .seat.danger{background:var(--bg-danger);}
-.seat.highlight{box-shadow:0 0 0 3px var(--shine-gold) inset;}
-.line1{display:flex; justify-content:space-between; align-items:center; font-weight:700;}
-.line1 .endAt{font-weight:700; font-size:18px; opacity:.9; margin-left:10px; white-space:nowrap;}
-.timer{font-size:22px; font-weight:800;}
-.meta{font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere;}
+#pageTimer .seat:hover{transform:translateY(-1px);}
+#pageTimer .seat.red{border-color:var(--accent-red);} 
+#pageTimer .seat.blue{border-color:var(--accent-blue);}
+#pageTimer .seat.active{background:var(--bg-ok);} 
+#pageTimer .seat.warn{background:var(--bg-warn);} 
+#pageTimer .seat.danger{background:var(--bg-danger);}
+#pageTimer .seat.highlight{box-shadow:0 0 0 3px var(--shine-gold) inset;}
+#pageTimer .line1{display:flex; justify-content:space-between; align-items:center; font-weight:700;}
+#pageTimer .line1 .endAt{font-weight:700; font-size:18px; opacity:.9; margin-left:10px; white-space:nowrap;}
+#pageTimer .timer{font-size:22px; font-weight:800;}
+#pageTimer .meta{font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere;}
+#pageTimer .vipRow{position:static; display:contents;}
 
-/* 通常VIP コンテナは子の absolute 座標を尊重 */
-.vipRow{position:static; display:contents; inset:auto;}
-
-/* ====== ★ 超VIP：白UIと同じ位置に強制固定（左右15%・下7%・3等分） ====== */
-.ultraRow{
-  position:absolute !important;
-  left:15% !important;
-  right:15% !important;
-  bottom:7% !important;
-  display:flex !important;
-  gap:12px !important;
-  z-index:2 !important;
+/* ★ 超VIP：左右15%・下7%・3等分（白UI準拠で固定） */
+#pageTimer .ultraRow{
+  position:absolute; left:15%; right:15%; bottom:7%;
+  display:flex; gap:12px; z-index:2;
 }
-.ultraRow .vipSeat{
-  position:relative !important;
-  flex:1 1 0 !important;
-  min-height:100px !important;
-  padding:10px !important;
-  border:2px dashed var(--accent-vip) !important;
-  border-radius:12px !important;
+#pageTimer .ultraRow .vipSeat{
+  flex:1 1 0; min-height:100px; padding:10px; border:2px dashed var(--accent-vip); border-radius:12px;
 }
 
-/* ====== 控室 ====== */
-.backstage{border-radius:12px; padding:10px; margin-top:12px;}
-.backstage h2{margin:0 0 8px; font-size:16px;}
-.legend-staff{font-size:12px; opacity:.85; display:flex; gap:12px; align-items:center;}
-.dotS{width:10px; height:10px; border-radius:50%; display:inline-block;}
-.dotS.on{background:#34d399;} .dotS.busy{background:#f59e0b;} .dotS.off{background:#9ca3af;}
-.roster{display:flex; flex-wrap:wrap; gap:8px;}
-.staffChip{
-  padding:6px 10px; border-radius:999px; cursor:pointer; font-size:14px;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong); border:1px solid var(--chip-bd);
-}
-.staffChip.on{box-shadow:0 0 0 1px #0e3d49 inset;} .staffChip.busy{box-shadow:0 0 0 1px #3a2706 inset;}
-.staffChip.off{opacity:.9;} .staffChip.selected{box-shadow:0 0 0 2px #fff2 inset; font-weight:700;}
-.staffSectionTitle{flex-basis:100%; margin-top:6px; font-size:12px; color:var(--text-muted);}
-.backstage .rosterGrid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;}
-.backstage .rosterHead{display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted);}
-.backstage .rosterSearch{
-  padding:8px; border-radius:8px; min-width:160px; background:rgb(var(--field-rgb)/var(--field-a));
-  color:var(--text-strong); border:1px solid var(--field-bd); outline:none;
-}
-@media (max-width:900px){ .backstage .rosterGrid{grid-template-columns:1fr;} }
-
-/* ====== MODAL / PICKER ====== */
-.modalWrap{position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:9;}
-.modal{border-radius:14px; padding:16px; min-width:300px; max-width:92vw; box-shadow:0 20px 60px #0006;}
-.modal h3{margin:0 0 10px;}
-.row{display:flex; gap:8px; margin:8px 0;}
-.row input{
-  flex:1; padding:10px; border-radius:8px; outline:none;
-  background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); border:1px solid var(--field-bd);
-}
-.btns{display:flex; flex-wrap:wrap; gap:8px;}
-button,.btn{border:none; border-radius:10px; padding:10px 14px; cursor:pointer; background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong); border:1px solid var(--chip-bd);}
-button.secondary{background:#2b2f36; color:#fff;} button.danger{background:#dc2626; color:#fff;}
-.chips button{background:rgb(var(--chip-rgb)/var(--chip-a)); border:1px solid var(--chip-bd); color:var(--text-strong);}
-.label{font-weight:700; padding:6px 10px; border-radius:999px; font-size:12px; line-height:1; align-self:center; white-space:nowrap;}
-.label-extend{color:var(--accent-vip); border:1px solid var(--accent-vip); background:#f7ecff10;}
-.pickerField{
-  border:1px solid var(--field-bd); background:rgb(var(--field-rgb)/var(--field-a));
-  color:var(--text-strong); border-radius:12px; padding:8px; min-height:46px;
-  display:flex; gap:6px; align-items:center; flex-wrap:wrap; cursor:pointer;
-}
-.pickerField.empty{color:var(--text-weak);}
-.pill{padding:4px 10px; border-radius:999px; font-size:12px; background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong); border:1px solid var(--chip-bd);}
-.pickerWrap{position:fixed; inset:0; background:#0008; display:none; place-items:center; z-index:10;}
-.pickerPanel{border-radius:14px; padding:14px; max-width:92vw; max-height:80vh; overflow:auto; box-shadow:0 20px 60px #0006;}
-
-/* =========================================================
-   ▼ 売上一覧 / 給料支払い（この2ページだけダーク化を強制）
-   ========================================================= */
-
-/* コンテナ自体を黒ガラスに */
+/* ===============================
+   4) SALES / PAYROLL＝ Dark Glass を適用
+   =============================== */
 #pageSales .salesListWrap,
 #pageSales .salesDayWrap,
 #pagePayroll .payrollWrap,
@@ -244,242 +215,100 @@ button.secondary{background:#2b2f36; color:#fff;} button.danger{background:#dc26
   color:var(--text-strong) !important;
   border:1px solid var(--panel-bd) !important;
   border-radius:12px !important;
-  backdrop-filter:blur(var(--panel-blur)) !important;
-  -webkit-backdrop-filter:blur(var(--panel-blur)) !important;
+  backdrop-filter:blur(var(--panel-blur)) !important; -webkit-backdrop-filter:blur(var(--panel-blur)) !important;
 }
 
-/* 内部の行/アイテム類は透明化して親の黒ガラスを見せる */
-#pageSales .salesListWrap * ,
-#pageSales .salesDayWrap  * ,
-#pagePayroll .payrollWrap  * ,
-#pagePayroll .payrollDayWrap * ,
-#pagePayroll .payoutsPanel  * {
-  color:var(--text-strong) !important;
-  border-color:var(--panel-bd) !important;
+/* 内部の文字・境界 */
+#pageSales .salesListWrap *, #pageSales .salesDayWrap *,
+#pagePayroll .payrollWrap  *, #pagePayroll .payrollDayWrap *, #pagePayroll .payoutsPanel *{
+  color:var(--text-strong) !important; border-color:var(--panel-bd) !important;
 }
 
-/* ヘッダー帯の薄反転 */
+/* ヘッダー帯・行境界 */
 #pageSales .tHead, #pagePayroll .tHead,
 #pageSales .dayBox .head, #pagePayroll .dayBox .head,
 #pageSales thead th, #pagePayroll thead th{
-  background:#ffffff10 !important;
-  color:var(--text-strong) !important;
-  font-weight:700 !important;
+  background:#ffffff10 !important; color:var(--text-strong) !important; font-weight:700 !important;
 }
 #pageSales .tRow, #pagePayroll .tRow{ border-bottom:1px dashed var(--bd-dash) !important; }
 
-/* 入力欄の白戻り対策 */
+/* 入力欄（暗色） */
 #pageSales input, #pageSales select, #pageSales textarea,
 #pagePayroll input, #pagePayroll select, #pagePayroll textarea{
   background:rgb(var(--field-rgb)/var(--field-a)) !important;
   color:var(--text-strong) !important;
-  border:1px solid var(--field-bd) !important;
-  border-radius:8px !important;
+  border:1px solid var(--field-bd) !important; border-radius:8px !important;
 }
 
-/* inline style="background:#fff" を最終上書き */
-#pageSales *[style*="background: #fff"],
-#pageSales *[style*="background:#fff"],
-#pagePayroll *[style*="background: #fff"],
-#pagePayroll *[style*="background:#fff"]{
-  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  color:var(--text-strong) !important;
-  border-color:var(--panel-bd) !important;
+/* inline の白背景も吸収 */
+#pageSales *[style*="background: #fff"], #pageSales *[style*="background:#fff"],
+#pagePayroll *[style*="background: #fff"], #pagePayroll *[style*="background:#fff"]{
+  background:rgb(var(--panel-rgb)/var(--panel-a)) !important; color:var(--text-strong) !important; border-color:var(--panel-bd) !important;
 }
 
-/* 給料面のテーブルも暗色統一 */
-.payoutsPanel table,
-.payoutsPanel thead,
-.payoutsPanel tbody,
-.payoutsPanel tr,
-.payoutsPanel th,
-.payoutsPanel td{
-  background:transparent !important;
-  color:var(--text-strong) !important;
-  border-color:var(--bd-dash) !important;
+/* 給料テーブルの体裁 */
+#pagePayroll .payoutsPanel table,
+#pagePayroll .payoutsPanel thead,
+#pagePayroll .payoutsPanel tbody,
+#pagePayroll .payoutsPanel tr,
+#pagePayroll .payoutsPanel th,
+#pagePayroll .payoutsPanel td{
+  background:transparent !important; color:var(--text-strong) !important; border-color:var(--bd-dash) !important;
 }
-.payoutsPanel thead th{ background:#ffffff10 !important; font-weight:700; }
-.payoutsPanel tr{ border-bottom:1px dashed var(--bd-dash); }
-.payoutsPanel input[type="text"],
-.payoutsPanel input[type="number"],
-.payoutsPanel input[type="search"],
-.payoutsPanel input[type="tel"]{
-  background:rgb(var(--field-rgb)/var(--field-a)) !important;
-  color:var(--text-strong) !important;
-  border:1px solid var(--field-bd) !important;
-  border-radius:8px !important;
-  padding:8px 10px !important;
+#pagePayroll .payoutsPanel thead th{ background:#ffffff10 !important; font-weight:700; }
+#pagePayroll .payoutsPanel tr{ border-bottom:1px dashed var(--bd-dash); }
+#pagePayroll .payoutsPanel input[type="text"],
+#pagePayroll .payoutsPanel input[type="number"],
+#pagePayroll .payoutsPanel input[type="search"],
+#pagePayroll .payoutsPanel input[type="tel"]{
+  background:rgb(var(--field-rgb)/var(--field-a)) !important; color:var(--text-strong) !important;
+  border:1px solid var(--field-bd) !important; border-radius:8px !important; padding:8px 10px !important;
 }
-.payoutsPanel .tRight,
-.payoutsPanel td.amount,
-.payoutsPanel input[type="number"]{ text-align:right; }
-.payoutsPanel .summaryRow td{ background:#ffffff08 !important; font-weight:800; }
+#pagePayroll .payoutsPanel .tRight,
+#pagePayroll .payoutsPanel td.amount,
+#pagePayroll .payoutsPanel input[type="number"]{ text-align:right; }
+#pagePayroll .payoutsPanel .summaryRow td{ background:#ffffff08 !important; font-weight:800; }
 
-/* =========================================================
-   ▼ ここから下は “他ページに影響しない” 共通の軽微UI
-   ========================================================= */
-
-/* Sales page のタブなど */
-.salesTabHead{display:flex; gap:8px; margin:8px 0 4px;}
-.salesTabBtn{
-  padding:6px 10px; border-radius:999px; cursor:pointer;
-  background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong);
-  border:1px solid var(--chip-bd);
+/* ===============================
+   5) STAFF / PRODUCTS / UNPAID / ANALYTICS ＝ 白UIに戻す
+   （ここにはダークを一切当てない。明確に白で再指定）
+   =============================== */
+#pageStaff *, #pageProducts *, #pageUnpaid *, #pageAnalytics *{
+  color:var(--light-text) !important; border-color:var(--light-bd) !important;
 }
-.salesTabBtn.active{background:#111; color:#fff;}
+#pageStaff .panelBox, #pageProducts .panelBox, #pageUnpaid .panelBox, #pageAnalytics .panelBox,
+#pageStaff .tableLike, #pageProducts .tableLike, #pageUnpaid .tableLike, #pageAnalytics .tableLike,
+#pageStaff .analyticsWrap, #pageAnalytics .analyticsWrap, #pageAnalytics .analyticsCard,
+#pageStaff .listBox, #pageProducts .listBox, #pageUnpaid .listBox, #pageAnalytics .listBox,
+#pageStaff .panel, #pageProducts .panel, #pageUnpaid .panel, #pageAnalytics .panel{
+  background:var(--light-panel) !important; border:1px solid var(--light-bd) !important; border-radius:12px !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important; box-shadow:none !important;
+}
+#pageStaff input, #pageProducts input, #pageUnpaid input, #pageAnalytics input,
+#pageStaff select, #pageProducts select, #pageUnpaid select, #pageAnalytics select,
+#pageStaff textarea, #pageProducts textarea, #pageUnpaid textarea, #pageAnalytics textarea{
+  background:#fff !important; color:var(--light-text) !important; border:1px solid var(--light-bd) !important; border-radius:8px !important;
+}
+#pageAnalytics .tHead, #pageAnalytics thead th{ background:#f3f4f6 !important; color:#111 !important; font-weight:700; }
 
+/* ===============================
+   6) 細部
+   =============================== */
+.brand{display:flex; align-items:center; gap:10px;}
+.brand .brand-mark{height:34px; width:34px; object-fit:contain; border-radius:50%; filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
 .page h2,.salesTitle,.payrollTitle,.payoutsHeadTitle{
-  color:var(--text-strong);
-  font-size:var(--heading-size);
-  font-weight:var(--heading-weight);
-  letter-spacing:.02em;
-  margin:8px 0 10px;
+  color:var(--text-strong); font-size:var(--heading-size); font-weight:var(--heading-weight); letter-spacing:.02em; margin:8px 0 10px;
 }
-.page h3,.sectionTitle-sub{
-  color:var(--text-muted);
-  font-size:var(--subheading-size);
-  font-weight:700;
-  margin:6px 0;
-}
-
-/* ====== PAYOUTS LAYOUT（構造） ====== */
-#pageAdmin{min-height:0;}
-#adminPayouts{display:flex; flex-direction:column; height:100%; min-height:0;}
-#payoutsListBox{flex:1 1 auto; min-height:0; display:flex; flex-direction:column;}
-#payoutsHistoryBox{flex:0 0 260px; min-height:0;}
-.payoutsPanel{display:flex; flex-direction:column; min-height:0;}
-.payoutsScroll{flex:1 1 auto; overflow:auto; max-height:none;}
-#pageAdmin.payouts-fit{overflow:hidden; height:calc(100dvh - var(--headerH));}
-#payoutsListBox>.payoutsPanel,#payoutsHistoryBox>.payoutsPanel{height:100%; display:flex; flex-direction:column;}
-#payoutsHistScroll{flex:1 1 auto; overflow:auto; max-height:none;}
-.payoutRow{padding:8px 0; border-top:1px dashed var(--bd-dash);}
-#payoutsHistScroll::-webkit-scrollbar-thumb,.payoutsScroll::-webkit-scrollbar-thumb{background:#374151; border-radius:8px;}
-
-/* ====== MOBILE ====== */
+.page h3,.sectionTitle-sub{color:var(--text-muted); font-size:var(--subheading-size); font-weight:700; margin:6px 0;}
+.salesTabHead{display:flex; gap:8px; margin:8px 0 4px;}
+.salesTabBtn{padding:6px 10px; border-radius:999px; cursor:pointer; background:rgb(var(--chip-rgb)/var(--chip-a)); color:var(--text-strong); border:1px solid var(--chip-bd);}
+.salesTabBtn.active{background:#111; color:#fff;}
 @media(max-width:900px){
   .toolbar input{min-width:160px;}
-  .seat{min-width:72px; min-height:60px;}
+  #pageTimer .seat{min-width:72px; min-height:60px;}
 }
-
-/* ===============================
-   HOTFIX 1) 影響範囲の暴走停止
-   - タイマー以外のページは「白UI」に戻す
-   - ダーク化は #pageTimer / #pageSales / #pagePayroll のみ許可
-   =============================== */
-
-/* いったん全ページのダーク強制をオフ（保険） */
-.page, body, .panelBox, .tableLike, .analyticsWrap, .analyticsCard {
-  background: initial !important;
-  color: initial !important;
-  border-color: initial !important;
-  backdrop-filter: none !important;
-}
-
-/* ===============================
-   HOTFIX 2) タイマー（座席）だけは黒ガラスを維持
-   =============================== */
-#pageTimer .floor,
-#pageTimer .backstage,
-#pageTimer .legend,
-#pageTimer .pickerPanel,
-#pageTimer .modal {
-  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  color: var(--text-strong) !important;
-  border: 1px solid var(--panel-bd) !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(var(--panel-blur)) !important;
-  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
-}
-#pageTimer .seat,
-#pageTimer .vipSeat {
-  background: rgb(var(--card-rgb)/var(--card-a)) !important;
-  color: var(--text-strong) !important;
-  border: 2px solid var(--card-bd) !important;
-}
-
-/* ★ 超VIPの正しい位置（白UI準拠：左右15%・下7%・3分割） */
-#pageTimer .ultraRow{
-  position: absolute !important;
-  left: 15% !important;
-  right: 15% !important;
-  bottom: 7% !important;
-  display: flex !important;
-  gap: 12px !important;
-  z-index: 2 !important;
-}
-#pageTimer .ultraRow .vipSeat{
-  position: relative !important;
-  flex: 1 1 0 !important;
-  min-height: 100px !important;
-  padding: 10px !important;
-  border: 2px dashed var(--accent-vip) !important;
-  border-radius: 12px !important;
-}
-
-/* ===============================
-   HOTFIX 3) 売上一覧／給料支払いのみダーク統一
-   - コンテナを黒ガラス化
-   - 内部の白指定を吸収
-   =============================== */
-#pageSales .salesListWrap,
-#pageSales .salesDayWrap,
-#pagePayroll .payrollWrap,
-#pagePayroll .payrollDayWrap,
-#pagePayroll .payoutsPanel{
-  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  color: var(--text-strong) !important;
-  border: 1px solid var(--panel-bd) !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(var(--panel-blur)) !important;
-  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
-}
-
-/* 行・セル・ヘッダー帯 */
-#pageSales .tHead, #pagePayroll .tHead,
-#pageSales .dayBox .head, #pagePayroll .dayBox .head,
-#pageSales thead th, #pagePayroll thead th{
-  background:#ffffff10 !important;
-  color:var(--text-strong) !important;
-  font-weight:700 !important;
-}
-#pageSales .tRow, #pagePayroll .tRow{ border-bottom:1px dashed var(--bd-dash) !important; }
-
-/* 入力欄の白戻り対策 */
-#pageSales input, #pageSales select, #pageSales textarea,
-#pagePayroll input, #pagePayroll select, #pagePayroll textarea{
-  background: rgb(var(--field-rgb)/var(--field-a)) !important;
-  color: var(--text-strong) !important;
-  border: 1px solid var(--field-bd) !important;
-  border-radius: 8px !important;
-}
-
-/* inline style="background:#fff" を強制吸収 */
-#pageSales *[style*="background: #fff"],
-#pageSales *[style*="background:#fff"],
-#pagePayroll *[style*="background: #fff"],
-#pagePayroll *[style*="background:#fff"]{
-  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  color: var(--text-strong) !important;
-  border-color: var(--panel-bd) !important;
-}
-
-/* ===============================
-   HOTFIX 4) 従業員管理 / 商品管理 / 未払い者 / データ(集計)
-   - 白UIに戻す（ここには一切ダークを掛けない）
-   =============================== */
-#pageStaff *,        /* 従業員管理 */
-#pageProducts *,     /* 商品管理 */
-#pageUnpaid *,       /* 未払い者 */
-#pageAnalytics *     /* データ(集計) */
-{
-  background: initial !important;
-  color: initial !important;
-  border-color: initial !important;
-  backdrop-filter: none !important;
-}
-
-
 </style>
+
 
 
 </head>
