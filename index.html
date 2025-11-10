@@ -21,61 +21,59 @@
 
 /* ====== THEME TOKENS（ここを触れば全体の色が変わる） ====== */
 :root{
-  /* === Text === */
-  --text-strong: #f3f4f6;    /* 主テキスト（明） */
-  --text-muted:  #cbd5e1;    /* 補助テキスト */
-  --text-weak:   #94a3b8;    /* さらに弱い */
+  /* ── テキスト色 ───────────────────────── */
+  --text-strong:#f3f4f6;   /* 主テキスト（基本の文字色） */
+  --text-muted:#cbd5e1;    /* サブ見出し・補助文 */
+  --text-weak:#94a3b8;     /* ヒント・placeholder 等 */
 
-  /* === Panel (大パネル：黒ガラス) === */
-  --panel-rgb:   12 12 14;   /* panel 背景のRGB（スペース区切り） */
-  --panel-a:     .78;        /* panel 透明度（0.70–0.90） */
-  --panel-blur:  6px;        /* ガラス感（0で無効） */
-  --panel-bd:    rgba(255,255,255,.09);  /* panel 枠線 */
+  /* ── 大きめパネル（黒ガラス） ────────── */
+  --panel-rgb:12 12 14;    /* パネル背景のRGB（スペース区切り） */
+  --panel-a:.78;           /* パネルの透明度（0.70–0.90 推奨） */
+  --panel-blur:6px;        /* ガラスぼかし（0で無効） */
+  --panel-bd:rgba(255,255,255,.09); /* パネル枠線色 */
 
-  /* === Card (席カード/小ブロック) === */
-  --card-rgb:    18 18 22;
-  --card-a:      .86;
-  --card-bd:     rgba(255,255,255,.12);
+  /* ── 小ブロック/カード（行・小パネル） ─── */
+  --card-rgb:18 18 22;
+  --card-a:.86;
+  --card-bd:rgba(255,255,255,.12);
 
-  /* === Field (入力系) === */
-  --field-rgb:   24 24 28;
-  --field-a:     .92;
-  --field-bd:    rgba(255,255,255,.16);
-  --ph-color:    #9aa4b2;
+  /* ── 入力フィールド ─────────────────── */
+  --field-rgb:24 24 28;
+  --field-a:.92;
+  --field-bd:rgba(255,255,255,.16);
+  --ph-color:#9aa4b2;      /* プレースホルダー文字色 */
 
-  /* === Chip/Badge === */
-  --chip-rgb:    26 26 30;
-  --chip-a:      .88;
-  --chip-bd:     rgba(255,255,255,.12);
+  /* ── チップ/バッジ/小ボタン ─────────── */
+  --chip-rgb:26 26 30;
+  --chip-a:.88;
+  --chip-bd:rgba(255,255,255,.12);
 
-  /* === 状態色 / アクセント === */
-  --accent-red:  #e74c3c;
-  --accent-blue: #2e86de;
-  --accent-vip:  #9b59b6;   /* VIP/超VIP の枠色 */
-  --state-ok:    #22c55e;
-  --state-warn:  #f59e0b;
-  --state-danger:#ef4444;
-  --state-empty: #374151;
-  --shine-gold:  #ffdd57;
+  /* ── アクセント & 状態色 ─────────────── */
+  --accent-red:#e74c3c;    /* 重要警告や赤席枠 */
+  --accent-blue:#2e86de;   /* 青席枠など */
+  --accent-vip:#9b59b6;    /* VIP/超VIP の点線枠色 */
+  --state-ok:#22c55e;      /* 良好 */
+  --state-warn:#f59e0b;    /* 注意 */
+  --state-danger:#ef4444;  /* 危険 */
+  --state-empty:#374151;   /* 空席/未入力など中立 */
+  --shine-gold:#ffdd57;    /* ハイライトの金色 */
 
-  /* 状態時の背景（ダーク向け薄色） */
-  --bg-ok:       #16a34a1a;
-  --bg-warn:     #f59e0b1a;
-  --bg-danger:   #ef44441a;
+  /* ── 状態背景の薄色（ダーク用）────────── */
+  --bg-ok:#16a34a1a;
+  --bg-warn:#f59e0b1a;
+  --bg-danger:#ef44441a;
 
-  /* === 背景/レイアウト === */
-  --bg-dark:   #000;       /* ページ最終背景 */
-  --headerH:   60px;       /* ヘッダー高さ */
-  --hero-posY: 30%;        /* 中央ロゴの縦位置 */
+  /* ── 背景/レイアウト共通 ─────────────── */
+  --bg-dark:#000;          /* 最背面のページ背景 */
+  --headerH:60px;          /* 固定ヘッダーの高さ */
+  --hero-posY:30%;         /* 中央ロゴ縦位置 */
 
-  /* === 罫線 === */
-  --bd-light: rgba(255,255,255,.08);
-  --bd-dash : rgba(255,255,255,.10);
-
-  /* タイトルの共通トークン（色は既存を使用） */
-  --heading-size: 20px;
-  --heading-weight: 800;
-  --subheading-size: 14px;
+  /* ── 罫線・見出し ─────────────────── */
+  --bd-light:rgba(255,255,255,.08); /* うっすら罫線 */
+  --bd-dash:rgba(255,255,255,.10);  /* 破線罫線 */
+  --heading-size:20px;     /* h2 等のサイズ */
+  --heading-weight:800;    /* h2 等の太さ */
+  --subheading-size:14px;  /* h3/サブ見出し */
 }
 
 /* =========================
@@ -414,6 +412,74 @@ button.sales-pill:hover{ filter:brightness(1.05); }
   color: var(--text-strong) !important;
   border-color: var(--panel-bd) !important;
 }
+
+/* =========================================================
+   ▼ 給料支払い（日付選択ビュー）の “白帯” を完全吸収
+   - 画像7枚目の「上と下の白い帯」を強制ダーク化
+   - 既存のPayroll配色にだけ効くよう #pagePayroll スコープ限定
+   ========================================================= */
+
+/* コンテナ & セクション */
+#pagePayroll .payrollDayWrap,
+#pagePayroll .payrollWrap,
+#pagePayroll .payoutsPanel,
+#pagePayroll .dayBox,
+#pagePayroll .listBox,
+#pagePayroll .panelBox,
+#pagePayroll .tableLike{
+  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color:var(--text-strong) !important;
+  border:1px solid var(--panel-bd) !important;
+  border-radius:12px !important;
+  backdrop-filter:blur(var(--panel-blur)) !important;
+  -webkit-backdrop-filter:blur(var(--panel-blur)) !important;
+}
+
+/* ヘッダー/フッター/見出し帯っぽい要素（命名ゆらぎを広く拾う） */
+#pagePayroll .tHead,
+#pagePayroll thead th,
+#pagePayroll .head,
+#pagePayroll .header,
+#pagePayroll [class*="Head"],
+#pagePayroll [class*="Header"],
+#pagePayroll .foot,
+#pagePayroll .footer,
+#pagePayroll [class*="Foot"],
+#pagePayroll [class*="Footer"]{
+  background:#ffffff10 !important;   /* 薄い反転帯（暗色） */
+  color:var(--text-strong) !important;
+  border-color:var(--panel-bd) !important;
+  font-weight:700;
+}
+
+/* 残白の最終キャッチ（inline style 直書き白も握る） */
+#pagePayroll *[style*="background:#fff"],
+#pagePayroll *[style*="background: #fff"],
+#pagePayroll *[style*="background-color:#fff"],
+#pagePayroll *[style*="background-color: #fff"],
+#pagePayroll *[style*="rgb(255, 255, 255)"]{
+  background:rgb(var(--panel-rgb)/var(--panel-a)) !important;
+  color:var(--text-strong) !important;
+  border-color:var(--panel-bd) !important;
+}
+
+/* テーブル罫線＆入力フィールドの統一 */
+#pagePayroll .tRow,
+#pagePayroll tr{ border-bottom:1px dashed var(--bd-dash) !important; }
+
+#pagePayroll input,
+#pagePayroll select,
+#pagePayroll textarea{
+  background:rgb(var(--field-rgb)/var(--field-a)) !important;
+  color:var(--text-strong) !important;
+  border:1px solid var(--field-bd) !important;
+  border-radius:8px !important;
+}
+
+/* 金額系は右寄せ */
+#pagePayroll .tRight,
+#pagePayroll td.amount,
+#pagePayroll input[type="number"]{ text-align:right; }
 
 
 
