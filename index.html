@@ -186,7 +186,7 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   box-shadow:0 1px 0 rgba(0,0,0,.22);
 }
 /* VIP/超VIP だけ点線・紫（白UIと同印象） */
-.vipSeat{ border:2px dashed var(--accent-vip); }
+/*.vipSeat{ border:2px dashed var(--accent-vip); }*/
 
 .seat:hover{ transform:translateY(-1px); }
 .seat.red{  border-color:var(--accent-red); }
@@ -207,7 +207,10 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
   position:absolute; left:15%; right:15%; bottom:7%;
   display:flex; gap:12px; z-index:2;
 }
-.vipRow .vipSeat{ position:relative; border:2px dashed var(--accent-vip);border-radius:12px; padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px; }
+/*.vipRow .vipSeat{ position:relative; border:2px dashed var(--accent-vip);border-radius:12px; padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px; }*/
+.vipRow .vipSeat{ background: rgb(var(--card-rgb) / var(--card-a); border:2px dashed var(--accent-vip);border-radius:12px; padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px; }
+
+  
 .vipSeat.active{background:var(--ok)} .vipSeat.warn{background:var(--warn)} .vipSeat.danger{background:var(--danger)}
 .vipSeat .timer{ font-size:22px; }
 
