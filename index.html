@@ -563,54 +563,7 @@ button.sales-pill:hover{ filter:brightness(1.05); }
   .sales-grid{ grid-template-columns:1fr; }
 }
 
-/* =========================
-   ▼ レイアウト修正（白UIの絶対配置をそのまま使う）
-   ========================= */
 
-/* コンテナ（VIP行/超VIP行）は“流れに影響しない”器にする */
-.vipRow,
-.ultraRow{
-  position: static !important;
-  display: contents !important; /* 子(.seat / .vipSeat)の絶対配置を邪魔しない */
-  inset: auto !important;       /* 念のため以前の指定を無効化 */
-  position: absolute !important;
-  left: 16px !important;
-  right: 16px !important;
-  bottom: 16px !important;
-  display: flex !important;
-  gap: 12px !important;
-  z-index: 2 !important;
-}
-
-/* 各席はすべて絶対配置のまま（HTMLの left/top をそのまま使う） */
-.vipRow .vipSeat,
-.ultraRow .vipSeat{
-  position: absolute !important;
-  position: relative !important;
-  flex: 1 1 0 !important;       /* 3等分 */
-  min-height: 96px;             /* お好みで高さ、白UIと同等感 */
-  padding: 10px 12px;
-  border: 2px dashed var(--accent-vip) !important;
-  border-radius: 12px;
-}
-
-/* 通常VIPは display:contents のままで “座席の絶対配置” を尊重する */
-.vipRow{
-  position: static !important;
-  display: contents !important;
-  inset: auto !important;
-}
-
-/* 境界線の見た目だけ分ける（位置には影響しない） */
-.vipRow .vipSeat{
-  border: 2px solid var(--card-bd) !important;     /* 通常VIP＝実線 */
-  position: absolute !important;                 /* ここは絶対配置のまま */
-}
-}
-.ultraRow .vipSeat{
-  border: 2px dashed var(--accent-vip) !important; /* 超VIP＝点線(紫) */
-  border-radius: 12px;
-}
 
 /* =========================
    ▼ 控室（2カラム＆検索ボックス統一）
@@ -675,37 +628,7 @@ main > section, main > .panel, main .panel {
    ▼ 細部：控室チップ・スクロール等は現状維持
    ========================= */
 
-/* =========================================================
-   ▼ Patch: 超VIPの最下段3分割／白パネル&文字色の取りこぼし修正
-   ========================================================= */
 
-/* 1) まず seat と vipSeat の position を分離（事故の元を解消） */
-.seat{ position:absolute !important; }
-.vipSeat{ position:relative !important; }  /* ← 子を相対配置に戻す */
-
-/* 2) 通常VIPの枠は実線、超VIPは点線（トークン名の打ち間違いも修正） */
-.vipRow .vipSeat{ border:2px solid var(--card-bd) !important; }
-.ultraRow .vipSeat{ border:2px dashed var(--accent-vip) !important; }
-
-/* 3) 超VIPを“下端に横3分割”で固定配置（白UIと同じ見た目） */
-.ultraRow{
-  position:absolute !important;
-  left:24px !important; right:24px !important; bottom:24px !important;
-  display:flex !important; gap:16px !important; z-index:2 !important;
-}
-.ultraRow .vipSeat{
-  flex:1 1 0 !important;
-  min-height:120px !important;
-  padding:12px 14px !important;
-  border-radius:12px !important;
-}
-
-/* 4) vipRow は流し込みをやめ、既存の座標指定を邪魔しない */
-.vipRow{
-  position:static !important;
-  display:contents !important;   /* ← 子の absolute 座標を尊重 */
-  inset:auto !important;
-}
 
 /* 5) 売上一覧／給料支払いの白帯＆黒文字化抜けを強制吸収 */
 #pageSales, #pagePayroll{ color:var(--text-strong) !important; }
