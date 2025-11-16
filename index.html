@@ -173,33 +173,52 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 /* =========================
    SEATS（絶対配置＝白UIと一致）
    ========================= */
-.seat,
-.vipSeat{
+/*.seat,
+/*.vipSeat{
   /* ★ レイアウトは白UIのまま。座席要素は HTML 側の left/top をそのまま尊重 */
-  position:absolute; /* ← 必須（HTML内の座標に従う） */
-  background: rgb(var(--card-rgb) / var(--card-a));
+  /*position:absolute; /* ← 必須（HTML内の座標に従う） */
+  /*background: rgb(var(--card-rgb) / var(--card-a));
   color: var(--text-strong);
   border:2px solid var(--card-bd);        /* ← 通常席は落ち着いた実線 */
-  border-radius:10px; padding:6px; min-height:64px; min-width:80px; cursor:pointer;
+  /*border-radius:10px; padding:6px; min-height:64px; min-width:80px; cursor:pointer;
   display:flex; flex-direction:column; gap:4px;
   transition:transform .05s, box-shadow .1s, background .2s;
   box-shadow:0 1px 0 rgba(0,0,0,.22);
-}
+}*/
 /* VIP/超VIP だけ点線・紫（白UIと同印象） */
-.vipSeat{ border:2px dashed var(--accent-vip); }
 
-.seat:hover{ transform:translateY(-1px); }
-.seat.red{  border-color:var(--accent-red); }
-.seat.blue{ border-color:var(--accent-blue); }
-.seat.active{  background:var(--bg-ok); }
-.seat.warn{    background:var(--bg-warn); }
-.seat.danger{  background:var(--bg-danger); }
-.seat.highlight{ box-shadow:0 0 0 3px var(--shine-gold) inset; }
+  
+.seat{
+  background: rgb(var(--card-rgb) / var(--card-a)) !important; /* 黒ガラス */
+  color: var(--text-strong) !important;
+  border-color: var(--card-bd) !important;                     /* 本番の実線を暗色に */
+  box-shadow: 0 1px 0 rgba(0,0,0,.22) !important;              /* ほんのり立体感 */
+}
 
-.line1{ display:flex; justify-content:space-between; align-items:center; font-weight:700; }
-.line1 .endAt{ font-weight:700; font-size:18px; opacity:.9; margin-left:10px; white-space:nowrap; }
+/* VIP席：本番どおり点線＆紫のまま。ベースは黒ガラスに */
+.vipSeat{
+  background: rgb(var(--card-rgb) / var(--card-a)) !important; /* 黒ガラス */
+  color: var(--text-strong) !important;
+  border: 2px dashed var(--vip) !important;                    /* 本番のまま */
+}
+
+/* 重要：状態色は “本番そのまま”（上書きしない） */
+.seat.active, .vipSeat.active{  background: var(--ok)    !important; color: inherit; }
+.seat.warn,   .vipSeat.warn{    background: var(--warn)  !important; color: inherit; }
+.seat.danger, .vipSeat.danger{  background: var(--danger)!important; color: inherit; }
+
+/* 赤/青の枠線も本番のまま */
+.seat.red{  border-color: var(--red)  !important; }
+.seat.blue{ border-color: var(--blue) !important; }
+
+/* 強調リングも本番のまま */
+.seat.highlight{ box-shadow: 0 0 0 3px var(--gold) inset !important; }
+
+/* タイポ周り（黒地で視認性UP） */
+.line1{ font-weight:700; }
+.line1 .endAt{ font-weight:700; font-size:18px; opacity:.9; } /* 本番の雰囲気+DEV寄りの視認性 */
 .timer{ font-size:18px; font-weight:800; }
-.meta{ font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere; }
+.meta{  font-size:18px; line-height:1.25; opacity:.95; overflow-wrap:anywhere; }
 
 /* VIP 行（横一列：白UI準拠） */
 .vipRow{
