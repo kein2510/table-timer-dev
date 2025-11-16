@@ -7,17 +7,6 @@
   <link rel="icon" href="data:," />
 
 <style>
-/* =========================================================
-   ALEXANDRITE – Perfect UI (Dark Glass Theme, merged)
-   - レイアウト/寸法/挙動: 白UIそのまま（座席=絶対配置）
-   - 配色/質感: 黒トークンによるダークガラス
-   - 置換手順: 既存<style>をこれで丸ごと置換
-   - 重要修正点:
-     1) .seat に強制していた紫の点線ボーダーを撤去 → VIP系のみ点線
-     2) VIP 行(.vipRow) と 超VIP 行(.ultraRow) を白UIと同じ位置・寸法で再定義
-     3) 「データ(集計)」の各ブロック/グラフ領域のスタイル再装着
-     4) 黒文字化していたUI（pill/ボタン/入力）の文字色を統一
-   ========================================================= */
 
 /* ====== THEME TOKENS（ここを触れば全体の色が変わる） ====== */
 :root{
@@ -484,8 +473,6 @@ button.sales-pill:hover{ filter:brightness(1.05); }
 #pagePayroll td.amount,
 #pagePayroll input[type="number"]{ text-align:right; }
 
-
-
 /* =========================
    ADMIN / FORMS
    ========================= */
@@ -623,9 +610,7 @@ button.sales-pill:hover{ filter:brightness(1.05); }
 .ultraRow .vipSeat{
   border: 2px dashed var(--accent-vip) !important; /* 超VIP＝点線(紫) */
   border-radius: 12px;
-
 }
-
 
 /* =========================
    ▼ 控室（2カラム＆検索ボックス統一）
@@ -762,15 +747,9 @@ main > section, main > .panel, main .panel {
   border-color: var(--panel-bd) !important;
 }
 
-
-
-
-
 </style>
 
-
 </head>
-
 
 <body>
   <!-- DEVバナー -->
