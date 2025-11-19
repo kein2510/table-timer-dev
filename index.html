@@ -639,18 +639,7 @@ button.sales-pill:hover{ filter:brightness(1.05); }
    （元の白背景と競合するので !important で強制）
    ========================= */
 /* 共通“白パネル”っぽいものを吸収して統一 */
-.salesListWrap, .salesDayWrap, .dayBox, .listBox, .panelBox,
-.payrollWrap, .payrollDayWrap, .payoutsPanel, .analyticsCard,
-.tableLike, .anaFilter,
-#pageSales .dayBox, #pageSales .listBox,
-#pagePayroll .dayBox, #pagePayroll .listBox {
-  background: rgb(var(--panel-rgb)/var(--panel-a)) !important;
-  border: 1px solid var(--panel-bd) !important;
-  color: var(--text-strong) !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(var(--panel-blur)) !important;
-  -webkit-backdrop-filter: blur(var(--panel-blur)) !important;
-}
+
 
 /* 行ヘッダー・表頭の薄い反転（白UIの視認性維持） */
 .tHead{ background:var(--card-rgb) !important; color:var(--text-strong) !important; }
