@@ -285,6 +285,21 @@ button.danger{ background:#dc2626; color:#fff; }
   box-shadow:0 20px 60px #0006;
 }
 
+/* === ① 席編集モーダル：出勤キャスト／出勤ボーイを左右 1:1 に === */
+.modal .row .suggBlock{
+  flex: 1 1 0;      /* ← これで2カラムがピッタリ半分ずつ */
+  min-width: 0;
+}
+.suggBlock .suggTitle{
+  font-size:12px; color:var(--text-muted); margin-bottom:6px;
+}
+.suggBlock .suggList{
+  display:flex; flex-wrap:wrap; gap:8px;
+  padding:8px; border:1px solid var(--field-bd); border-radius:10px;
+  background:rgb(var(--field-rgb)/var(--field-a));
+  max-height:220px; overflow:auto;       /* ← 枠内でスクロール */
+}
+
 /* =========================
    SALES / LISTS / TABLE（色だけ暗色化）
    ========================= */
@@ -335,6 +350,30 @@ button.sales-pill:hover{ filter:brightness(1.05); }
   font-size: var(--subheading-size);
   font-weight: 700;
   margin: 6px 0;
+}
+
+/* === ② 売上一覧→日別→「売上を編集」モーダルのスクロール改善 === */
+/* モーダル本体は画面高さに収め、はみ出す分はモーダル内スクロール */
+#salesEditWrap .modal{
+  max-height: 90vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+/* 明細リストは“縦可変の専用スクロール域”にする（下のボタンが隠れない） */
+#salesEditWrap #seList{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  max-height: 50vh;    /* 端末に合わせて見やすい高さに */
+}
+/* 一番下の合計＆保存バーが常に見えるよう軽く固定（任意） */
+#salesEditWrap .salesFoot{
+  position: sticky;
+  bottom: 0;
+  background: rgb(var(--panel-rgb)/var(--panel-a));
+  border-top: 1px solid var(--panel-bd);
+  padding-top: 8px;
 }
 
 /* ==== 給料支払い：日別ビューのテーブル・入力の暗色スキン ==== */
