@@ -1598,7 +1598,7 @@ function salesRowHTML(r){
       <div>
         <div><b>${esc(r.seatLabel||r.seatId||'')}</b>｜合計 <b>¥${Number(r.total||0).toLocaleString()}</b>｜${when}</div>
         <div style="color:#475569">キャスト：${esc((r.cast||[]).join(', ')||'なし')}　/　ボーイ：${esc(r.boy||'')}</div>
-        <div style="color:#111">${lines}</div>
+        <div style="color:#475569">${lines}</div>
       </div>
       <div style="display:flex; gap:8px">
         <button type="button" class="sales-pill edit">編集</button>
