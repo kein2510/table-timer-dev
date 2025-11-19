@@ -108,7 +108,7 @@ body::after{
    ========================= */
 header{
   display:flex; gap:12px; align-items:center; justify-content:space-between;
-  padding:10px 14px; background:#1f1f23; color:var(--card-rgb); position:sticky; top:0; z-index:5;
+  padding:10px 14px; background:#1f1f23; color:#fff; position:sticky; top:0; z-index:5;
 }
 header h1{ margin:0; font-size:18px; line-height:1; }
 .toolbar{ display:flex; gap:8px; align-items:center; }
@@ -351,7 +351,7 @@ button.sales-pill:hover{ filter:brightness(1.05); }
 
 /* ヘッダー帯は薄反転 */
 .payoutsPanel thead th{
-  background: #ffffff10 !important;
+  background: var(--card-rgb) !important;
   font-weight: 700;
 }
 
@@ -382,7 +382,7 @@ button.sales-pill:hover{ filter:brightness(1.05); }
 
 /* 集計行（最下段）の帯をわずかに強調 */
 .payoutsPanel .summaryRow td{
-  background: #ffffff08 !important;
+  background: var(--card-rgb) !important;
   font-weight: 800;
 }
 
