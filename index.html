@@ -3548,38 +3548,62 @@ function buildProdGrid(q=''){
 prodSearch?.addEventListener('input', e => buildProdGrid((e.target.value||'').trim()));
 
 /* 1席ごとの仮売上をローカル保持 */
+/* 1席ごとの仮売上をローカル保持（席モーダルの売上タブ用） */
 const SALES_LS_PREFIX = LS_PREFIX + 'seat.sales.';
+
 function loadSeatSales(seatId){
-  try{ return JSON.parse(localStorage.getItem(SALES_LS_PREFIX+seatId)||'{}'); }catch(_){ return {}; }
+  try{
+    const raw = localStorage.getItem(SALES_LS_PREFIX + seatId);
+    const arr = raw ? JSON.parse(raw) : [];
+    // 正規化
+    return (Array.isArray(arr) ? arr : [])
+      .map(it => ({
+        product: String(it.product||''),
+        unitPrice: Number(it.unitPrice||0),
+        qty: Math.max(0, Number(it.qty||0))
+      }))
+      .filter(it => it.product && it.qty > 0);
+  }catch(_){
+    return [];
+  }
 }
-function saveSeatSales(seatId, data){
-  localStorage.setItem(SALES_LS_PREFIX+seatId, JSON.stringify(data||{}));
+function saveSeatSales(seatId, items){
+  const clean = (Array.isArray(items) ? items : [])
+    .map(it => ({
+      product: String(it.product||''),
+      unitPrice: Number(it.unitPrice||0),
+      qty: Math.max(0, Number(it.qty||0))
+    }))
+    .filter(it => it.product && it.qty > 0);
+  localStorage.setItem(SALES_LS_PREFIX + seatId, JSON.stringify(clean));
+}
+function clearSeatSales(seatId){
+  localStorage.removeItem(SALES_LS_PREFIX + seatId);
 }
 
-/* 商品追加（同一商品は数量+1） */
-function addItemToSeat(seatId, {product, unitPrice}){
-  const data = loadSeatSales(seatId);
-  data.items = Array.isArray(data.items) ? data.items : [];
-  const found = data.items.find(x=>x.product===product && Number(x.unitPrice)===Number(unitPrice));
-  if(found){ found.qty = Number(found.qty||0)+1; }
-  else{ data.items.push({product, unitPrice:Number(unitPrice||0), qty:1}); }
-  saveSeatSales(seatId, data);
+/* カート操作 */
+function addItemToSeat(seatId, {product, unitPrice, qty=1}){
+  const list = loadSeatSales(seatId);
+  const found = list.find(x => x.product === product && Number(x.unitPrice) === Number(unitPrice));
+  if (found) found.qty = Number(found.qty||0) + Number(qty||0);
+  else list.push({product, unitPrice:Number(unitPrice||0), qty:Number(qty||1)});
+  saveSeatSales(seatId, list);
+}
+function setItemQty(seatId, idx, qty){
+  const list = loadSeatSales(seatId);
+  if (idx<0 || idx>=list.length) return;
+  const v = Math.max(0, Number(qty||0));
+  if (v === 0) list.splice(idx,1);
+  else list[idx].qty = v;
+  saveSeatSales(seatId, list);
 }
 
-/* 数量変更・削除 */
-function setQty(seatId, idx, qty){
-  const data = loadSeatSales(seatId);
-  if(!Array.isArray(data.items)) return;
-  if(qty<=0){ data.items.splice(idx,1); }
-  else{ data.items[idx].qty = qty; }
-  saveSeatSales(seatId, data);
-}
-
-/* 合計計算＋描画 */
+/* 表示 */
 function renderSeatSales(seatId){
-  const data = loadSeatSales(seatId);
-  const items = Array.isArray(data.items) ? data.items : [];
-  seatSalesList.innerHTML = items.map((it, i)=>`
+  const items = loadSeatSales(seatId);
+  if (!seatSalesList) return;
+
+  seatSalesList.innerHTML = items.map((it,i)=>`
     <div class="salesItem" data-idx="${i}">
       <div>${esc(it.product)}</div>
       <div class="yen">${yen(it.unitPrice)}</div>
@@ -3588,92 +3612,103 @@ function renderSeatSales(seatId){
         <input type="number" min="0" step="1" value="${Number(it.qty||0)}">
         <button type="button" class="qplus">＋</button>
       </div>
-      <div class="yen">${yen(it.unitPrice * Number(it.qty||0))}</div>
+      <div class="yen">${yen(Number(it.unitPrice||0)*Number(it.qty||0))}</div>
     </div>
-  `).join('');
+  `).join('') || `<div style="color:#64748b;padding:8px">（まだ商品がありません）</div>`;
+
+  // 行高を測って 8 行スクロールの高さ安定化
+  const firstRow = seatSalesList.querySelector('.salesItem');
+  if (firstRow){
+    const h = Math.ceil(firstRow.getBoundingClientRect().height);
+    seatSalesList.style.setProperty('--rowH', h + 'px');
+  }
 
   seatSalesList.querySelectorAll('.salesItem').forEach(row=>{
     const idx = Number(row.dataset.idx||0);
     const input = row.querySelector('input');
-    row.querySelector('.qminus').addEventListener('click',()=>{
+    row.querySelector('.qminus')?.addEventListener('click',()=>{
       const v = Math.max(0, Number(input.value||0)-1);
-      input.value = v; setQty(seatId, idx, v); renderSeatSales(seatId);
+      input.value = v; setItemQty(seatId, idx, v); renderSeatSales(seatId); updateSeatSalesTotal(seatId);
     });
-    row.querySelector('.qplus').addEventListener('click',()=>{
+    row.querySelector('.qplus')?.addEventListener('click',()=>{
       const v = Number(input.value||0)+1;
-      input.value = v; setQty(seatId, idx, v); renderSeatSales(seatId);
+      input.value = v; setItemQty(seatId, idx, v); renderSeatSales(seatId); updateSeatSalesTotal(seatId);
     });
-    input.addEventListener('input',()=>{
+    input?.addEventListener('input',()=>{
       const v = Math.max(0, Number(input.value||0));
-      setQty(seatId, idx, v); renderSeatSales(seatId);
+      setItemQty(seatId, idx, v); updateSeatSalesTotal(seatId);
     });
   });
 
+  updateSeatSalesTotal(seatId);
+}
+function updateSeatSalesTotal(seatId){
+  const items = loadSeatSales(seatId);
   const total = items.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
-  seatSalesTotal.textContent = yen(total);
+  if (seatSalesTotal) seatSalesTotal.textContent = yen(total);
 }
 
-/* タブ切替 */
-function useTimerTab(){ tabTimer.classList.add('active'); tabSales.classList.remove('active'); seatSalesEl.classList.remove('show'); seatSalesEl.setAttribute('aria-hidden','true'); }
-function useSalesTab(){ tabSales.classList.add('active'); tabTimer.classList.remove('active'); seatSalesEl.classList.add('show'); seatSalesEl.removeAttribute('aria-hidden'); buildProdGrid(); renderSeatSales(currentId); }
-tabTimer?.addEventListener('click', useTimerTab);
-tabSales?.addEventListener('click', useSalesTab);
-seatSalesBack?.addEventListener('click', useTimerTab);
+/* タブ切替（タイマー ↔ 売上） */
+tabSales?.addEventListener('click', ()=>{
+  tabSales.classList.add('active');
+  tabTimer.classList.remove('active');
+  seatSalesEl.classList.add('show');
+  renderSeatSales(currentId);
+});
+tabTimer?.addEventListener('click', ()=>{
+  tabTimer.classList.add('active');
+  tabSales.classList.remove('active');
+  seatSalesEl.classList.remove('show');
+});
+seatSalesBack?.addEventListener('click', ()=> tabTimer.click());
 
-/* モーダルを開いた時点で売上タブを初期化できるように openModal の末尾に1行足す */
-const _openModalOrig = openModal;
-openModal = function(id){
-  _openModalOrig(id);
-  // タブ初期位置はタイマー
-  useTimerTab();
-  // 商品検索をリセット
-  if(prodSearch) prodSearch.value='';
-
-  const firstRow = seatSalesList.querySelector('.salesItem');
-if (firstRow) {
-  const h = Math.ceil(firstRow.getBoundingClientRect().height);
-  seatSalesList.style.setProperty('--rowH', h + 'px'); // 8行分に効く
-}
-};
-
-/* 送信（Firestoreへ保存） */
+/* 売上 登録（Firestore: rooms/{ROOM_ID}/sales） */
 seatSalesSend?.addEventListener('click', async ()=>{
-  const seat = seats.find(x=>x.id===currentId);
-  const data = loadSeatSales(currentId);
-  const items = (data.items||[]).filter(it=>it.product && Number(it.qty)>0);
-  if(items.length===0){ alert('明細がありません'); return; }
+  if (!currentId) return;
+  const cart = loadSeatSales(currentId);
+  if (!cart.length){ alert('商品がありません'); return; }
 
-  const cast = (castI.value||'').split(',').map(v=>v.trim()).filter(Boolean);
-  const boy  = (boyI.value||'').trim();
-  const total = items.reduce((a,b)=>a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
+  // 入力中のメタ（席モーダルのフォームから取得）
+  const seat = seats.find(x => x.id === currentId) || {};
+  const seatLabel = (seat.label || '');
+  const boy  = (boyI?.value || '').trim();
+  const cast = (castI?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
 
-  const payload = {
-    seatId: seat?.id || '',
-    seatLabel: seat?.label || '',
-    rows: items.map(it=>({
-      product: it.product,
-      unitPrice: Number(it.unitPrice||0),
-      qty: Number(it.qty||0),
-      amount: Number(it.unitPrice||0)*Number(it.qty||0)
-    })),
-    cast, boy, total,
-    createdAt: serverTimestamp()
-  };
+  const total = cart.reduce((a,b)=> a + Number(b.unitPrice||0)*Number(b.qty||0), 0);
 
+  // Firestore 書き込み
   try{
-    const salesCol = collection(db,'rooms',ROOM_ID,'sales');
-    await addDoc(salesCol, payload);
-    alert('登録しました（幹部→売上一覧に反映）');
+    const rec = {
+      seatId: currentId,
+      seatLabel,
+      boy,
+      cast,
+      rows: cart.map(it=>({
+        product: it.product,
+        unitPrice: Number(it.unitPrice||0),
+        qty: Number(it.qty||0)
+      })),
+      total: Number(total||0),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+    await addDoc(collection(db,'rooms',ROOM_ID,'sales'), rec);
 
-    // この席の仮売上はクリア
-    saveSeatSales(currentId, { items:[] });
+    // （任意）GAS 側にも転送したい場合はコメント解除
+    // fetch(SALES_GAS_URL, { method:'POST', mode:'no-cors', body: JSON.stringify(rec) }).catch(()=>{});
+
+    clearSeatSales(currentId);
     renderSeatSales(currentId);
-    useTimerTab();
+    updateSeatSalesTotal(currentId);
+    alert('登録しました');
+    // 売上登録後はタイマーに戻してもOK
+    tabTimer.click();
   }catch(e){
-    console.error(e);
-    alert('保存エラー: ' + (e?.message || e));
+    console.error('[sales] write failed', e);
+    alert('登録に失敗しました: ' + (e?.message || e));
   }
 });
+
 
   document.getElementById('q').addEventListener('input', render);
 
