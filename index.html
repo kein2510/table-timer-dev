@@ -1107,6 +1107,15 @@ window.fitAdminPayouts = fitAdminPayouts;
 window.addEventListener('resize', ()=>{
   if (location.hash.startsWith('#admin-payouts')) fitAdminPayouts(true);
 });
+
+// 初期ロード時にもヘッダー高をCSS変数へ反映
+document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('header');
+  if (header) {
+    const h = Math.ceil(header.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--headerH', h + 'px');
+  }
+});
   // ===== 幹部UI：ログイン/表示コントロール（唯一の定義） =====
 
   function showAdminSub(hash) {
@@ -1767,17 +1776,6 @@ function renderSalesGroupedByBizDay(rows, filterDay /* 'YYYY-MM-DD' or null */){
     updateBulk();
 
     // 単体削除
-    section.querySelectorAll('.dl').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        const row = btn.closest('.salesRow');
-        const id  = row?.dataset.id;
-        if(!id) return;
-        if(!confirm('この売上を削除しますか？')) return;
-        try{ await deleteDoc(doc(salesCol, id)); }catch(e){ alert('削除に失敗しました: ' + (e?.message||e)); }
-      });
-    });
-
-        // 単体削除
     section.querySelectorAll('.dl').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         const row = btn.closest('.salesRow');
