@@ -2225,7 +2225,7 @@ async function renderPayrollDay(dayKey){
       <div style="overflow:auto">
         <table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
           <thead>
-            <tr style="background:#f8fafc">
+            <tr style="background:#0C0C0E">
               <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">名前</th>
               <th style="text-align:left;padding:8px;border-bottom:1px solid #e5e7eb">区分</th>
               <th style="text-align:right;padding:8px;border-bottom:1px solid #e5e7eb">金額（自動）</th>
@@ -2235,7 +2235,7 @@ async function renderPayrollDay(dayKey){
           </thead>
           <tbody>${rowsHTML}</tbody>
           <tfoot>
-  <tr style="background:#f8fafc">
+  <tr style="background:#0C0C0E">
     <td style="padding:8px;font-weight:700">合計</td>
     <td style="padding:8px">CAST / BOY / 店 / 追加入力</td>
     <td style="padding:8px;text-align:right">売上 ¥${Number(preview.totals.sales||0).toLocaleString()}</td>
