@@ -204,16 +204,37 @@ main{ padding:12px; display:block; position:relative; z-index:3; }
 
 /* VIP 行（横一列：白UI準拠） */
 .vipRow{
-  position:absolute; left:15%; right:15%; bottom:7%;
-  display:flex; gap:12px; z-index:2;
+  position:absolute;
+  left:8%;          /* 15% → 8% にして少し左寄せ */
+  right:8%;         /* 右も少し詰める */
+  bottom:7%;
+  display:flex;
+  gap:10px;
+  z-index:2;
+  justify-content:flex-start; /* 左から順に並べる */
 }
 
-.vipRow .vipSeat{ position:relative; border:2px dashed var(--accent-vip);border-radius:12px; padding:10px;min-height:100px;flex:1;cursor:pointer;display:flex;flex-direction:column;gap:6px; }
+.vipRow .vipSeat{
+  position:relative;
+  border:2px dashed var(--accent-vip);
+  border-radius:12px;
+  padding:8px 10px;
+  min-height:90px;
+  flex:0 0 16%;        /* 1つあたり幅16%くらいに固定 → 5卓入る */
+  max-width:18%;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
 
-
-  
 .vipSeat.active{background:var(--bg-ok)} .vipSeat.warn{background:var(--bg-warn)} .vipSeat.danger{background:var(--bg-danger)}
 .vipSeat .timer{ font-size:22px; }
+
+.vipSeat.heli{
+  border-color: var(--shine-gold);              /* ゴールド枠 */
+  box-shadow:0 0 0 1px rgba(255,221,87,.4);     /* ちょっと光らせる */
+}
 
 /* ★ 超VIP 行（左下に 1→3 で横並び） */
 /*.ultraRow{
@@ -3321,12 +3342,19 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
         if(s.finished===undefined) s.finished=false;
         if(s.extendCount===undefined) s.extendCount=0;
       });
+      if (!arr.some(s => s.id === 'H1')) {
+      arr.push({id:'H1',group:'heli',label:'ヘリ 1',cast:'',boy:'',end:null,finished:false,extendCount:0});
+    }
+    if (!arr.some(s => s.id === 'H2')) {
+      arr.push({id:'H2',group:'heli',label:'ヘリ 2',cast:'',boy:'',end:null,finished:false,extendCount:0});
+    }
       return arr;
     }
     const a=[];
     for(let i=1;i<=8;i++) a.push({id:`R${i}`,group:'red',label:`VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
     for(let i=1;i<=7;i++) a.push({id:`B${i}`,group:'blue',label:`ノーマル ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
     for(let i=1;i<=3;i++) a.push({id:`V${i}`,group:'vip',label:`超VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+    for(let i=1;i<=2;i++) a.push({id:`H${i}`,group:'heli',label:`ヘリ ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
     return a;
   })();
 
@@ -3346,7 +3374,7 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
   const pageRoots=document.querySelectorAll('header, main');
 
   function cardHTML(s){
-    const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP'};
+    const nameByGroup={red:'VIP',blue:'ノーマル',vip:'超VIP',heli:'ヘリ'};
     const num=(s.id.match(/\d+/)||[''])[0];
     const label=`${nameByGroup[s.group]||s.label} ${num}`;
     const endAt=s.end?`～ ${formatClock(s.end)}`:'';
@@ -3363,7 +3391,7 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
   }
   function addVipSeat(s){
     const d=document.createElement('div');
-    d.className='vipSeat';
+    d.className = (s.group === 'heli') ? 'vipSeat heli' : 'vipSeat';
     d.dataset.id=s.id;
     d.innerHTML=cardHTML(s);
     d.addEventListener('click',()=>openModal(s.id));
@@ -3410,7 +3438,13 @@ onSnapshot(seatsCol, (qs)=>{
     vipWrap.innerHTML='';
     const q=$('#q').value.trim();
 
-    seats.forEach(s=>{ if(s.group==='vip') addVipSeat(s); else addSeatToFloor(s); });
+    seats.forEach(s=>{
+    if (s.group === 'vip' || s.group === 'heli') {
+      addVipSeat(s);   // 超VIPとヘリは同じ vipRow に並べる
+    } else {
+      addSeatToFloor(s);
+    }
+  });
 
     floor.querySelectorAll('[data-id]').forEach(el=>{
       const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
