@@ -919,7 +919,7 @@ main > section, main > .panel, main .panel {
 
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input id="paSearch" class="prodSearch" placeholder="名前で検索（例: かな、にゃん）" style="flex:1">
-      <input id="paAmount" type="number" inputmode="numeric" min="0" step="1" placeholder="初期金額（円）"
+      <input id="paAmount" type="number" inputmode="numeric" step="1" placeholder="初期金額（円）"
              style="width:160px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;text-align:right">
       <button id="paAdd" type="button" class="sales-pill">追加</button>
     </div>
@@ -2320,13 +2320,18 @@ root.querySelectorAll('.pr-plus').forEach(inp=>{
   const totalAmtSpan = tr?.querySelector('.pr-total-amt');
 
   // 初期の合計表示
-  if (totalAmtSpan) totalAmtSpan.textContent = '¥' + (base + Number(inp.value||0)).toLocaleString();
+    if (totalAmtSpan) {
+      totalAmtSpan.textContent =
+        '¥' + (base + Number(inp.value || 0)).toLocaleString();
+    }
 
   // 入力中：値を反映して行とフッターだけ更新
   inp.addEventListener('input', ()=>{
-    const name = tr?.dataset.name || '';
-    const isExtra = tr?.dataset.extra === '1';
-    const v = Math.max(0, Number(inp.value || 0));
+    const name   = tr?.dataset.name || '';
+    const isExtra= tr?.dataset.extra === '1';
+
+    let v = Number(inp.value || 0);        // ← マイナスもそのまま
+    if (!Number.isFinite(v)) v = 0;        // 変な値は 0
 
     if (isExtra){
       const idx = extraRs.findIndex(r => r.name===name);
@@ -2337,7 +2342,9 @@ root.querySelectorAll('.pr-plus').forEach(inp=>{
     savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
 
     // 行の合計だけ更新（ボタンは消さない）
-    if (totalAmtSpan) totalAmtSpan.textContent = '¥' + (base + v).toLocaleString();
+    if (totalAmtSpan) {
+      totalAmtSpan.textContent = '¥' + (base + v).toLocaleString();
+    }
 
     // 下の合計
     refreshFooterSums();
@@ -2345,7 +2352,8 @@ root.querySelectorAll('.pr-plus').forEach(inp=>{
 
   // フォーカス外れで正規化
   inp.addEventListener('blur', ()=>{
-    const v = Math.max(0, Number(inp.value || 0));
+    let v = Number(inp.value || 0);
+    if (!Number.isFinite(v)) v = 0;
     inp.value = v;
   });
 });
@@ -2422,7 +2430,8 @@ function openAddPicker(){
   btnAdd.onclick = () => {
     if (!picked) return;
     const role = (window.STAFF_MASTER.find(s=>s.name===picked)?.role === 'boy') ? 'boy' : 'cast';
-    const amount = Math.max(0, Number(amtInp.value || 0));
+    let amount = Number(amtInp.value || 0);   
+    if (!Number.isFinite(amount)) amount = 0; 
     extraRs.push({ name:picked, role, amount });
     savePayrollExtras(dayKey, { manualAdds: adds, extra: extraRs });
 
