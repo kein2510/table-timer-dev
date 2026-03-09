@@ -987,7 +987,7 @@ main > section, main > .panel, main .panel {
     </div>
 
     <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
-      <input id="paSearch" class="prodSearch" placeholder="名前で検索（例: かな、にゃん）" style="flex:1; min-width:200px; padding:10px; border-radius:8px; border:1px solid var(--field-bd); background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong);">
+      <input id="paSearch" class="prodSearch" placeholder="リストから選択してください" readonly style="flex:1; min-width:200px; padding:10px; border-radius:8px; border:1px solid var(--field-bd); background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); cursor:default;">
       <input id="paAmount" type="number" inputmode="numeric" step="1" placeholder="初期金額（円）"
              style="width:140px; padding:10px 12px; border:1px solid var(--field-bd); border-radius:8px; background:rgb(var(--field-rgb)/var(--field-a)); color:var(--text-strong); text-align:right;">
       <button id="paAdd" type="button" class="sales-pill" style="padding:10px 16px;">追加</button>
@@ -2447,10 +2447,11 @@ root.querySelectorAll('.btn-extra-del').forEach(btn=>{
 });
 
     // 追加ピッカー（検索＋チップ）
+// 追加ピッカー（検索なし＋チップ選択）
 function openAddPicker(){
   const wrap  = document.getElementById('payrollAddWrap');
   const list  = document.getElementById('paList');
-  const qInp  = document.getElementById('paSearch');
+  const nameInp = document.getElementById('paSearch'); // 名前表示用
   const amtInp= document.getElementById('paAmount');
   const btnAdd= document.getElementById('paAdd');
   const btnClose = document.getElementById('paClose');
@@ -2460,15 +2461,13 @@ function openAddPicker(){
   const choices = (window.STAFF_MASTER || []).filter(s => !already.has(s.name));
 
   let picked = ''; // クリックで選んだ人の名前
-  let q = '';
 
   function renderChips(){
-    const view = choices
-      .filter(s => !q || s.name.includes(q))
-      .map(s => ({
-        name: s.name,
-        role: (s.role === 'boy' ? 'boy' : 'cast'),
-      }));
+    // 検索フィルタを削除し、常に全員を表示
+    const view = choices.map(s => ({
+      name: s.name,
+      role: (s.role === 'boy' ? 'boy' : 'cast'),
+    }));
 
     list.innerHTML = view.map(v => `
       <button type="button"
@@ -2483,6 +2482,8 @@ function openAddPicker(){
       b.addEventListener('click', ()=>{
         const n = b.dataset.name || '';
         picked = (picked === n) ? '' : n;
+        // 選択された名前を入力欄に反映
+        nameInp.value = picked; 
         renderChips();
       });
     });
@@ -2491,13 +2492,26 @@ function openAddPicker(){
     btnAdd.disabled = !picked;
   }
 
-  qInp.value = '';
+  nameInp.value = '';
   amtInp.value = '0';
   picked = '';
   renderChips();
 
-  qInp.oninput = () => { q = (qInp.value||'').trim(); renderChips(); };
-  btnClose.onclick = () => { wrap.style.display='none'; wrap.setAttribute('aria-hidden','true'); };
+  // モーダルを閉じる共通処理
+  const closePicker = () => {
+    wrap.style.display = 'none'; 
+    wrap.setAttribute('aria-hidden', 'true');
+  };
+
+  // 「閉じる」ボタンのクリック
+  btnClose.onclick = closePicker;
+
+  // ★背景（余白）クリックで閉じる処理
+  wrap.onclick = (e) => {
+    if (e.target === wrap) {
+      closePicker();
+    }
+  };
 
   btnAdd.onclick = () => {
     if (!picked) return;
@@ -2510,14 +2524,12 @@ function openAddPicker(){
     // テーブル側を再構成して見せる（ここだけ再描画）
     render();
 
-    // モーダルを閉じる
-    wrap.style.display='none'; wrap.setAttribute('aria-hidden','true');
+    closePicker();
   };
 
   // 開く
   wrap.style.display='grid';
   wrap.removeAttribute('aria-hidden');
-  qInp.focus();
 }
 
 root.querySelector('#btnAddPayer')?.addEventListener('click', openAddPicker);
