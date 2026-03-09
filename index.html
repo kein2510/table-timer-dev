@@ -3972,7 +3972,7 @@ async function toggleDuty(name){
   }
 
 
-  // Roster（本鯖式）
+// Roster（本鯖式）
 function renderRoster(){
   const boxCast = document.getElementById('rosterCast');
   const boxBoy  = document.getElementById('rosterBoy');
@@ -4028,9 +4028,13 @@ function renderRoster(){
   // 検索関数
   const byQuery = (q) => (s) => !q || s.name.includes(q);
 
-  // 左カラム（キャスト）
-  const onCast  = staff.filter(s => s.duty?.cast === true).filter(byQuery(qCast));
-  const offCast = isEditCast ? staff.filter(s => s.duty?.cast !== true).filter(byQuery(qCast)) : [];
+  // ▼ ここを追加：役職(role)で左右に表示する対象を絞り込む
+  const castTargets = staff.filter(s => s.role === 'cast' || s.role === 'staff');
+  const boyTargets  = staff.filter(s => s.role === 'boy'  || s.role === 'staff');
+
+  // 左カラム（キャスト：castとstaffのみ）
+  const onCast  = castTargets.filter(s => s.duty?.cast === true).filter(byQuery(qCast));
+  const offCast = isEditCast ? castTargets.filter(s => s.duty?.cast !== true).filter(byQuery(qCast)) : [];
 
   onCast.forEach(s => addChip(boxCast, s.name, {on:true, busy:isNameBusy(s.name), role:'cast', isEdit:isEditCast}));
   if(offCast.length){
@@ -4039,9 +4043,9 @@ function renderRoster(){
     offCast.forEach(s => addChip(boxCast, s.name, {on:false, busy:false, role:'cast', isEdit:isEditCast}));
   }
 
-  // 右カラム（ボーイ/スタッフ）
-  const onBoy  = staff.filter(s => s.duty?.boy === true).filter(byQuery(qBoy));
-  const offBoy = isEditBoy ? staff.filter(s => s.duty?.boy !== true).filter(byQuery(qBoy)) : [];
+  // 右カラム（ボーイ/スタッフ：boyとstaffのみ）
+  const onBoy  = boyTargets.filter(s => s.duty?.boy === true).filter(byQuery(qBoy));
+  const offBoy = isEditBoy ? boyTargets.filter(s => s.duty?.boy !== true).filter(byQuery(qBoy)) : [];
 
   onBoy.forEach(s => addChip(boxBoy, s.name, {on:true, busy:isNameBusy(s.name), role:'boy', isEdit:isEditBoy}));
   if(offBoy.length){
