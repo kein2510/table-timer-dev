@@ -725,6 +725,44 @@ main > section, main > .panel, main .panel {
   border-color: var(--panel-bd) !important;
 }
 
+  /* =========================
+   ▼ 席レイアウトの2列（グリッド）化
+   ========================= */
+.floor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* 凡例(legend)と被らないよう、上部にパディングを確保 */
+  padding: 40px 12px 16px !important; 
+  height: auto !important; 
+  min-height: auto;
+}
+.seat-group h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+  padding-left: 4px;
+}
+.seat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* ここで「横並びの2列」を指定 */
+  gap: 12px;
+}
+/* 席の絶対配置を完全に無効化 */
+.seat, .vipSeat {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important; 
+  max-width: none !important;
+  margin: 0 !important;
+  flex: none !important;
+}
+/* 古いレイアウトの残骸を非表示 */
+#vip { display: none !important; }
+
 </style>
 
 </head>
@@ -3334,31 +3372,31 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
   window.LS_PREFIX = LS_PREFIX;
 
   /* === 席データ === */
+  /* === 席データ（指定の数に変更 ＆ キーをv3にしてリセット） === */
   const seats = (()=>{ 
-    const saved=localStorage.getItem(LS_PREFIX+'seats.v2');
+    const saved = localStorage.getItem(LS_PREFIX+'seats.v3');
     if(saved){
-      const arr=JSON.parse(saved);
+      const arr = JSON.parse(saved);
       arr.forEach(s=>{
         if(s.finished===undefined) s.finished=false;
         if(s.extendCount===undefined) s.extendCount=0;
       });
-      if (!arr.some(s => s.id === 'H1')) {
-      arr.push({id:'H1',group:'heli',label:'ヘリ 1',cast:'',boy:'',end:null,finished:false,extendCount:0});
-    }
-    if (!arr.some(s => s.id === 'H2')) {
-      arr.push({id:'H2',group:'heli',label:'ヘリ 2',cast:'',boy:'',end:null,finished:false,extendCount:0});
-    }
       return arr;
     }
-    const a=[];
-    for(let i=1;i<=8;i++) a.push({id:`R${i}`,group:'red',label:`VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
-    for(let i=1;i<=7;i++) a.push({id:`B${i}`,group:'blue',label:`ノーマル ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
-    for(let i=1;i<=3;i++) a.push({id:`V${i}`,group:'vip',label:`超VIP ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
-    for(let i=1;i<=2;i++) a.push({id:`H${i}`,group:'heli',label:`ヘリ ${i}`,cast:'',boy:'',end:null,finished:false,extendCount:0});
+    const a = [];
+    // ノーマル: 7席
+    for(let i=1; i<=7; i++) a.push({id:`B${i}`, group:'blue', label:`ノーマル ${i}`, cast:'', boy:'', end:null, finished:false, extendCount:0});
+    // VIP: 8席
+    for(let i=1; i<=8; i++) a.push({id:`R${i}`, group:'red', label:`VIP ${i}`, cast:'', boy:'', end:null, finished:false, extendCount:0});
+    // 超VIP: 8席
+    for(let i=1; i<=8; i++) a.push({id:`V${i}`, group:'vip', label:`超VIP ${i}`, cast:'', boy:'', end:null, finished:false, extendCount:0});
+    // ヘリ: 2席
+    for(let i=1; i<=2; i++) a.push({id:`H${i}`, group:'heli', label:`ヘリ ${i}`, cast:'', boy:'', end:null, finished:false, extendCount:0});
     return a;
   })();
 
-  const save = () => localStorage.setItem(LS_PREFIX+'seats.v2', JSON.stringify(seats));
+  const save = () => localStorage.setItem(LS_PREFIX+'seats.v3', JSON.stringify(seats));
+
 
   /* === 座標 / 要素参照 / UI生成群（元コードそのまま）=== */
   const POS={R8:{top:15,left:25,width:13},R7:{top:15,left:39,width:13},R6:{top:15,left:53,width:13},R5:{top:15,left:67,width:13},
@@ -3434,29 +3472,70 @@ onSnapshot(seatsCol, (qs)=>{
 });
 
   function render(){
-    floor.querySelectorAll('.seat').forEach(n=>n.remove());
-    vipWrap.innerHTML='';
-    const q=$('#q').value.trim();
+    // 既存の席グループ要素を一度クリア
+    floor.querySelectorAll('.seat-group').forEach(n => n.remove());
+    
+    const q = $('#q').value.trim();
 
-    seats.forEach(s=>{
-    if (s.group === 'vip' || s.group === 'heli') {
-      addVipSeat(s);   // 超VIPとヘリは同じ vipRow に並べる
-    } else {
-      addSeatToFloor(s);
-    }
-  });
+    // 描画する順番とグループ定義
+    const groups = [
+      { id: 'blue', title: 'ノーマル' },
+      { id: 'red',  title: 'VIP' },
+      { id: 'vip',  title: '超VIP' },
+      { id: 'heli', title: 'ヘリ' }
+    ];
 
-    floor.querySelectorAll('[data-id]').forEach(el=>{
-      const s=seats.find(x=>x.id===el.dataset.id); const t=el.querySelector('.remain');
+    // グループごとに「タイトル」と「2列のグリッド」を作って席を流し込む
+    groups.forEach(g => {
+      const gSeats = seats.filter(s => s.group === g.id);
+      if(gSeats.length === 0) return;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'seat-group';
+      wrap.innerHTML = `
+        <h3>${g.title}</h3>
+        <div class="seat-grid"></div>
+      `;
+      const grid = wrap.querySelector('.seat-grid');
+
+      gSeats.forEach(s => {
+        const d = document.createElement('div');
+        if (s.group === 'vip' || s.group === 'heli') {
+          d.className = (s.group === 'heli') ? 'vipSeat heli' : 'vipSeat';
+        } else {
+          d.className = `seat ${s.group}`;
+        }
+        d.dataset.id = s.id;
+        d.innerHTML = cardHTML(s);
+        d.addEventListener('click', () => openModal(s.id));
+        grid.appendChild(d);
+      });
+      floor.appendChild(wrap);
+    });
+
+    // 状態の更新処理（タイマーや検索ハイライトなど）
+    floor.querySelectorAll('[data-id]').forEach(el => {
+      const s = seats.find(x => x.id === el.dataset.id); 
+      const t = el.querySelector('.remain');
       el.classList.remove('active','warn','danger','highlight');
       if(s.end){
-        const r=s.end-Date.now();
-        if(r>0){ t.textContent=formatRemain(r); el.classList.add('active'); if(r<=3*60*1000)el.classList.add('danger'); else if(r<=10*60*1000)el.classList.add('warn'); }
-        else { s.end=null; s.finished=true; save(); t.textContent='終了'; }
-      }else{ t.textContent=s.finished?'終了':'空'; }
+        const r = s.end - Date.now();
+        if(r > 0){ 
+          t.textContent = formatRemain(r); 
+          el.classList.add('active'); 
+          if(r <= 3*60*1000) el.classList.add('danger'); 
+          else if(r <= 10*60*1000) el.classList.add('warn'); 
+        } else { 
+          s.end = null; s.finished = true; save(); 
+          t.textContent = '終了'; 
+        }
+      } else { 
+        t.textContent = s.finished ? '終了' : '空'; 
+      }
       if(q && s.cast && s.cast.includes(q)) el.classList.add('highlight');
     });
-    resizeFloor(); renderRoster();
+
+    renderRoster();
   }
 
   function tick(){
