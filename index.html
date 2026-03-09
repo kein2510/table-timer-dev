@@ -725,8 +725,8 @@ main > section, main > .panel, main .panel {
   border-color: var(--panel-bd) !important;
 }
 
-  /* =========================
-   ▼ 席レイアウトの2列（グリッド）化
+/* =========================
+   ▼ 席レイアウトのグループ別Grid化 (image_0.png対応)
    ========================= */
 .floor {
   display: flex;
@@ -745,9 +745,19 @@ main > section, main > .panel, main .panel {
 }
 .seat-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* ここで「横並びの2列」を指定 */
   gap: 12px;
 }
+
+/* 青（ノーマル）、赤（VIP）、紫（超VIP）は4列 */
+.blue-grid, .red-grid, .vip-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* 黄色（ヘリ）は2列 */
+.heli-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
 /* 席の絶対配置を完全に無効化 */
 .seat, .vipSeat {
   position: relative !important;
@@ -3372,7 +3382,7 @@ const esc = s => String(s).replace(/[&<>"']/g, m => ({
   window.LS_PREFIX = LS_PREFIX;
 
   /* === 席データ === */
-  /* === 席データ（指定の数に変更 ＆ キーをv3にしてリセット） === */
+/* === 席データ（指定の数に変更 ＆ キーをv3にしてリセット） === */
   const seats = (()=>{ 
     const saved = localStorage.getItem(LS_PREFIX+'seats.v3');
     if(saved){
@@ -3471,30 +3481,31 @@ onSnapshot(seatsCol, (qs)=>{
   render();   // UI更新
 });
 
-  function render(){
+function render(){
     // 既存の席グループ要素を一度クリア
     floor.querySelectorAll('.seat-group').forEach(n => n.remove());
     
     const q = $('#q').value.trim();
 
-    // 描画する順番とグループ定義
+    // 描画する順番とグループ定義 (CSSクラスも追加)
     const groups = [
-      { id: 'blue', title: 'ノーマル' },
-      { id: 'red',  title: 'VIP' },
-      { id: 'vip',  title: '超VIP' },
-      { id: 'heli', title: 'ヘリ' }
+      { id: 'blue', title: 'ノーマル', gridClass: 'blue-grid' },
+      { id: 'red',  title: 'VIP',     gridClass: 'red-grid' },
+      { id: 'vip',  title: '超VIP',   gridClass: 'vip-grid' },
+      { id: 'heli', title: 'ヘリ',     gridClass: 'heli-grid' }
     ];
 
-    // グループごとに「タイトル」と「2列のグリッド」を作って席を流し込む
+    // グループごとに「タイトル」と「Grid」を作って席を流し込む
     groups.forEach(g => {
       const gSeats = seats.filter(s => s.group === g.id);
       if(gSeats.length === 0) return;
 
       const wrap = document.createElement('div');
       wrap.className = 'seat-group';
+      // div.seat-grid に g.gridClass を追加
       wrap.innerHTML = `
         <h3>${g.title}</h3>
-        <div class="seat-grid"></div>
+        <div class="seat-grid ${g.gridClass}"></div>
       `;
       const grid = wrap.querySelector('.seat-grid');
 
@@ -3537,7 +3548,6 @@ onSnapshot(seatsCol, (qs)=>{
 
     renderRoster();
   }
-
   function tick(){
     nowEl.textContent=new Date().toLocaleString('ja-JP',{hour12:false});
     floor.querySelectorAll('[data-id]').forEach(el=>{
